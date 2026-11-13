@@ -5,7 +5,12 @@ targets:
   - codex
   - agent-skills
 dependencies:
-  apm: []
+  apm:
+    - git: seniorkonung/agent-skills
+      ref: main
+      skills:
+        - discussion
+        - change-summary
   mcp: []
 includes: auto
 scripts: {}

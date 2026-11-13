@@ -1,6 +1,424 @@
-lockfile_version: '1'
-dependencies: []
+lockfile_version: '2'
+apm_version: 0.35.1
+dependencies:
+- repo_url: seniorkonung/agent-skills
+  name: agent-skills
+  host: github.com
+  resolved_commit: 504e0329ebfbbda7ae49044d2f502b0b98b606ca
+  resolved_ref: main
+  version: 0.0.1
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/change-summary
+  - .agents/skills/change-summary/SKILL.md
+  - .agents/skills/discussion
+  - .agents/skills/discussion/SKILL.md
+  - .agents/skills/discussion/references/document-format.md
+  - .agents/skills/discussion/references/examples.md
+  - .claude/agents/code-reviewer.md
+  - .claude/agents/security-auditor.md
+  - .claude/agents/test-engineer.md
+  - .claude/rules/commit-message-conventions.md
+  - .claude/rules/domain-language.md
+  - .claude/rules/process-discipline.md
+  - .claude/rules/production-readiness.md
+  - .claude/rules/proven-necessity.md
+  - .claude/skills/change-summary
+  - .claude/skills/change-summary/SKILL.md
+  - .claude/skills/discussion
+  - .claude/skills/discussion/SKILL.md
+  - .claude/skills/discussion/references/document-format.md
+  - .claude/skills/discussion/references/examples.md
+  - .codex/agents/code-reviewer.toml
+  - .codex/agents/security-auditor.toml
+  - .codex/agents/test-engineer.toml
+  deployed_file_hashes:
+    .agents/skills/change-summary/SKILL.md: sha256:855ac5dae361704b0af7471cf5a6c50519b338f95d49d7f83c9c1ccf1cf7cfc4
+    .agents/skills/discussion/SKILL.md: sha256:e9c3423b73b4d572af3d95c8820142e18bb44e226adc92f1c297905e9835ca9a
+    .agents/skills/discussion/references/document-format.md: sha256:9012f228e7a7759f14176e38b1b39946a3d810693a4a96319934b93ad71e80ac
+    .agents/skills/discussion/references/examples.md: sha256:e0a056cc213de20ee0e311c1404a21bfdda9e70d2d2cc2b73748de1b53359a6c
+    .claude/agents/code-reviewer.md: sha256:c73c351164c513586dcb46e389df5249627526e64eab8bcc63605f9e62389bfe
+    .claude/agents/security-auditor.md: sha256:e9d51b87b02eae4e7af55a549fcb8fcc1289dce81a39806d2739d2d5c3f867db
+    .claude/agents/test-engineer.md: sha256:5c967d9626e6f7414f42ef7ec5b670c663c554b4e92abfa5215a0506649f1650
+    .claude/rules/commit-message-conventions.md: sha256:4d0e01e3f8628b9f4e2a90b932935cd819bd50a0969862294e140ae6e4aeb8ba
+    .claude/rules/domain-language.md: sha256:047b781ee08264502823b2594ab7851095bbf1ed455d6e51ff1883baa95b9861
+    .claude/rules/process-discipline.md: sha256:0881e04e71d1480690e708917090c885e9c3230dc3541e789e0030a4073e9d40
+    .claude/rules/production-readiness.md: sha256:b9b97fff2887221cd60c897e518246c8775828ead55c9381a92f1a5e42e91020
+    .claude/rules/proven-necessity.md: sha256:5b03705c13c7ab66896fe35e544344957135c1323e39d30728c1af3ebd90318c
+    .claude/skills/change-summary/SKILL.md: sha256:855ac5dae361704b0af7471cf5a6c50519b338f95d49d7f83c9c1ccf1cf7cfc4
+    .claude/skills/discussion/SKILL.md: sha256:e9c3423b73b4d572af3d95c8820142e18bb44e226adc92f1c297905e9835ca9a
+    .claude/skills/discussion/references/document-format.md: sha256:9012f228e7a7759f14176e38b1b39946a3d810693a4a96319934b93ad71e80ac
+    .claude/skills/discussion/references/examples.md: sha256:e0a056cc213de20ee0e311c1404a21bfdda9e70d2d2cc2b73748de1b53359a6c
+    .codex/agents/code-reviewer.toml: sha256:c1da100c40961598eb98fe065c8f7ea3d796c7727cb001056c0531c1a83b2a42
+    .codex/agents/security-auditor.toml: sha256:6f2bec3bded4da237fa14b74fd77720f0e7d96982f09288652aec26b228110dd
+    .codex/agents/test-engineer.toml: sha256:424d1fe9b726af918098b6a8d6119e441aa5e2e45265c5cdfa5fba44f0c9f608
+  content_hash: sha256:be9fabdd21216054dca3088555a30c33a0573cb6483ab121f093b888dd8b0d0b
+  skill_subset:
+  - change-summary
+  - discussion
+- repo_url: addyosmani/agent-skills
+  name: code-simplification
+  host: github.com
+  resolved_commit: 84ee50673804b95c287d1e4eb4f1c1dad7c5188a
+  resolved_ref: 0.6.9
+  version: 0.6.9
+  virtual_path: skills/code-simplification
+  is_virtual: true
+  depth: 2
+  resolved_by: seniorkonung/agent-skills
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/code-simplification
+  - .agents/skills/code-simplification/SKILL.md
+  - .claude/skills/code-simplification
+  - .claude/skills/code-simplification/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/code-simplification/SKILL.md: sha256:f0c5ed754057eb0c1e027e2587f59de816651feb5e837242296c43ea21cf621d
+    .claude/skills/code-simplification/SKILL.md: sha256:f0c5ed754057eb0c1e027e2587f59de816651feb5e837242296c43ea21cf621d
+  content_hash: sha256:7973e746e8e2ea5004d520da970c15a106824b8d6be1bcff48908aec021f3677
+  constraint: 0.6.9
+  resolved_tag: 0.6.9
+  resolved_at: '2026-11-13T20:34:56+00:00'
+- repo_url: addyosmani/agent-skills
+  name: debugging-and-error-recovery
+  host: github.com
+  resolved_commit: 84ee50673804b95c287d1e4eb4f1c1dad7c5188a
+  resolved_ref: 0.6.9
+  version: 0.6.9
+  virtual_path: skills/debugging-and-error-recovery
+  is_virtual: true
+  depth: 2
+  resolved_by: seniorkonung/agent-skills
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/debugging-and-error-recovery
+  - .agents/skills/debugging-and-error-recovery/SKILL.md
+  - .claude/skills/debugging-and-error-recovery
+  - .claude/skills/debugging-and-error-recovery/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/debugging-and-error-recovery/SKILL.md: sha256:67ce2c9442da0c5a6e3515617fc9c4003cfe232ef7c7210da342f40f508f9958
+    .claude/skills/debugging-and-error-recovery/SKILL.md: sha256:67ce2c9442da0c5a6e3515617fc9c4003cfe232ef7c7210da342f40f508f9958
+  content_hash: sha256:1a119d27e8f1d27ed6317adf3115826336491346780dcb7d7a7a7f79fe3ffe10
+  constraint: 0.6.9
+  resolved_tag: 0.6.9
+  resolved_at: '2026-11-13T20:34:57+00:00'
+- repo_url: addyosmani/agent-skills
+  name: source-driven-development
+  host: github.com
+  resolved_commit: 84ee50673804b95c287d1e4eb4f1c1dad7c5188a
+  resolved_ref: 0.6.9
+  version: 0.6.9
+  virtual_path: skills/source-driven-development
+  is_virtual: true
+  depth: 2
+  resolved_by: seniorkonung/agent-skills
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/source-driven-development
+  - .agents/skills/source-driven-development/SKILL.md
+  - .claude/skills/source-driven-development
+  - .claude/skills/source-driven-development/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/source-driven-development/SKILL.md: sha256:719d4e54083c90ded62112fb41df3dbc4619309118ee0e6aa4d846f92d8204af
+    .claude/skills/source-driven-development/SKILL.md: sha256:719d4e54083c90ded62112fb41df3dbc4619309118ee0e6aa4d846f92d8204af
+  content_hash: sha256:c48d3c3abb2cb8a5c4a8584ab95db64f8a0261f3acfe2cdb7b8ff88ec3d90211
+  constraint: 0.6.9
+  resolved_tag: 0.6.9
+  resolved_at: '2026-11-13T20:34:57+00:00'
+- repo_url: mattpocock/skills
+  name: grill-with-docs
+  host: github.com
+  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+  resolved_ref: v1.2.3
+  version: unknown
+  virtual_path: skills/engineering/grill-with-docs
+  is_virtual: true
+  depth: 2
+  resolved_by: seniorkonung/agent-skills
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/grill-with-docs
+  - .agents/skills/grill-with-docs/SKILL.md
+  - .agents/skills/grill-with-docs/agents/openai.yaml
+  - .claude/skills/grill-with-docs
+  - .claude/skills/grill-with-docs/SKILL.md
+  - .claude/skills/grill-with-docs/agents/openai.yaml
+  deployed_file_hashes:
+    .agents/skills/grill-with-docs/SKILL.md: sha256:610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165
+    .agents/skills/grill-with-docs/agents/openai.yaml: sha256:94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9
+    .claude/skills/grill-with-docs/SKILL.md: sha256:610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165
+    .claude/skills/grill-with-docs/agents/openai.yaml: sha256:94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9
+  content_hash: sha256:c3a266bcc09eab29358eaae6e288f9a2cd492fd0af2bcaeeec55fd6207da9a89
+- repo_url: mattpocock/skills
+  name: grilling
+  host: github.com
+  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
+  resolved_ref: v1.2.3
+  version: unknown
+  virtual_path: skills/productivity/grilling
+  is_virtual: true
+  depth: 2
+  resolved_by: seniorkonung/agent-skills
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/grilling
+  - .agents/skills/grilling/SKILL.md
+  - .agents/skills/grilling/agents/openai.yaml
+  - .claude/skills/grilling
+  - .claude/skills/grilling/SKILL.md
+  - .claude/skills/grilling/agents/openai.yaml
+  deployed_file_hashes:
+    .agents/skills/grilling/SKILL.md: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
+    .agents/skills/grilling/agents/openai.yaml: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
+    .claude/skills/grilling/SKILL.md: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
+    .claude/skills/grilling/agents/openai.yaml: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
+  content_hash: sha256:6f3a681f493ac92bf3c0f1263a9bf89f10f8f406623f3fbe5c87268e6d09e91e
+- repo_url: obra/superpowers
+  name: verification-before-completion
+  host: github.com
+  resolved_commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+  resolved_ref: v6.3.0
+  version: unknown
+  virtual_path: skills/verification-before-completion
+  is_virtual: true
+  depth: 2
+  resolved_by: seniorkonung/agent-skills
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/verification-before-completion
+  - .agents/skills/verification-before-completion/SKILL.md
+  - .claude/skills/verification-before-completion
+  - .claude/skills/verification-before-completion/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/verification-before-completion/SKILL.md: sha256:2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3
+    .claude/skills/verification-before-completion/SKILL.md: sha256:2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3
+  content_hash: sha256:b529822bdac4b197b180fe12225cff86b930b65910435103c10622df7f041651
 deployments:
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/change-summary
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/change-summary/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:855ac5dae361704b0af7471cf5a6c50519b338f95d49d7f83c9c1ccf1cf7cfc4
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/code-simplification
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/code-simplification
+  active_owner: addyosmani/agent-skills/skills/code-simplification
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/code-simplification/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/code-simplification
+  active_owner: addyosmani/agent-skills/skills/code-simplification
+  content_hash: sha256:f0c5ed754057eb0c1e027e2587f59de816651feb5e837242296c43ea21cf621d
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/debugging-and-error-recovery
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/debugging-and-error-recovery
+  active_owner: addyosmani/agent-skills/skills/debugging-and-error-recovery
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/debugging-and-error-recovery/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/debugging-and-error-recovery
+  active_owner: addyosmani/agent-skills/skills/debugging-and-error-recovery
+  content_hash: sha256:67ce2c9442da0c5a6e3515617fc9c4003cfe232ef7c7210da342f40f508f9958
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/discussion
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/discussion/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:e9c3423b73b4d572af3d95c8820142e18bb44e226adc92f1c297905e9835ca9a
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/discussion/references/document-format.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:9012f228e7a7759f14176e38b1b39946a3d810693a4a96319934b93ad71e80ac
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/discussion/references/examples.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:e0a056cc213de20ee0e311c1404a21bfdda9e70d2d2cc2b73748de1b53359a6c
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/grill-with-docs
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/engineering/grill-with-docs
+  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/grill-with-docs/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/engineering/grill-with-docs
+  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
+  content_hash: sha256:610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/grill-with-docs/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/engineering/grill-with-docs
+  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
+  content_hash: sha256:94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/grilling
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/productivity/grilling
+  active_owner: mattpocock/skills/skills/productivity/grilling
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/grilling/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/productivity/grilling
+  active_owner: mattpocock/skills/skills/productivity/grilling
+  content_hash: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/grilling/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/productivity/grilling
+  active_owner: mattpocock/skills/skills/productivity/grilling
+  content_hash: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/source-driven-development
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/source-driven-development
+  active_owner: addyosmani/agent-skills/skills/source-driven-development
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/source-driven-development/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/source-driven-development
+  active_owner: addyosmani/agent-skills/skills/source-driven-development
+  content_hash: sha256:719d4e54083c90ded62112fb41df3dbc4619309118ee0e6aa4d846f92d8204af
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/verification-before-completion
+  runtime: null
+  scope: project
+  owners:
+  - obra/superpowers/skills/verification-before-completion
+  active_owner: obra/superpowers/skills/verification-before-completion
+  content_hash: null
+- kind: project-relative
+  target: agent-skills
+  value: .agents/skills/verification-before-completion/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - obra/superpowers/skills/verification-before-completion
+  active_owner: obra/superpowers/skills/verification-before-completion
+  content_hash: sha256:2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3
+- kind: project-relative
+  target: claude
+  value: .claude/agents/code-reviewer.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:c73c351164c513586dcb46e389df5249627526e64eab8bcc63605f9e62389bfe
+- kind: project-relative
+  target: claude
+  value: .claude/agents/security-auditor.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:e9d51b87b02eae4e7af55a549fcb8fcc1289dce81a39806d2739d2d5c3f867db
+- kind: project-relative
+  target: claude
+  value: .claude/agents/test-engineer.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:5c967d9626e6f7414f42ef7ec5b670c663c554b4e92abfa5215a0506649f1650
+- kind: project-relative
+  target: claude
+  value: .claude/rules/commit-message-conventions.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:4d0e01e3f8628b9f4e2a90b932935cd819bd50a0969862294e140ae6e4aeb8ba
+- kind: project-relative
+  target: claude
+  value: .claude/rules/domain-language.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:047b781ee08264502823b2594ab7851095bbf1ed455d6e51ff1883baa95b9861
 - kind: project-relative
   target: claude
   value: .claude/rules/language-preferences.md
@@ -12,6 +430,33 @@ deployments:
   content_hash: sha256:e500f4facb5fc936b79aa3b7eb140bbd2f456d5d497da76a269ae7d5322ca1e8
 - kind: project-relative
   target: claude
+  value: .claude/rules/process-discipline.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:0881e04e71d1480690e708917090c885e9c3230dc3541e789e0030a4073e9d40
+- kind: project-relative
+  target: claude
+  value: .claude/rules/production-readiness.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:b9b97fff2887221cd60c897e518246c8775828ead55c9381a92f1a5e42e91020
+- kind: project-relative
+  target: claude
+  value: .claude/rules/proven-necessity.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:5b03705c13c7ab66896fe35e544344957135c1323e39d30728c1af3ebd90318c
+- kind: project-relative
+  target: claude
   value: .claude/rules/type-safe-design.md
   runtime: null
   scope: project
@@ -19,6 +464,213 @@ deployments:
   - .
   active_owner: .
   content_hash: sha256:91e3d48f0eb3d7f65f523e59c7734221f93208c91557d07ddc40dc2a9c8dd867
+- kind: project-relative
+  target: claude
+  value: .claude/skills/change-summary
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/change-summary/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:855ac5dae361704b0af7471cf5a6c50519b338f95d49d7f83c9c1ccf1cf7cfc4
+- kind: project-relative
+  target: claude
+  value: .claude/skills/code-simplification
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/code-simplification
+  active_owner: addyosmani/agent-skills/skills/code-simplification
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/code-simplification/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/code-simplification
+  active_owner: addyosmani/agent-skills/skills/code-simplification
+  content_hash: sha256:f0c5ed754057eb0c1e027e2587f59de816651feb5e837242296c43ea21cf621d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/debugging-and-error-recovery
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/debugging-and-error-recovery
+  active_owner: addyosmani/agent-skills/skills/debugging-and-error-recovery
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/debugging-and-error-recovery/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/debugging-and-error-recovery
+  active_owner: addyosmani/agent-skills/skills/debugging-and-error-recovery
+  content_hash: sha256:67ce2c9442da0c5a6e3515617fc9c4003cfe232ef7c7210da342f40f508f9958
+- kind: project-relative
+  target: claude
+  value: .claude/skills/discussion
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/discussion/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:e9c3423b73b4d572af3d95c8820142e18bb44e226adc92f1c297905e9835ca9a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/discussion/references/document-format.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:9012f228e7a7759f14176e38b1b39946a3d810693a4a96319934b93ad71e80ac
+- kind: project-relative
+  target: claude
+  value: .claude/skills/discussion/references/examples.md
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:e0a056cc213de20ee0e311c1404a21bfdda9e70d2d2cc2b73748de1b53359a6c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/grill-with-docs
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/engineering/grill-with-docs
+  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/grill-with-docs/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/engineering/grill-with-docs
+  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
+  content_hash: sha256:610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165
+- kind: project-relative
+  target: claude
+  value: .claude/skills/grill-with-docs/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/engineering/grill-with-docs
+  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
+  content_hash: sha256:94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/grilling
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/productivity/grilling
+  active_owner: mattpocock/skills/skills/productivity/grilling
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/grilling/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/productivity/grilling
+  active_owner: mattpocock/skills/skills/productivity/grilling
+  content_hash: sha256:fa5c1e5ee76b1c8f1ae56101f52c9e239de75d5c578adc61227b92d10b7e52ef
+- kind: project-relative
+  target: claude
+  value: .claude/skills/grilling/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - mattpocock/skills/skills/productivity/grilling
+  active_owner: mattpocock/skills/skills/productivity/grilling
+  content_hash: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/source-driven-development
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/source-driven-development
+  active_owner: addyosmani/agent-skills/skills/source-driven-development
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/source-driven-development/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - addyosmani/agent-skills/skills/source-driven-development
+  active_owner: addyosmani/agent-skills/skills/source-driven-development
+  content_hash: sha256:719d4e54083c90ded62112fb41df3dbc4619309118ee0e6aa4d846f92d8204af
+- kind: project-relative
+  target: claude
+  value: .claude/skills/verification-before-completion
+  runtime: null
+  scope: project
+  owners:
+  - obra/superpowers/skills/verification-before-completion
+  active_owner: obra/superpowers/skills/verification-before-completion
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/verification-before-completion/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - obra/superpowers/skills/verification-before-completion
+  active_owner: obra/superpowers/skills/verification-before-completion
+  content_hash: sha256:2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3
+- kind: project-relative
+  target: codex
+  value: .codex/agents/code-reviewer.toml
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:c1da100c40961598eb98fe065c8f7ea3d796c7727cb001056c0531c1a83b2a42
+- kind: project-relative
+  target: codex
+  value: .codex/agents/security-auditor.toml
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:6f2bec3bded4da237fa14b74fd77720f0e7d96982f09288652aec26b228110dd
+- kind: project-relative
+  target: codex
+  value: .codex/agents/test-engineer.toml
+  runtime: null
+  scope: project
+  owners:
+  - seniorkonung/agent-skills
+  active_owner: seniorkonung/agent-skills
+  content_hash: sha256:424d1fe9b726af918098b6a8d6119e441aa5e2e45265c5cdfa5fba44f0c9f608
 local_deployed_files:
 - .claude/rules/language-preferences.md
 - .claude/rules/type-safe-design.md
