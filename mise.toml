@@ -6,4 +6,8 @@ uv = "0.13.8"
 "pipx:serena-agent" = "2.1.0"
 
 [tasks]
-setup = "apm install --frozen"
+setup = ["apm install --frozen", "npm ci --prefix web"]
+
+[tasks.web]
+run = "npm run dev"
+dir = "{{config_root}}/web"
