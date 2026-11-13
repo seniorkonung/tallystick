@@ -9,8 +9,52 @@ dependencies:
     - git: seniorkonung/agent-skills
       ref: main
       skills:
+        - code-review-and-quality
+        - idea-refine
+        - incremental-implementation
+        - observability-and-instrumentation
+        - planning-and-task-breakdown
+        - security-and-hardening
+        - shipping-and-launch
+        - test-driven-development
         - discussion
+        - openspec-review-change
+        - phased-planning
+        - implementation-decision-review
+        - openspec-review-implementation
         - change-summary
+        - openspec-task-deliberation
+        - openspec-gherkin-authoring
+        - c4-diagrams
+        - domain-modeling
+        - top-down-contract-development
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-update-change
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-verify-change
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-sync-specs
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-propose
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-new-change
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-explore
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-continue-change
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-archive-change
+    - git: Fission-AI/OpenSpec
+      ref: v2.0.0
+      path: skills/openspec-apply-change
   mcp: []
 includes: auto
 scripts: {}
