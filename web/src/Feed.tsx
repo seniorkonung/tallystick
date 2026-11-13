@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type Entry } from './db'
+import { db, isEmptyValue, type Entry, type EntryType } from './db'
+import { formatValue } from './fields'
 
 const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
 const dayWithYearFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -23,7 +24,7 @@ export function Feed() {
   const types = useLiveQuery(() => db.types.toArray())
   if (!entries || !types) return <div className="flex-1" />
 
-  const typeNames = new Map(types.map((t) => [t.id, t.name]))
+  const typesById = new Map(types.map((t) => [t.id, t]))
   const days: { key: string; time: number; entries: Entry[] }[] = []
   for (const entry of entries) {
     const key = dayKey(entry.createdAt)
@@ -41,17 +42,47 @@ export function Feed() {
           <section key={day.key} className="flex flex-col gap-2">
             <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(day.time)}</h2>
             {day.entries.map((entry) => (
-              <article key={entry.id} className="rounded-2xl border border-stone-200 bg-white px-4 py-3">
-                <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
-                  <span>{typeNames.get(entry.typeId)}</span>
-                  <span>{timeFormat.format(entry.createdAt)}</span>
-                </div>
-                <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">{entry.text}</p>
-              </article>
+              <EntryCard key={entry.id} entry={entry} type={typesById.get(entry.typeId)} />
             ))}
           </section>
         ))}
       </div>
     </div>
+  )
+}
+
+function EntryCard({ entry, type }: { entry: Entry; type: EntryType | undefined }) {
+  const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
+  return (
+    <article className="rounded-2xl border border-stone-200 bg-white px-4 py-3">
+      <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
+        <span>{type?.name}</span>
+        <span>{timeFormat.format(entry.createdAt)}</span>
+      </div>
+      {entry.text && (
+        <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">{entry.text}</p>
+      )}
+      {fields.length > 0 && (
+        <dl className="mt-2 flex flex-col gap-1 text-sm">
+          {fields.map((field) => {
+            const labels = formatValue(field, entry.values[field.id])
+            return (
+              <div key={field.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <dt className="text-stone-500">{field.name}</dt>
+                {field.kind === 'multi' ? (
+                  labels.map((label, i) => (
+                    <dd key={i} className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-800">
+                      {label}
+                    </dd>
+                  ))
+                ) : (
+                  <dd className="text-stone-900">{labels[0]}</dd>
+                )}
+              </div>
+            )
+          })}
+        </dl>
+      )}
+    </article>
   )
 }
