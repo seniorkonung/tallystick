@@ -55,6 +55,17 @@ dependencies:
     - git: Fission-AI/OpenSpec
       ref: v2.0.0
       path: skills/openspec-apply-change
-  mcp: []
+  mcp:
+    - name: serena
+      registry: false
+      transport: stdio
+      command: serena
+      args:
+        - start-mcp-server
+        - --context
+        - agent
+        - --project-from-cwd
+        - --enable-web-dashboard
+        - "false"
 includes: auto
 scripts: {}

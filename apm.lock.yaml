@@ -1616,6 +1616,15 @@ deployments:
   content_hash: sha256:5b03705c13c7ab66896fe35e544344957135c1323e39d30728c1af3ebd90318c
 - kind: project-relative
   target: claude
+  value: .claude/rules/serena.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:19259a943aa6dc70e70a3412f6bbf8631bfc4b6b996bd52bb21b59c3f3af3a8d
+- kind: project-relative
+  target: claude
   value: .claude/rules/type-safe-design.md
   runtime: null
   scope: project
@@ -2577,13 +2586,53 @@ deployments:
   - seniorkonung/agent-skills
   active_owner: seniorkonung/agent-skills
   content_hash: sha256:424d1fe9b726af918098b6a8d6119e441aa5e2e45265c5cdfa5fba44f0c9f608
+- kind: uri
+  target: mcp
+  value: serena
+  runtime: claude
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:b65423a4aabf2a5eaf829df6c4f8cff314414193fa82cd9b88a3abb9f9d75cd9
+- kind: uri
+  target: mcp
+  value: serena
+  runtime: codex
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:8799f075bfa24a648f790624cf244f6177308a2ccb95e966bf836f64f83a3277
+mcp_servers:
+- serena
+mcp_configs:
+  serena:
+    name: serena
+    transport: stdio
+    args:
+    - start-mcp-server
+    - --context
+    - agent
+    - --project-from-cwd
+    - --enable-web-dashboard
+    - 'false'
+    registry: false
+    command: serena
+mcp_target_servers:
+  claude:
+  - serena
+  codex:
+  - serena
 local_deployed_files:
 - .claude/rules/language-preferences.md
 - .claude/rules/product-context.md
+- .claude/rules/serena.md
 - .claude/rules/type-safe-design.md
 - .claude/rules/web-scout.md
 local_deployed_file_hashes:
   .claude/rules/language-preferences.md: sha256:e500f4facb5fc936b79aa3b7eb140bbd2f456d5d497da76a269ae7d5322ca1e8
   .claude/rules/product-context.md: sha256:796ea4f5c58f391ad3cf43c7e941b7d1e48224533937a9f287e4b74c4a48a041
+  .claude/rules/serena.md: sha256:19259a943aa6dc70e70a3412f6bbf8631bfc4b6b996bd52bb21b59c3f3af3a8d
   .claude/rules/type-safe-design.md: sha256:91e3d48f0eb3d7f65f523e59c7734221f93208c91557d07ddc40dc2a9c8dd867
   .claude/rules/web-scout.md: sha256:dfa323f191dfb2e8040174a711d8480142eceea19bf03375a9fb0db1d8f1d469

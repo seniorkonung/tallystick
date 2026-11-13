@@ -2,6 +2,8 @@
 node = "26.13.1"
 "github:microsoft/apm" = "0.35.1"
 "npm:@fission-ai/openspec" = "2.0.0"
+uv = "0.13.8"
+"pipx:serena-agent" = "2.1.0"
 
 [tasks]
 setup = "apm install --frozen"
