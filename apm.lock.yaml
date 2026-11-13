@@ -1616,6 +1616,15 @@ deployments:
   content_hash: sha256:91e3d48f0eb3d7f65f523e59c7734221f93208c91557d07ddc40dc2a9c8dd867
 - kind: project-relative
   target: claude
+  value: .claude/rules/web-prototype.md
+  runtime: null
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: sha256:8558bdc91a8668f3d14d245b15697a7057ef6be44c5839eb2f02cfe6c6f17788
+- kind: project-relative
+  target: claude
   value: .claude/skills/c4-diagrams
   runtime: null
   scope: project
@@ -2562,6 +2571,8 @@ deployments:
 local_deployed_files:
 - .claude/rules/language-preferences.md
 - .claude/rules/type-safe-design.md
+- .claude/rules/web-prototype.md
 local_deployed_file_hashes:
   .claude/rules/language-preferences.md: sha256:e500f4facb5fc936b79aa3b7eb140bbd2f456d5d497da76a269ae7d5322ca1e8
   .claude/rules/type-safe-design.md: sha256:91e3d48f0eb3d7f65f523e59c7734221f93208c91557d07ddc40dc2a9c8dd867
+  .claude/rules/web-prototype.md: sha256:8558bdc91a8668f3d14d245b15697a7057ef6be44c5839eb2f02cfe6c6f17788
