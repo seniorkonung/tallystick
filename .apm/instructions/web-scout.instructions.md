@@ -12,4 +12,6 @@ applyTo: "web/**"
 - Do not report justifications for each element; keep the code minimal instead.
 - Prefer speed of iteration over type rigor; plain TypeScript is enough.
 
+Record significant decisions about `web/` as ADRs in `web/docs/adr/`, never in the repository-level `docs/adr/`, which belongs to the main app.
+
 Still apply: language preferences, commit conventions, and domain terms from `CONTEXT.md`.

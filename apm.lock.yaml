@@ -1640,7 +1640,7 @@ deployments:
   owners:
   - .
   active_owner: .
-  content_hash: sha256:dfa323f191dfb2e8040174a711d8480142eceea19bf03375a9fb0db1d8f1d469
+  content_hash: sha256:6d6b9fbf7871f1b5f8a43006bab850a7b32809ce5637340cab7305b1c23340b8
 - kind: project-relative
   target: claude
   value: .claude/skills/c4-diagrams
@@ -2635,4 +2635,4 @@ local_deployed_file_hashes:
   .claude/rules/product-context.md: sha256:796ea4f5c58f391ad3cf43c7e941b7d1e48224533937a9f287e4b74c4a48a041
   .claude/rules/serena.md: sha256:19259a943aa6dc70e70a3412f6bbf8631bfc4b6b996bd52bb21b59c3f3af3a8d
   .claude/rules/type-safe-design.md: sha256:91e3d48f0eb3d7f65f523e59c7734221f93208c91557d07ddc40dc2a9c8dd867
-  .claude/rules/web-scout.md: sha256:dfa323f191dfb2e8040174a711d8480142eceea19bf03375a9fb0db1d8f1d469
+  .claude/rules/web-scout.md: sha256:6d6b9fbf7871f1b5f8a43006bab850a7b32809ce5637340cab7305b1c23340b8
