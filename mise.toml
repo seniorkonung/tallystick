@@ -1,4 +1,5 @@
 [tools]
+node = "26.13.1"
 "github:microsoft/apm" = "0.35.1"
 
 [tasks]

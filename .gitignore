@@ -1,7 +1,10 @@
 .agents/
 .codex/
 .claude/
+.mcp.json
 
 node_modules/
 apm_modules/
 dist/
+build/
+context/
