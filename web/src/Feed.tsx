@@ -50,7 +50,7 @@ export function Feed() {
   return (
     // column-reverse держит прокрутку у нижнего края, как в мессенджере
     <div ref={scroller} className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain">
-      <div className="flex flex-col gap-2 px-3 py-4">
+      <div className="flex flex-col gap-2 px-3 pt-4 pb-[calc(var(--composer-height,0px)+0.5rem)]">
         {entries.length === 0 && <p className="py-10 text-center text-sm text-stone-400">Записей пока нет</p>}
         {days.map((day) => (
           <section key={day.key} className="flex flex-col gap-2">

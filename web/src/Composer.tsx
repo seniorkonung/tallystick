@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { FieldInput } from './FieldInput'
 import { TypeEditor } from './TypeEditor'
 import { TypePicker } from './TypePicker'
@@ -20,6 +20,16 @@ export function Composer() {
   const [picking, setPicking] = useState(false)
   const [editing, setEditing] = useState<Editing>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
+
+  // Лента получает нижний отступ по высоте панели, чтобы последняя запись не пряталась под ней
+  const measure = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    const observer = new ResizeObserver(() => {
+      document.documentElement.style.setProperty('--composer-height', `${el.offsetHeight}px`)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   if (!types) return null
   const sortedTypes = [...types].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
@@ -52,84 +62,90 @@ export function Composer() {
   }
 
   return (
-    <div className="px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-      {activeField && (
-        <FieldInput
-          field={activeField}
-          value={values[activeField.id]}
-          onChange={(value) => {
-            const next = { ...values }
-            if (value === undefined) delete next[activeField.id]
-            else next[activeField.id] = value
-            setValues(next)
-          }}
-          onClose={() => setActiveFieldId(null)}
-        />
-      )}
-
-      <div className="rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
-        <textarea
-          ref={textarea}
-          value={text}
-          rows={1}
-          placeholder="Что произошло?"
-          className="block max-h-[200px] w-full resize-none bg-transparent px-2 py-2 font-serif text-[15px] outline-none placeholder:text-stone-400"
-          onChange={(e) => {
-            setText(e.target.value)
-            resize()
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault()
-              void send()
-            }
-          }}
-        />
-
-        {type.fields.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 px-1 pb-2">
-            {type.fields.map((field) => {
-              const value = values[field.id]
-              const filled = !isEmptyValue(value)
-              return (
-                <button
-                  key={field.id}
-                  type="button"
-                  onClick={() => setActiveFieldId(activeFieldId === field.id ? null : field.id)}
-                  className={`rounded-full px-3 py-1 text-sm ${
-                    filled ? 'bg-stone-100 text-stone-900' : 'border border-dashed border-stone-300 text-stone-500'
-                  } ${activeFieldId === field.id ? 'ring-2 ring-stone-900' : ''}`}
-                >
-                  {field.name}
-                  {filled && value !== undefined && <span className="ml-1 font-medium">{formatValue(field, value).join(', ')}</span>}
-                </button>
-              )
-            })}
-          </div>
+    <>
+      {/* Панель висит над лентой: прозрачные места пропускают касания в ленту */}
+      <div
+        ref={measure}
+        className="pointer-events-none absolute inset-x-0 bottom-0 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] *:pointer-events-auto"
+      >
+        {activeField && (
+          <FieldInput
+            field={activeField}
+            value={values[activeField.id]}
+            onChange={(value) => {
+              const next = { ...values }
+              if (value === undefined) delete next[activeField.id]
+              else next[activeField.id] = value
+              setValues(next)
+            }}
+            onClose={() => setActiveFieldId(null)}
+          />
         )}
 
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
-            onClick={() => setPicking(true)}
-          >
-            {type.name}
-            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="m6 9 6 6 6-6" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            aria-label="Отправить"
-            disabled={!canSend}
-            onClick={() => void send()}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-orange-600 text-white disabled:bg-stone-200"
-          >
-            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 19V5M5 12l7-7 7 7" />
-            </svg>
-          </button>
+        <div className="rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
+          <textarea
+            ref={textarea}
+            value={text}
+            rows={1}
+            placeholder="Что произошло?"
+            className="block max-h-[200px] w-full resize-none bg-transparent px-2 py-2 font-serif text-[15px] outline-none placeholder:text-stone-400"
+            onChange={(e) => {
+              setText(e.target.value)
+              resize()
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                void send()
+              }
+            }}
+          />
+
+          {type.fields.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-1 pb-2">
+              {type.fields.map((field) => {
+                const value = values[field.id]
+                const filled = !isEmptyValue(value)
+                return (
+                  <button
+                    key={field.id}
+                    type="button"
+                    onClick={() => setActiveFieldId(activeFieldId === field.id ? null : field.id)}
+                    className={`rounded-full px-3 py-1 text-sm ${
+                      filled ? 'bg-stone-100 text-stone-900' : 'border border-dashed border-stone-300 text-stone-500'
+                    } ${activeFieldId === field.id ? 'ring-2 ring-stone-900' : ''}`}
+                  >
+                    {field.name}
+                    {filled && value !== undefined && <span className="ml-1 font-medium">{formatValue(field, value).join(', ')}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+              onClick={() => setPicking(true)}
+            >
+              {type.name}
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              aria-label="Отправить"
+              disabled={!canSend}
+              onClick={() => void send()}
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-orange-600 text-white disabled:bg-stone-200"
+            >
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -165,6 +181,6 @@ export function Composer() {
           onClose={() => setEditing(null)}
         />
       )}
-    </div>
+    </>
   )
 }
