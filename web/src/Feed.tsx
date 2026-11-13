@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useEffect, useRef } from 'react'
 import { db, isEmptyValue, type Entry, type EntryType } from './db'
 import { formatValue } from './fields'
 
@@ -22,6 +23,19 @@ function dayLabel(time: number) {
 export function Feed() {
   const entries = useLiveQuery(() => db.entries.orderBy('createdAt').toArray())
   const types = useLiveQuery(() => db.types.toArray())
+  const scroller = useRef<HTMLDivElement>(null)
+  const lastId = entries?.at(-1)?.id
+  const prevLastId = useRef(lastId)
+
+  // Записи добавляются только в конец ленты: новая последняя запись — только что созданная
+  useEffect(() => {
+    if (prevLastId.current !== undefined && lastId !== prevLastId.current) {
+      // В column-reverse нулевая прокрутка — самый низ
+      scroller.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    prevLastId.current = lastId
+  }, [lastId])
+
   if (!entries || !types) return <div className="flex-1" />
 
   const typesById = new Map(types.map((t) => [t.id, t]))
@@ -35,7 +49,7 @@ export function Feed() {
 
   return (
     // column-reverse держит прокрутку у нижнего края, как в мессенджере
-    <div className="flex flex-1 flex-col-reverse overflow-y-auto">
+    <div ref={scroller} className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain">
       <div className="flex flex-col gap-2 px-3 py-4">
         {entries.length === 0 && <p className="py-10 text-center text-sm text-stone-400">Записей пока нет</p>}
         {days.map((day) => (
