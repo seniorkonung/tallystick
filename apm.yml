@@ -1,0 +1,11 @@
+name: tallystick
+version: 0.0.1
+targets:
+  - claude
+  - codex
+  - agent-skills
+dependencies:
+  apm: []
+  mcp: []
+includes: auto
+scripts: {}

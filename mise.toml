@@ -1,0 +1,5 @@
+[tools]
+"github:microsoft/apm" = "0.35.1"
+
+[tasks]
+setup = "apm install --frozen"

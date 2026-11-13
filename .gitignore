@@ -1,0 +1,7 @@
+.agents/
+.codex/
+.claude/
+
+node_modules/
+apm_modules/
+dist/
