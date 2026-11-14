@@ -110,7 +110,7 @@ export function Feed() {
       attachments={attachmentsByEntry.get(entry.id) ?? []}
       onAttachment={setViewing}
       // На экране ответов цитата исходной записи не нужна — она наверху
-      quote={entry.replyTo && entry.replyTo !== root?.id ? entriesById.get(entry.replyTo) : undefined}
+      quote={entry.replyTo && entry.replyTo !== root?.id ? (entriesById.get(entry.replyTo) ?? 'deleted') : undefined}
       replyCount={entry.id === root?.id ? 0 : (replyCounts.get(entry.id) ?? 0)}
       highlighted={entry.id === editingEntryId || entry.id === highlightId}
       onOpen={() => setMenuEntryId(entry.id)}
@@ -219,8 +219,8 @@ type EntryCardProps = {
   projects: Project[]
   attachments: Attachment[]
   onAttachment: (attachment: Attachment) => void
-  // Исходная запись, если это ответ
-  quote: Entry | undefined
+  // Исходная запись, если это ответ; 'deleted' — исходную удалили
+  quote: Entry | 'deleted' | undefined
   replyCount: number
   // Запись в редактировании или найдена по цитате
   highlighted: boolean
@@ -248,7 +248,12 @@ function EntryCard(props: EntryCardProps) {
         <span>{timeFormat.format(entry.createdAt)}</span>
       </div>
       <div className={entry.actual ? '' : 'opacity-55'}>
-        {quote && (
+        {quote === 'deleted' && (
+          <p className="mb-2 rounded-lg border-l-[3px] border-stone-300 bg-stone-100 px-2.5 py-1.5 text-xs text-stone-500">
+            Запись удалена
+          </p>
+        )}
+        {quote && quote !== 'deleted' && (
           <button
             type="button"
             className="mb-2 block w-full rounded-lg border-l-[3px] border-orange-500 bg-[#F7EFE8] px-2.5 py-1.5 text-left"

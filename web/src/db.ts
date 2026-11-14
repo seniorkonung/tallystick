@@ -235,6 +235,14 @@ async function addAttachments(entryId: string, files: PreparedFile[], now: numbe
   await db.attachments.bulkAdd(files.map((f, i) => ({ ...f, id: crypto.randomUUID(), entryId, createdAt: now + i })))
 }
 
+// Запись удаляется безвозвратно вместе с вложениями; ответы на неё остаются в ленте
+export async function deleteEntry(entryId: string) {
+  await db.transaction('rw', db.entries, db.attachments, async () => {
+    await db.attachments.where('entryId').equals(entryId).delete()
+    await db.entries.delete(entryId)
+  })
+}
+
 export async function setActual(entryId: string, actual: boolean) {
   await db.entries.update(entryId, { actual })
 }
