@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { db, deleteType, saveType, type EntryType, type Field, type FieldKind } from './db'
 import { fieldKindLabels, newField } from './fields'
+import { pluralRu } from './plural'
 
 type Props = {
   // null — создание нового типа
@@ -208,7 +209,7 @@ function DeleteSection({ type, types, onDeleted }: { type: EntryType; types: Ent
     const target = others.find((t) => t.id === targetId)
     if (!target) return
     const message = count
-      ? `Удалить тип «${type.name}»? ${entriesMove(count)} в тип «${target.name}», значения их полей пропадут.`
+      ? `Удалить тип «${type.name}»? ${count} ${pluralRu(count, ['запись перейдёт', 'записи перейдут', 'записей перейдут'])} в тип «${target.name}», значения их полей пропадут.`
       : `Удалить тип «${type.name}»?`
     if (!window.confirm(message)) return
     await deleteType(type.id, target.id)
@@ -241,15 +242,3 @@ function DeleteSection({ type, types, onDeleted }: { type: EntryType; types: Ent
   )
 }
 
-const plural = new Intl.PluralRules('ru-RU')
-
-function entriesMove(count: number) {
-  switch (plural.select(count)) {
-    case 'one':
-      return `${count} запись перейдёт`
-    case 'few':
-      return `${count} записи перейдут`
-    default:
-      return `${count} записей перейдут`
-  }
-}

@@ -27,11 +27,48 @@ export type Entry = {
   text: string
   typeId: string
   values: FieldValues
+  projectIds: string[]
+}
+
+export type ProjectStatus = 'active' | 'completed'
+
+export type Project = {
+  id: string
+  name: string
+  // Индекс в палитре projectColors
+  color: number
+  status: ProjectStatus
+  categoryId: string | null
+  // Название категории на момент завершения: завершённый проект её замораживает
+  frozenCategoryName: string | null
+  startedAt: number
+  completedAt: number | null
+}
+
+export type Category = {
+  id: string
+  name: string
+  createdAt: number
+}
+
+export type MarkKind = 'started' | 'completed' | 'reopened'
+
+// Служебная отметка в ленте — её создаёт приложение, это не запись
+export type Mark = {
+  id: string
+  createdAt: number
+  projectId: string
+  kind: MarkKind
+  // Число записей проекта на момент завершения
+  entryCount: number | null
 }
 
 export const db = new Dexie('tallystick') as Dexie & {
   types: EntityTable<EntryType, 'id'>
   entries: EntityTable<Entry, 'id'>
+  projects: EntityTable<Project, 'id'>
+  categories: EntityTable<Category, 'id'>
+  marks: EntityTable<Mark, 'id'>
 }
 
 db.version(1).stores({
@@ -47,6 +84,19 @@ db.version(2)
     })
     await tx.table('entries').toCollection().modify((entry) => {
       entry.values ??= {}
+    })
+  })
+
+db.version(3)
+  .stores({
+    entries: 'id, createdAt, typeId, *projectIds',
+    projects: 'id, status',
+    categories: 'id, createdAt',
+    marks: 'id, createdAt',
+  })
+  .upgrade(async (tx) => {
+    await tx.table('entries').toCollection().modify((entry) => {
+      entry.projectIds ??= []
     })
   })
 
@@ -69,13 +119,86 @@ export function valuesForType(type: EntryType, values: FieldValues): FieldValues
   return result
 }
 
-export async function addEntry(type: EntryType, text: string, values: FieldValues) {
-  await db.entries.add({
+// Привязка записи к завершённому проекту возобновляет его
+export async function addEntry(type: EntryType, text: string, values: FieldValues, projectIds: string[]) {
+  await db.transaction('rw', db.entries, db.projects, db.categories, db.marks, async () => {
+    const now = Date.now()
+    const projects = await db.projects.bulkGet(projectIds)
+    for (const project of projects) {
+      if (project?.status === 'completed') await reopenProject(project, now)
+    }
+    await db.entries.add({
+      id: crypto.randomUUID(),
+      createdAt: now,
+      text,
+      typeId: type.id,
+      values: valuesForType(type, values),
+      projectIds,
+    })
+  })
+}
+
+async function addMark(projectId: string, kind: MarkKind, createdAt: number, entryCount: number | null = null) {
+  await db.marks.add({ id: crypto.randomUUID(), createdAt, projectId, kind, entryCount })
+}
+
+export async function createProject(name: string, categoryId: string | null) {
+  const project: Project = {
     id: crypto.randomUUID(),
-    createdAt: Date.now(),
-    text,
-    typeId: type.id,
-    values: valuesForType(type, values),
+    name,
+    color: (await db.projects.count()) % 7,
+    status: 'active',
+    categoryId,
+    frozenCategoryName: null,
+    startedAt: Date.now(),
+    completedAt: null,
+  }
+  await db.transaction('rw', db.projects, db.marks, async () => {
+    await db.projects.add(project)
+    await addMark(project.id, 'started', project.startedAt)
+  })
+  return project
+}
+
+export async function completeProject(project: Project) {
+  await db.transaction('rw', db.entries, db.projects, db.categories, db.marks, async () => {
+    const now = Date.now()
+    const category = project.categoryId ? await db.categories.get(project.categoryId) : undefined
+    const entryCount = await db.entries.where('projectIds').equals(project.id).count()
+    await db.projects.update(project.id, {
+      status: 'completed',
+      completedAt: now,
+      frozenCategoryName: category?.name ?? null,
+    })
+    await addMark(project.id, 'completed', now, entryCount)
+  })
+}
+
+// Проект возвращается в прежнюю категорию, если она ещё есть; дата начала сохраняется
+export async function reopenProject(project: Project, now = Date.now()) {
+  await db.transaction('rw', db.projects, db.categories, db.marks, async () => {
+    const category = project.categoryId ? await db.categories.get(project.categoryId) : undefined
+    await db.projects.update(project.id, {
+      status: 'active',
+      completedAt: null,
+      categoryId: category?.id ?? null,
+      frozenCategoryName: null,
+    })
+    await addMark(project.id, 'reopened', now)
+  })
+}
+
+export async function createCategory(name: string) {
+  const category: Category = { id: crypto.randomUUID(), name, createdAt: Date.now() }
+  await db.categories.add(category)
+  return category
+}
+
+// Проекты удалённой категории остаются без категории
+export async function deleteCategory(categoryId: string) {
+  await db.transaction('rw', db.projects, db.categories, async () => {
+    await db.projects.filter((p) => p.categoryId === categoryId).modify({ categoryId: null })
+    await db.categories.delete(categoryId)
   })
 }
 

@@ -1,7 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef } from 'react'
-import { db, isEmptyValue, type Entry, type EntryType } from './db'
+import { ProjectChip } from './ProjectChip'
+import { db, isEmptyValue, type Entry, type EntryType, type Mark, type Project } from './db'
 import { formatValue } from './fields'
+import { pluralRu } from './plural'
 
 const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
 const dayWithYearFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -23,6 +25,8 @@ function dayLabel(time: number) {
 export function Feed() {
   const entries = useLiveQuery(() => db.entries.orderBy('createdAt').toArray())
   const types = useLiveQuery(() => db.types.toArray())
+  const projects = useLiveQuery(() => db.projects.toArray())
+  const marks = useLiveQuery(() => db.marks.toArray())
   const scroller = useRef<HTMLDivElement>(null)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
@@ -36,15 +40,21 @@ export function Feed() {
     prevLastId.current = lastId
   }, [lastId])
 
-  if (!entries || !types) return <div className="flex-1" />
+  if (!entries || !types || !projects || !marks) return <div className="flex-1" />
 
   const typesById = new Map(types.map((t) => [t.id, t]))
-  const days: { key: string; time: number; entries: Entry[] }[] = []
-  for (const entry of entries) {
-    const key = dayKey(entry.createdAt)
+  const projectsById = new Map(projects.map((p) => [p.id, p]))
+  // Записи и служебные отметки в одной хронологии; при равном времени отметка идёт раньше
+  const items: Item[] = [
+    ...marks.map((mark): Item => ({ kind: 'mark', mark, time: mark.createdAt })),
+    ...entries.map((entry): Item => ({ kind: 'entry', entry, time: entry.createdAt })),
+  ].sort((a, b) => a.time - b.time)
+  const days: { key: string; time: number; items: Item[] }[] = []
+  for (const item of items) {
+    const key = dayKey(item.time)
     const last = days.at(-1)
-    if (last?.key === key) last.entries.push(entry)
-    else days.push({ key, time: entry.createdAt, entries: [entry] })
+    if (last?.key === key) last.items.push(item)
+    else days.push({ key, time: item.time, items: [item] })
   }
 
   return (
@@ -55,9 +65,18 @@ export function Feed() {
         {days.map((day) => (
           <section key={day.key} className="flex flex-col gap-2">
             <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(day.time)}</h2>
-            {day.entries.map((entry) => (
-              <EntryCard key={entry.id} entry={entry} type={typesById.get(entry.typeId)} />
-            ))}
+            {day.items.map((item) =>
+              item.kind === 'entry' ? (
+                <EntryCard
+                  key={item.entry.id}
+                  entry={item.entry}
+                  type={typesById.get(item.entry.typeId)}
+                  projects={item.entry.projectIds.flatMap((id) => projectsById.get(id) ?? [])}
+                />
+              ) : (
+                <MarkLine key={item.mark.id} mark={item.mark} project={projectsById.get(item.mark.projectId)} />
+              ),
+            )}
           </section>
         ))}
       </div>
@@ -65,7 +84,30 @@ export function Feed() {
   )
 }
 
-function EntryCard({ entry, type }: { entry: Entry; type: EntryType | undefined }) {
+type Item = { kind: 'entry'; entry: Entry; time: number } | { kind: 'mark'; mark: Mark; time: number }
+
+function MarkLine({ mark, project }: { mark: Mark; project: Project | undefined }) {
+  const name = `«${project?.name ?? 'Проект'}»`
+  let text: string
+  switch (mark.kind) {
+    case 'started':
+      text = `${name} начат`
+      break
+    case 'completed':
+      text = `${name} завершён · ${mark.entryCount ?? 0} ${pluralRu(mark.entryCount ?? 0, ['запись', 'записи', 'записей'])}`
+      break
+    case 'reopened':
+      text = `${name} снова в работе`
+      break
+  }
+  return (
+    <p className="py-1 text-center text-xs text-stone-400">
+      {text} · {timeFormat.format(mark.createdAt)}
+    </p>
+  )
+}
+
+function EntryCard({ entry, type, projects }: { entry: Entry; type: EntryType | undefined; projects: Project[] }) {
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   return (
     <article className="rounded-2xl border border-stone-200 bg-white px-4 py-3">
@@ -73,6 +115,13 @@ function EntryCard({ entry, type }: { entry: Entry; type: EntryType | undefined 
         <span>{type?.name}</span>
         <span>{timeFormat.format(entry.createdAt)}</span>
       </div>
+      {projects.length > 0 && (
+        <div className="mb-1.5 flex flex-wrap gap-1">
+          {projects.map((project) => (
+            <ProjectChip key={project.id} project={project} />
+          ))}
+        </div>
+      )}
       {entry.text && (
         <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">{entry.text}</p>
       )}
