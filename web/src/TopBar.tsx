@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FilterSheet } from './FilterSheet'
+import { useDateJump } from './dateJumpStore'
 import { Gallery } from './Gallery'
 import { Sidebar } from './Sidebar'
 import { FilterChips } from './FilterChips'
@@ -79,6 +80,14 @@ export function TopBar() {
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="11" cy="11" r="7" />
                 <path d="m20 20-3.5-3.5" />
+              </svg>
+            </button>
+          )}
+          {!searching && (
+            <button type="button" aria-label="Перейти к дате" className={iconButton} onClick={() => useDateJump.setState({ open: true })}>
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="5" width="16" height="15" rx="2" />
+                <path d="M4 10h16M9 3v4M15 3v4" />
               </svg>
             </button>
           )}

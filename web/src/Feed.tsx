@@ -8,6 +8,7 @@ import { ProjectChip } from './ProjectChip'
 import { db, isEmptyValue, type Attachment, type Entry, type EntryType, type Mark, type Project } from './db'
 import { formatValue } from './fields'
 import { pluralRu } from './plural'
+import { useDateJump } from './dateJumpStore'
 import { focusEntry, useHighlight } from './focusEntry'
 import { useThread } from './threadStore'
 
@@ -18,6 +19,11 @@ const timeFormat = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '
 function dayKey(time: number) {
   const d = new Date(time)
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
+function dayStart(time: number) {
+  const d = new Date(time)
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }
 
 function dayLabel(time: number) {
@@ -130,10 +136,20 @@ export function Feed() {
           </p>
         )}
         {days.map((day) => (
-          <section key={day.key} className="flex flex-col gap-2">
+          <section
+            key={day.key}
+            data-day={dayStart(day.time)}
+            className="flex scroll-mt-[calc(var(--topbar-height,0px)+0.5rem)] flex-col gap-2"
+          >
             {/* На экране ответов день исходной записи уже подписан над ней */}
             {(!root || day.key !== dayKey(root.createdAt)) && (
-              <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(day.time)}</h2>
+              <button
+                type="button"
+                className="self-center py-2 text-xs font-medium text-stone-400"
+                onClick={() => useDateJump.setState({ open: true })}
+              >
+                {dayLabel(day.time)}
+              </button>
             )}
             {day.items.map((item) =>
               item.kind === 'entry' ? (

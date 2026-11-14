@@ -1,4 +1,5 @@
 import { Composer } from './Composer'
+import { DateJump } from './DateJump'
 import { Feed } from './Feed'
 import { TopBar } from './TopBar'
 
@@ -8,6 +9,7 @@ export default function App() {
       <Feed />
       <TopBar />
       <Composer />
+      <DateJump />
     </div>
   )
 }
