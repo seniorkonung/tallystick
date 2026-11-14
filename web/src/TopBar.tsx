@@ -30,6 +30,9 @@ export function TopBar() {
   if (filters.actuality !== 'all') {
     chips.push({ key: 'actuality', label: filters.actuality === 'actual' ? 'Актуальные' : 'Неактуальные', remove: { actuality: 'all' } })
   }
+  if (filters.hideReplies) {
+    chips.push({ key: 'replies', label: 'Без ответов', remove: { hideReplies: false } })
+  }
   if (filters.from || filters.to) {
     const label = filters.from && filters.to ? `${formatDate(filters.from)} — ${formatDate(filters.to)}` : filters.from ? `с ${formatDate(filters.from)}` : `по ${formatDate(filters.to)}`
     chips.push({ key: 'period', label, remove: { from: '', to: '' } })

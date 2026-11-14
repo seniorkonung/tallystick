@@ -12,6 +12,8 @@ export type Filters = {
   from: string
   to: string
   text: string
+  // В ленте остаются только записи, которые сами не ответы; ответы открываются по их счётчикам
+  hideReplies: boolean
   conditions: Condition[]
   // Как сочетаются условия по полям между собой; с остальными фильтрами — всегда «и»
   conditionMode: 'all' | 'any'
@@ -24,6 +26,7 @@ export const emptyFilters: Filters = {
   from: '',
   to: '',
   text: '',
+  hideReplies: false,
   conditions: [],
   conditionMode: 'all',
 }
@@ -49,6 +52,7 @@ export function isFiltered(f: Filters) {
     f.from !== '' ||
     f.to !== '' ||
     f.text.trim() !== '' ||
+    f.hideReplies ||
     f.conditions.length > 0
   )
 }
@@ -67,6 +71,7 @@ function inPeriod(f: Filters, time: number) {
 export function matchEntry(f: Filters, entry: Entry, typesById: Map<string, EntryType>) {
   if (f.actuality === 'actual' && !entry.actual) return false
   if (f.actuality === 'inactual' && entry.actual) return false
+  if (f.hideReplies && entry.replyTo) return false
   if (f.typeIds.length && !f.typeIds.includes(entry.typeId)) return false
   if (f.projectIds.length && !entry.projectIds.some((id) => f.projectIds.includes(id))) return false
   const text = f.text.trim().toLowerCase()
