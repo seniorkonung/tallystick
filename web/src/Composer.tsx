@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FieldInput } from './FieldInput'
 import { ProjectChip } from './ProjectChip'
 import { ProjectEditor } from './ProjectEditor'
@@ -9,6 +9,7 @@ import { TypePicker } from './TypePicker'
 import { useComposer } from './composerStore'
 import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType } from './db'
 import { formatValue } from './fields'
+import { useMeasuredHeight } from './useMeasuredHeight'
 
 // Редактор типа: null — новый тип
 type TypeEditing = { type: EntryType | null } | null
@@ -29,14 +30,7 @@ export function Composer() {
   const textarea = useRef<HTMLTextAreaElement>(null)
 
   // Лента получает нижний отступ по высоте панели, чтобы последняя запись не пряталась под ней
-  const measure = useCallback((el: HTMLDivElement | null) => {
-    if (!el) return
-    const observer = new ResizeObserver(() => {
-      document.documentElement.style.setProperty('--composer-height', `${el.offsetHeight}px`)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+  const measure = useMeasuredHeight('--composer-height')
 
   // Текст меняется и снаружи — при загрузке записи в редактирование
   useEffect(() => {
@@ -229,7 +223,16 @@ export function Composer() {
         />
       )}
 
-      {editingProjectId && <ProjectEditor projectId={editingProjectId} onClose={() => setEditingProjectId(null)} />}
+      {editingProjectId && (
+        <ProjectEditor
+          projectId={editingProjectId}
+          onClose={() => setEditingProjectId(null)}
+          onShowEntries={() => {
+            setEditingProjectId(null)
+            setPickingProjects(false)
+          }}
+        />
+      )}
 
       {typeEditing && (
         <TypeEditor

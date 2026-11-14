@@ -1,16 +1,26 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { completeProject, db, reopenProject, type Project } from './db'
+import { emptyFilters, useFilters } from './filterStore'
 import { pluralRu } from './plural'
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
-export function ProjectEditor({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+type Props = {
+  projectId: string
+  onClose: () => void
+  // Закрывает всё поверх ленты, чтобы показать записи проекта
+  onShowEntries: () => void
+}
+
+export function ProjectEditor({ projectId, onClose, onShowEntries }: Props) {
   const project = useLiveQuery(() => db.projects.get(projectId), [projectId])
   const categories = useLiveQuery(() => db.categories.orderBy('createdAt').toArray())
   const count = useLiveQuery(() => db.entries.where('projectIds').equals(projectId).count(), [projectId])
   if (!project || !categories || count === undefined) return null
-  return <Form key={project.id} project={project} categories={categories} count={count} onClose={onClose} />
+  return (
+    <Form key={project.id} project={project} categories={categories} count={count} onClose={onClose} onShowEntries={onShowEntries} />
+  )
 }
 
 type FormProps = {
@@ -18,9 +28,11 @@ type FormProps = {
   categories: { id: string; name: string }[]
   count: number
   onClose: () => void
+  onShowEntries: () => void
 }
 
-function Form({ project, categories, count, onClose }: FormProps) {
+function Form({ project, categories, count, onClose, onShowEntries }: FormProps) {
+  const setFilters = useFilters((s) => s.set)
   const [name, setName] = useState(project.name)
   const [categoryId, setCategoryId] = useState(project.categoryId ?? '')
   const active = project.status === 'active'
@@ -97,6 +109,16 @@ function Form({ project, categories, count, onClose }: FormProps) {
             onClick={() => void (active ? completeProject(project) : reopenProject(project))}
           >
             {active ? 'Завершить проект' : 'Вернуть в работу'}
+          </button>
+          <button
+            type="button"
+            className="mt-2 w-full rounded-xl bg-stone-100 py-2.5 font-medium text-stone-900"
+            onClick={() => {
+              setFilters({ ...emptyFilters, projectIds: [project.id] })
+              onShowEntries()
+            }}
+          >
+            Показать записи в ленте
           </button>
         </div>
       </div>

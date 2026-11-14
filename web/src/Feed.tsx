@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { EntryMenu } from './EntryMenu'
 import { useComposer } from './composerStore'
+import { isFiltered, matchEntry, matchMark, useFilters } from './filterStore'
 import { ProjectChip } from './ProjectChip'
 import { db, isEmptyValue, type Entry, type EntryType, type Mark, type Project } from './db'
 import { formatValue } from './fields'
@@ -32,6 +33,7 @@ export function Feed() {
   const scroller = useRef<HTMLDivElement>(null)
   const [menuEntryId, setMenuEntryId] = useState<string | null>(null)
   const editingEntryId = useComposer((s) => s.editingEntryId)
+  const filters = useFilters((s) => s.filters)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
 
@@ -44,14 +46,20 @@ export function Feed() {
     prevLastId.current = lastId
   }, [lastId])
 
+  // Новый набор фильтров показывает ленту с самых свежих записей
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 })
+  }, [filters])
+
   if (!entries || !types || !projects || !marks) return <div className="flex-1" />
 
   const typesById = new Map(types.map((t) => [t.id, t]))
   const projectsById = new Map(projects.map((p) => [p.id, p]))
   // Записи и служебные отметки в одной хронологии; при равном времени отметка идёт раньше
+  const shownEntries = entries.filter((e) => matchEntry(filters, e))
   const items: Item[] = [
-    ...marks.map((mark): Item => ({ kind: 'mark', mark, time: mark.createdAt })),
-    ...entries.map((entry): Item => ({ kind: 'entry', entry, time: entry.createdAt })),
+    ...marks.filter((m) => matchMark(filters, m)).map((mark): Item => ({ kind: 'mark', mark, time: mark.createdAt })),
+    ...shownEntries.map((entry): Item => ({ kind: 'entry', entry, time: entry.createdAt })),
   ].sort((a, b) => a.time - b.time)
   const days: { key: string; time: number; items: Item[] }[] = []
   for (const item of items) {
@@ -66,8 +74,12 @@ export function Feed() {
   return (
     // column-reverse держит прокрутку у нижнего края, как в мессенджере
     <div ref={scroller} className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain">
-      <div className="flex flex-col gap-2 px-3 pt-4 pb-[calc(var(--composer-height,0px)+0.5rem)]">
-        {entries.length === 0 && <p className="py-10 text-center text-sm text-stone-400">Записей пока нет</p>}
+      <div className="flex flex-col gap-2 px-3 pt-[calc(var(--topbar-height,0px)+0.5rem)] pb-[calc(var(--composer-height,0px)+0.5rem)]">
+        {shownEntries.length === 0 && (
+          <p className="py-10 text-center text-sm text-stone-400">
+            {isFiltered(filters) ? 'Под фильтры ничего не подходит' : 'Записей пока нет'}
+          </p>
+        )}
         {days.map((day) => (
           <section key={day.key} className="flex flex-col gap-2">
             <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(day.time)}</h2>
