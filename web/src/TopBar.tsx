@@ -1,57 +1,26 @@
-import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { FilterSheet } from './FilterSheet'
-import { formatCondition } from './conditions'
-import { db } from './db'
-import { isFiltered, useFilters, type Filters } from './filterStore'
+import { Gallery } from './Gallery'
+import { Sidebar } from './Sidebar'
+import { FilterChips } from './FilterChips'
+import { useFilterChips } from './useFilterChips'
+import { isFiltered, useFilters } from './filterStore'
 import { useThread } from './threadStore'
 import { useMeasuredHeight } from './useMeasuredHeight'
 
-const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
-
-function formatDate(date: string) {
-  const [y, m, d] = date.split('-').map(Number)
-  return dateFormat.format(new Date(y, m - 1, d))
-}
-
 // Плавающая панель над лентой: поиск, фильтры и чипы активных фильтров
 export function TopBar() {
-  const { filters, set, reset } = useFilters()
+  const { filters, set } = useFilters()
   const [searching, setSearching] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const types = useLiveQuery(() => db.types.toArray())
-  const projects = useLiveQuery(() => db.projects.toArray())
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [galleryOpen, setGalleryOpen] = useState(false)
   // Лента получает верхний отступ по высоте панели
   const measure = useMeasuredHeight('--topbar-height')
   const inThread = useThread((s) => s.stack.length > 0)
   const back = useThread((s) => s.back)
 
-  const chips: { key: string; label: string; remove: Partial<Filters> }[] = []
-  if (filters.actuality !== 'all') {
-    chips.push({ key: 'actuality', label: filters.actuality === 'actual' ? 'Актуальные' : 'Неактуальные', remove: { actuality: 'all' } })
-  }
-  if (filters.hideReplies) {
-    chips.push({ key: 'replies', label: 'Без ответов', remove: { hideReplies: false } })
-  }
-  if (filters.from || filters.to) {
-    const label = filters.from && filters.to ? `${formatDate(filters.from)} — ${formatDate(filters.to)}` : filters.from ? `с ${formatDate(filters.from)}` : `по ${formatDate(filters.to)}`
-    chips.push({ key: 'period', label, remove: { from: '', to: '' } })
-  }
-  for (const id of filters.typeIds) {
-    chips.push({ key: `t${id}`, label: types?.find((t) => t.id === id)?.name ?? 'Тип', remove: { typeIds: filters.typeIds.filter((x) => x !== id) } })
-  }
-  for (const id of filters.projectIds) {
-    chips.push({ key: `p${id}`, label: projects?.find((p) => p.id === id)?.name ?? 'Проект', remove: { projectIds: filters.projectIds.filter((x) => x !== id) } })
-  }
-  if (filters.conditions.length > 1 && filters.conditionMode === 'any') {
-    chips.push({ key: 'mode', label: 'Любое из условий', remove: { conditionMode: 'all' } })
-  }
-  for (const c of filters.conditions) {
-    chips.push({ key: `c${c.id}`, label: formatCondition(c), remove: { conditions: filters.conditions.filter((x) => x.id !== c.id) } })
-  }
-  if (filters.text.trim() && !searching) {
-    chips.push({ key: 'text', label: `Текст: ${filters.text.trim()}`, remove: { text: '' } })
-  }
+  const chips = useFilterChips({ withText: !searching })
 
   const iconButton = 'pointer-events-auto flex size-10 items-center justify-center rounded-full border border-stone-200 bg-white shadow-sm'
 
@@ -79,6 +48,13 @@ export function TopBar() {
         className="pointer-events-none absolute inset-x-0 top-0 z-[1] flex flex-col gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2"
       >
         <div className="flex items-center justify-end gap-2">
+          {!searching && (
+            <button type="button" aria-label="Меню" className={`${iconButton} mr-auto`} onClick={() => setSidebarOpen(true)}>
+              <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+          )}
           {searching ? (
             <div className="pointer-events-auto flex flex-1 items-center gap-2 rounded-full border border-stone-200 bg-white py-1 pr-1 pl-4 shadow-sm">
               <input
@@ -114,27 +90,12 @@ export function TopBar() {
           </button>
         </div>
 
-        {chips.length > 0 && (
-          <div className="pointer-events-auto flex gap-1.5 overflow-x-auto">
-            {chips.map((chip) => (
-              <button
-                key={chip.key}
-                type="button"
-                className="flex shrink-0 items-center gap-1.5 rounded-full bg-stone-900 px-3 py-1.5 text-xs text-white"
-                onClick={() => set(chip.remove)}
-              >
-                {chip.label}
-                <span className="text-stone-400">✕</span>
-              </button>
-            ))}
-            <button type="button" className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs text-stone-600 shadow-sm" onClick={reset}>
-              Сбросить
-            </button>
-          </div>
-        )}
+        <FilterChips chips={chips} />
       </div>
 
       {sheetOpen && <FilterSheet onClose={() => setSheetOpen(false)} />}
+      {sidebarOpen && <Sidebar onOpenGallery={() => setGalleryOpen(true)} onClose={() => setSidebarOpen(false)} />}
+      {galleryOpen && <Gallery onClose={() => setGalleryOpen(false)} />}
     </>
   )
 }

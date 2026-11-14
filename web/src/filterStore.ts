@@ -44,6 +44,15 @@ export const useFilters = create<FilterState>((set) => ({
   reset: () => set({ filters: emptyFilters }),
 }))
 
+// Пресет из старой версии может не знать о новых фильтрах — они берутся по умолчанию
+export function normalizeFilters(f: Partial<Filters>): Filters {
+  return { ...emptyFilters, ...f }
+}
+
+export function sameFilters(a: Filters, b: Filters) {
+  return JSON.stringify(normalizeFilters(a)) === JSON.stringify(normalizeFilters(b))
+}
+
 export function isFiltered(f: Filters) {
   return (
     f.actuality !== 'all' ||

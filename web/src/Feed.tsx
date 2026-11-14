@@ -8,6 +8,7 @@ import { ProjectChip } from './ProjectChip'
 import { db, isEmptyValue, type Attachment, type Entry, type EntryType, type Mark, type Project } from './db'
 import { formatValue } from './fields'
 import { pluralRu } from './plural'
+import { focusEntry, useHighlight } from './focusEntry'
 import { useThread } from './threadStore'
 
 const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
@@ -41,7 +42,7 @@ export function Feed() {
   const filters = useFilters((s) => s.filters)
   const threadId = useThread((s) => s.stack.at(-1))
   const openThread = useThread((s) => s.open)
-  const [highlightId, setHighlightId] = useState<string | null>(null)
+  const highlightId = useHighlight((s) => s.id)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
 
@@ -90,15 +91,6 @@ export function Feed() {
 
   const menuEntry = entries.find((e) => e.id === menuEntryId)
 
-  // Исходная запись на экране — прокрутить к ней и подсветить, иначе открыть её ответы
-  function goToOriginal(id: string) {
-    const el = document.getElementById(`entry-${id}`)
-    if (!el) return openThread(id)
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    setHighlightId(id)
-    setTimeout(() => setHighlightId((current) => (current === id ? null : current)), 1600)
-  }
-
   const card = (entry: Entry) => (
     <EntryCard
       key={entry.id}
@@ -112,7 +104,7 @@ export function Feed() {
       replyCount={entry.id === root?.id ? 0 : (replyCounts.get(entry.id) ?? 0)}
       highlighted={entry.id === editingEntryId || entry.id === highlightId}
       onOpen={() => setMenuEntryId(entry.id)}
-      onQuote={goToOriginal}
+      onQuote={focusEntry}
       onReplies={() => openThread(entry.id)}
     />
   )

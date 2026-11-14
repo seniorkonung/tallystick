@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import type { Filters } from './filterStore'
 
 export type FieldOption = { id: string; label: string }
 
@@ -80,6 +81,16 @@ export type Attachment = {
   thumb: Blob | null
 }
 
+// Именованный снимок фильтров: применение копирует фильтры в ленту, их дальнейшие изменения пресет не меняют
+export type Preset = {
+  id: string
+  name: string
+  createdAt: number
+  // Позиция в боковой панели
+  order: number
+  filters: Filters
+}
+
 // Вложение, подготовленное к сохранению: превью уже построено
 export type PreparedFile = Omit<Attachment, 'id' | 'entryId' | 'createdAt'>
 
@@ -90,6 +101,7 @@ export const db = new Dexie('tallystick') as Dexie & {
   categories: EntityTable<Category, 'id'>
   marks: EntityTable<Mark, 'id'>
   attachments: EntityTable<Attachment, 'id'>
+  presets: EntityTable<Preset, 'id'>
 }
 
 db.version(1).stores({
@@ -138,6 +150,8 @@ db.version(5)
   })
 
 db.version(6).stores({ attachments: 'id, entryId, createdAt' })
+
+db.version(7).stores({ presets: 'id, order' })
 
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {

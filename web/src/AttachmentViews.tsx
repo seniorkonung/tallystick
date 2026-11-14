@@ -76,7 +76,14 @@ export function AttachmentTile({ file, onOpen, onRemove }: TileProps) {
 }
 
 // Просмотр вложения во весь экран
-export function AttachmentViewer({ file, onClose }: { file: PreparedFile; onClose: () => void }) {
+type ViewerProps = {
+  file: PreparedFile
+  onClose: () => void
+  // Есть, когда просмотр открыт не из самой записи
+  onGoToEntry?: () => void
+}
+
+export function AttachmentViewer({ file, onClose, onGoToEntry }: ViewerProps) {
   const imageRef = useBlobRef<HTMLImageElement>(file.blob)
   const videoRef = useBlobRef<HTMLVideoElement>(file.blob)
   const linkRef = useBlobRef<HTMLAnchorElement>(file.blob)
@@ -86,6 +93,18 @@ export function AttachmentViewer({ file, onClose }: { file: PreparedFile; onClos
       <div className="flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 text-white">
         <span className="min-w-0 truncate text-sm">{file.name}</span>
         <div className="flex shrink-0 gap-4 text-sm">
+          {onGoToEntry && (
+            <button
+              type="button"
+              className="text-white/80"
+              onClick={(e) => {
+                e.stopPropagation()
+                onGoToEntry()
+              }}
+            >
+              К записи
+            </button>
+          )}
           <a ref={linkRef} download={file.name} className="text-white/80" onClick={(e) => e.stopPropagation()}>
             Скачать
           </a>
