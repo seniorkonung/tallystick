@@ -1,11 +1,15 @@
 import { create } from 'zustand'
-import type { Entry, FieldValues } from './db'
+import type { Attachment, Entry, FieldValues, PreparedFile } from './db'
+
+// Вложение в черновике: уже сохранённое у записи или новое
+export type DraftAttachment = { key: string; existingId: string | null; file: PreparedFile }
 
 export type Draft = {
   typeId: string
   text: string
   values: FieldValues
   projectIds: string[]
+  attachments: DraftAttachment[]
 }
 
 type ComposerState = {
@@ -17,7 +21,7 @@ type ComposerState = {
   // Запись, на которую отвечает новая запись
   replyToId: string | null
   update: (patch: Partial<Draft>) => void
-  startEditing: (entry: Entry) => void
+  startEditing: (entry: Entry, attachments: Attachment[]) => void
   stopEditing: () => void
   clearAfterSend: () => void
   startReply: (entryId: string) => void
@@ -33,6 +37,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
     text: '',
     values: {},
     projectIds: JSON.parse(localStorage.getItem(projectsStorageKey) ?? '[]'),
+    attachments: [],
   },
   editingEntryId: null,
   stash: null,
@@ -47,18 +52,24 @@ export const useComposer = create<ComposerState>((set, get) => ({
     set((s) => ({ draft: { ...s.draft, ...patch } }))
   },
 
-  startEditing: (entry) =>
+  startEditing: (entry, attachments) =>
     set((s) => ({
       replyToId: null,
       editingEntryId: entry.id,
       stash: s.stash ?? s.draft,
-      draft: { typeId: entry.typeId, text: entry.text, values: entry.values, projectIds: entry.projectIds },
+      draft: {
+        typeId: entry.typeId,
+        text: entry.text,
+        values: entry.values,
+        projectIds: entry.projectIds,
+        attachments: attachments.map((a) => ({ key: a.id, existingId: a.id, file: a })),
+      },
     })),
 
   stopEditing: () =>
     set((s) => ({ editingEntryId: null, stash: null, draft: s.stash ?? s.draft })),
 
-  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {} }, replyToId: null })),
+  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {}, attachments: [] }, replyToId: null })),
 
   // Ответ пишется в черновик новой записи: начатое редактирование отменяется
   startReply: (entryId) =>

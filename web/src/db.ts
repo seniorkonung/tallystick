@@ -67,12 +67,29 @@ export type Mark = {
   entryCount: number | null
 }
 
+// Вложение записи: файл целиком и превью для ленты
+export type Attachment = {
+  id: string
+  entryId: string
+  createdAt: number
+  name: string
+  mime: string
+  size: number
+  blob: Blob
+  // Уменьшенная картинка для фото и видео; у прочих файлов её нет
+  thumb: Blob | null
+}
+
+// Вложение, подготовленное к сохранению: превью уже построено
+export type PreparedFile = Omit<Attachment, 'id' | 'entryId' | 'createdAt'>
+
 export const db = new Dexie('tallystick') as Dexie & {
   types: EntityTable<EntryType, 'id'>
   entries: EntityTable<Entry, 'id'>
   projects: EntityTable<Project, 'id'>
   categories: EntityTable<Category, 'id'>
   marks: EntityTable<Mark, 'id'>
+  attachments: EntityTable<Attachment, 'id'>
 }
 
 db.version(1).stores({
@@ -120,6 +137,8 @@ db.version(5)
     })
   })
 
+db.version(6).stores({ attachments: 'id, entryId, createdAt' })
+
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
   tx.table('types').add({ id: crypto.randomUUID(), name: 'Заметка', createdAt: Date.now(), fields: [] })
@@ -146,15 +165,18 @@ export async function addEntry(
   values: FieldValues,
   projectIds: string[],
   replyTo: string | null,
+  files: PreparedFile[],
 ) {
-  await db.transaction('rw', db.entries, db.projects, db.categories, db.marks, async () => {
+  await db.transaction('rw', [db.entries, db.projects, db.categories, db.marks, db.attachments], async () => {
     const now = Date.now()
     const projects = await db.projects.bulkGet(projectIds)
     for (const project of projects) {
       if (project?.status === 'completed') await reopenProject(project, now)
     }
+    const entryId = crypto.randomUUID()
+    await addAttachments(entryId, files, now)
     await db.entries.add({
-      id: crypto.randomUUID(),
+      id: entryId,
       createdAt: now,
       text,
       typeId: type.id,
@@ -173,16 +195,30 @@ export async function updateEntry(
   text: string,
   values: FieldValues,
   projectIds: string[],
+  // Оставленные вложения записи; остальные удаляются
+  keptAttachmentIds: string[],
+  files: PreparedFile[],
 ) {
-  await db.transaction('rw', db.entries, db.projects, db.categories, db.marks, async () => {
+  await db.transaction('rw', [db.entries, db.projects, db.categories, db.marks, db.attachments], async () => {
     const entry = await db.entries.get(entryId)
     if (!entry) return
     const added = projectIds.filter((id) => !entry.projectIds.includes(id))
     for (const project of await db.projects.bulkGet(added)) {
       if (project?.status === 'completed') await reopenProject(project)
     }
+    await db.attachments
+      .where('entryId')
+      .equals(entryId)
+      .filter((a) => !keptAttachmentIds.includes(a.id))
+      .delete()
+    await addAttachments(entryId, files, Date.now())
     await db.entries.update(entryId, { text, typeId: type.id, values: valuesForType(type, values), projectIds })
   })
+}
+
+async function addAttachments(entryId: string, files: PreparedFile[], now: number) {
+  // Порядок вложений — порядок добавления
+  await db.attachments.bulkAdd(files.map((f, i) => ({ ...f, id: crypto.randomUUID(), entryId, createdAt: now + i })))
 }
 
 export async function setActual(entryId: string, actual: boolean) {

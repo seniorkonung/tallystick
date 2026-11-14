@@ -1,5 +1,5 @@
 import { useComposer } from './composerStore'
-import { setActual, type Entry } from './db'
+import { db, setActual, type Entry } from './db'
 
 // Действия с записью по тапу на карточку
 export function EntryMenu({ entry, onClose }: { entry: Entry; onClose: () => void }) {
@@ -27,8 +27,8 @@ export function EntryMenu({ entry, onClose }: { entry: Entry; onClose: () => voi
         <button
           type="button"
           className="mb-2 w-full rounded-2xl bg-stone-100 px-4 py-3 text-left font-medium text-stone-900"
-          onClick={() => {
-            startEditing(entry)
+          onClick={async () => {
+            startEditing(entry, await db.attachments.where('entryId').equals(entry.id).sortBy('createdAt'))
             onClose()
           }}
         >

@@ -1,10 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
+import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { EntryMenu } from './EntryMenu'
 import { useComposer } from './composerStore'
 import { isFiltered, matchEntry, matchMark, useFilters } from './filterStore'
 import { ProjectChip } from './ProjectChip'
-import { db, isEmptyValue, type Entry, type EntryType, type Mark, type Project } from './db'
+import { db, isEmptyValue, type Attachment, type Entry, type EntryType, type Mark, type Project } from './db'
 import { formatValue } from './fields'
 import { pluralRu } from './plural'
 import { useThread } from './threadStore'
@@ -31,6 +32,9 @@ export function Feed() {
   const types = useLiveQuery(() => db.types.toArray())
   const projects = useLiveQuery(() => db.projects.toArray())
   const marks = useLiveQuery(() => db.marks.toArray())
+  // Записи вложений: сами файлы браузер читает с диска, только когда их показывают
+  const attachments = useLiveQuery(() => db.attachments.orderBy('createdAt').toArray())
+  const [viewing, setViewing] = useState<Attachment | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const [menuEntryId, setMenuEntryId] = useState<string | null>(null)
   const editingEntryId = useComposer((s) => s.editingEntryId)
@@ -55,11 +59,13 @@ export function Feed() {
     scroller.current?.scrollTo({ top: 0 })
   }, [filters, threadId])
 
-  if (!entries || !types || !projects || !marks) return <div className="flex-1" />
+  if (!entries || !types || !projects || !marks || !attachments) return <div className="flex-1" />
 
   const typesById = new Map(types.map((t) => [t.id, t]))
   const projectsById = new Map(projects.map((p) => [p.id, p]))
   const entriesById = new Map(entries.map((e) => [e.id, e]))
+  const attachmentsByEntry = new Map<string, Attachment[]>()
+  for (const a of attachments) attachmentsByEntry.set(a.entryId, [...(attachmentsByEntry.get(a.entryId) ?? []), a])
   const replyCounts = new Map<string, number>()
   for (const e of entries) if (e.replyTo) replyCounts.set(e.replyTo, (replyCounts.get(e.replyTo) ?? 0) + 1)
 
@@ -99,6 +105,8 @@ export function Feed() {
       entry={entry}
       type={typesById.get(entry.typeId)}
       projects={entry.projectIds.flatMap((id) => projectsById.get(id) ?? [])}
+      attachments={attachmentsByEntry.get(entry.id) ?? []}
+      onAttachment={setViewing}
       // На экране ответов цитата исходной записи не нужна — она наверху
       quote={entry.replyTo && entry.replyTo !== root?.id ? entriesById.get(entry.replyTo) : undefined}
       replyCount={entry.id === root?.id ? 0 : (replyCounts.get(entry.id) ?? 0)}
@@ -146,6 +154,7 @@ export function Feed() {
         ))}
       </div>
       {menuEntry && <EntryMenu entry={menuEntry} onClose={() => setMenuEntryId(null)} />}
+      {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
 }
@@ -177,6 +186,8 @@ type EntryCardProps = {
   entry: Entry
   type: EntryType | undefined
   projects: Project[]
+  attachments: Attachment[]
+  onAttachment: (attachment: Attachment) => void
   // Исходная запись, если это ответ
   quote: Entry | undefined
   replyCount: number
@@ -187,7 +198,8 @@ type EntryCardProps = {
   onReplies: () => void
 }
 
-function EntryCard({ entry, type, projects, quote, replyCount, highlighted, onOpen, onQuote, onReplies }: EntryCardProps) {
+function EntryCard(props: EntryCardProps) {
+  const { entry, type, projects, attachments, onAttachment, quote, replyCount, highlighted, onOpen, onQuote, onReplies } = props
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   return (
     <article
@@ -226,6 +238,13 @@ function EntryCard({ entry, type, projects, quote, replyCount, highlighted, onOp
         )}
         {entry.text && (
           <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">{entry.text}</p>
+        )}
+        {attachments.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {attachments.map((a) => (
+              <AttachmentTile key={a.id} file={a} onOpen={() => onAttachment(a)} />
+            ))}
+          </div>
         )}
         {fields.length > 0 && (
           <dl className="mt-2 flex flex-col gap-1 text-sm">

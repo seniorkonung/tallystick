@@ -1,13 +1,15 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
+import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { FieldInput } from './FieldInput'
 import { ProjectEditor } from './ProjectEditor'
 import { ProjectPicker } from './ProjectPicker'
 import { TypeEditor } from './TypeEditor'
 import { TypePicker } from './TypePicker'
+import { prepareFile } from './attachments'
 import { useComposer } from './composerStore'
 import { useThread } from './threadStore'
-import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType } from './db'
+import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType, type PreparedFile } from './db'
 import { formatValue } from './fields'
 import { useMeasuredHeight } from './useMeasuredHeight'
 
@@ -35,6 +37,12 @@ export function Composer() {
   const [pickingProjects, setPickingProjects] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false)
+  const [preparing, setPreparing] = useState(false)
+  const [viewing, setViewing] = useState<PreparedFile | null>(null)
+  const galleryInput = useRef<HTMLInputElement>(null)
+  const cameraInput = useRef<HTMLInputElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
 
   // Лента получает нижний отступ по высоте панели, чтобы последняя запись не пряталась под ней
   const measure = useMeasuredHeight('--composer-height')
@@ -57,7 +65,7 @@ export function Composer() {
   const type = types.find((t) => t.id === draft.typeId) ?? sortedTypes[0]
   const activeField = type.fields.find((f) => f.id === activeFieldId)
   const hasValues = Object.keys(valuesForType(type, draft.values)).length > 0
-  const canSend = draft.text.trim() !== '' || hasValues
+  const canSend = !preparing && (draft.text.trim() !== '' || hasValues || draft.attachments.length > 0)
   const selectedProjects = draft.projectIds.flatMap((id) => projects.find((p) => p.id === id) ?? [])
 
   function selectType(id: string) {
@@ -65,18 +73,47 @@ export function Composer() {
     setActiveFieldId(null)
   }
 
+  // Превью строится сразу при выборе, чтобы отправка не ждала
+  async function attach(list: FileList | null) {
+    setAttachMenuOpen(false)
+    if (!list?.length) return
+    setPreparing(true)
+    try {
+      const prepared = await Promise.all([...list].map(prepareFile))
+      const current = useComposer.getState().draft.attachments
+      update({
+        attachments: [...current, ...prepared.map((file) => ({ key: crypto.randomUUID(), existingId: null, file }))],
+      })
+    } finally {
+      setPreparing(false)
+    }
+  }
+
   async function send() {
     if (!canSend) return
     const projectIds = selectedProjects.map((p) => p.id)
-    if (editingEntry) {
-      // Значения полей, которых нет в новом типе, пропадают — сначала предупреждаем
-      const lost = Object.keys(editingEntry.values).filter((id) => !type.fields.some((f) => f.id === id))
-      if (lost.length && !window.confirm(`Значения полей, которых нет в типе «${type.name}», пропадут. Сохранить?`)) return
-      await updateEntry(editingEntry.id, type, draft.text.trim(), draft.values, projectIds)
-      stopEditing()
-    } else {
-      await addEntry(type, draft.text.trim(), draft.values, projectIds, replyTarget?.id ?? null)
-      clearAfterSend()
+    const newFiles = draft.attachments.filter((a) => !a.existingId).map((a) => a.file)
+    try {
+      if (editingEntry) {
+        // Значения полей, которых нет в новом типе, пропадают — сначала предупреждаем
+        const lost = Object.keys(editingEntry.values).filter((id) => !type.fields.some((f) => f.id === id))
+        if (lost.length && !window.confirm(`Значения полей, которых нет в типе «${type.name}», пропадут. Сохранить?`)) return
+        const kept = draft.attachments.flatMap((a) => a.existingId ?? [])
+        await updateEntry(editingEntry.id, type, draft.text.trim(), draft.values, projectIds, kept, newFiles)
+        stopEditing()
+      } else {
+        await addEntry(type, draft.text.trim(), draft.values, projectIds, replyTarget?.id ?? null, newFiles)
+        clearAfterSend()
+      }
+    } catch (error) {
+      // Запись не сохранилась целиком — черновик остаётся в панели
+      const quota = error instanceof Error && (error.name === 'QuotaExceededError' || error.message.includes('QuotaExceeded'))
+      window.alert(
+        quota
+          ? 'Не хватает места в хранилище браузера. Уберите большие вложения или освободите место на устройстве.'
+          : `Не удалось сохранить запись: ${error instanceof Error ? error.message : String(error)}`,
+      )
+      return
     }
     setActiveFieldId(null)
   }
@@ -88,6 +125,28 @@ export function Composer() {
         ref={measure}
         className="pointer-events-none absolute inset-x-0 bottom-0 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] *:pointer-events-auto"
       >
+        {attachMenuOpen && (
+          <div className="mb-2 flex gap-2 rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
+            {[
+              { label: 'Фото или видео', input: galleryInput },
+              { label: 'Камера', input: cameraInput },
+              { label: 'Файл', input: fileInput },
+            ].map(({ label, input }) => (
+              <button
+                key={label}
+                type="button"
+                className="flex-1 rounded-2xl bg-stone-100 px-2 py-3 text-sm text-stone-800"
+                onClick={() => input.current?.click()}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        <input ref={galleryInput} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
+        <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
+        <input ref={fileInput} type="file" multiple hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
+
         {activeField && (
           <FieldInput
             field={activeField}
@@ -127,6 +186,19 @@ export function Composer() {
               )}
             </div>
           )}
+          {draft.attachments.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto px-1 pt-2 pb-1">
+              {draft.attachments.map((a) => (
+                <AttachmentTile
+                  key={a.key}
+                  file={a.file}
+                  onOpen={() => setViewing(a.file)}
+                  onRemove={() => update({ attachments: draft.attachments.filter((x) => x.key !== a.key) })}
+                />
+              ))}
+            </div>
+          )}
+          {preparing && <p className="px-2 pt-1 text-xs text-stone-400">Готовлю вложения…</p>}
           <textarea
             ref={textarea}
             value={draft.text}
@@ -166,6 +238,14 @@ export function Composer() {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">
+              <button
+                type="button"
+                aria-label="Вложения"
+                className={`flex size-9 items-center justify-center rounded-full text-xl text-stone-600 hover:bg-stone-100 ${attachMenuOpen ? 'bg-stone-100' : ''}`}
+                onClick={() => setAttachMenuOpen(!attachMenuOpen)}
+              >
+                +
+              </button>
               <button
                 type="button"
                 className="flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
@@ -231,6 +311,8 @@ export function Composer() {
           onClose={() => setPickingProjects(false)}
         />
       )}
+
+      {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
 
       {editingProjectId && (
         <ProjectEditor
