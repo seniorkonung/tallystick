@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { EntryMenu } from './EntryMenu'
+import { useComposer } from './composerStore'
 import { ProjectChip } from './ProjectChip'
 import { db, isEmptyValue, type Entry, type EntryType, type Mark, type Project } from './db'
 import { formatValue } from './fields'
@@ -30,6 +31,7 @@ export function Feed() {
   const marks = useLiveQuery(() => db.marks.toArray())
   const scroller = useRef<HTMLDivElement>(null)
   const [menuEntryId, setMenuEntryId] = useState<string | null>(null)
+  const editingEntryId = useComposer((s) => s.editingEntryId)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
 
@@ -76,6 +78,7 @@ export function Feed() {
                   entry={item.entry}
                   type={typesById.get(item.entry.typeId)}
                   projects={item.entry.projectIds.flatMap((id) => projectsById.get(id) ?? [])}
+                  editing={item.entry.id === editingEntryId}
                   onOpen={() => setMenuEntryId(item.entry.id)}
                 />
               ) : (
@@ -113,14 +116,23 @@ function MarkLine({ mark, project }: { mark: Mark; project: Project | undefined 
   )
 }
 
-type EntryCardProps = { entry: Entry; type: EntryType | undefined; projects: Project[]; onOpen: () => void }
+type EntryCardProps = {
+  entry: Entry
+  type: EntryType | undefined
+  projects: Project[]
+  // Запись загружена в панель ввода — карточка подсвечена
+  editing: boolean
+  onOpen: () => void
+}
 
-function EntryCard({ entry, type, projects, onOpen }: EntryCardProps) {
+function EntryCard({ entry, type, projects, editing, onOpen }: EntryCardProps) {
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   return (
     <article
       onClick={onOpen}
-      className={`cursor-pointer rounded-2xl border border-stone-200 px-4 py-3 ${entry.actual ? 'bg-white' : 'bg-[#F3F1EA]'}`}
+      className={`cursor-pointer rounded-2xl border px-4 py-3 ${entry.actual ? 'bg-white' : 'bg-[#F3F1EA]'} ${
+        editing ? 'border-orange-400 ring-2 ring-orange-200' : 'border-stone-200'
+      }`}
     >
       <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
         <span>

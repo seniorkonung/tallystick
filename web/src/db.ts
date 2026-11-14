@@ -149,6 +149,25 @@ export async function addEntry(type: EntryType, text: string, values: FieldValue
   })
 }
 
+// Время записи не меняется; добавленный завершённый проект возобновляется, как и при создании
+export async function updateEntry(
+  entryId: string,
+  type: EntryType,
+  text: string,
+  values: FieldValues,
+  projectIds: string[],
+) {
+  await db.transaction('rw', db.entries, db.projects, db.categories, db.marks, async () => {
+    const entry = await db.entries.get(entryId)
+    if (!entry) return
+    const added = projectIds.filter((id) => !entry.projectIds.includes(id))
+    for (const project of await db.projects.bulkGet(added)) {
+      if (project?.status === 'completed') await reopenProject(project)
+    }
+    await db.entries.update(entryId, { text, typeId: type.id, values: valuesForType(type, values), projectIds })
+  })
+}
+
 export async function setActual(entryId: string, actual: boolean) {
   await db.entries.update(entryId, { actual })
 }

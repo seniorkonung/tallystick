@@ -1,33 +1,29 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { FieldInput } from './FieldInput'
 import { ProjectChip } from './ProjectChip'
 import { ProjectEditor } from './ProjectEditor'
 import { ProjectPicker } from './ProjectPicker'
 import { TypeEditor } from './TypeEditor'
 import { TypePicker } from './TypePicker'
-import { addEntry, db, isEmptyValue, valuesForType, type EntryType, type FieldValues } from './db'
+import { useComposer } from './composerStore'
+import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType } from './db'
 import { formatValue } from './fields'
 
-const typeStorageKey = 'tallystick.typeId'
-const projectsStorageKey = 'tallystick.projectIds'
-
 // Редактор типа: null — новый тип
-type Editing = { type: EntryType | null } | null
+type TypeEditing = { type: EntryType | null } | null
 
 export function Composer() {
   const types = useLiveQuery(() => db.types.toArray())
   const projects = useLiveQuery(() => db.projects.toArray())
-  const [typeId, setTypeId] = useState(() => localStorage.getItem(typeStorageKey) ?? '')
-  const [text, setText] = useState('')
-  const [values, setValues] = useState<FieldValues>({})
+  const { draft, editingEntryId, update, stopEditing, clearAfterSend } = useComposer()
+  const editingEntry = useLiveQuery(
+    () => (editingEntryId ? db.entries.get(editingEntryId) : undefined),
+    [editingEntryId],
+  )
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
-  const [editing, setEditing] = useState<Editing>(null)
-  // Выбранные проекты, как и тип, сохраняются для следующей записи
-  const [projectIds, setProjectIds] = useState<string[]>(() =>
-    JSON.parse(localStorage.getItem(projectsStorageKey) ?? '[]'),
-  )
+  const [typeEditing, setTypeEditing] = useState<TypeEditing>(null)
   const [pickingProjects, setPickingProjects] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
@@ -42,45 +38,46 @@ export function Composer() {
     return () => observer.disconnect()
   }, [])
 
-  if (!types || !projects) return null
-  const sortedTypes = [...types].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
-  // Тип сохраняется для следующей записи; если его удалили — берём первый
-  const type = types.find((t) => t.id === typeId) ?? sortedTypes[0]
-  const activeField = type.fields.find((f) => f.id === activeFieldId)
-  const hasValues = Object.keys(valuesForType(type, values)).length > 0
-  const canSend = text.trim() !== '' || hasValues
-  const selectedProjects = projectIds.flatMap((id) => projects.find((p) => p.id === id) ?? [])
-
-  function setProjects(ids: string[]) {
-    setProjectIds(ids)
-    localStorage.setItem(projectsStorageKey, JSON.stringify(ids))
-  }
-
-  function selectType(id: string) {
-    setTypeId(id)
-    localStorage.setItem(typeStorageKey, id)
-    setActiveFieldId(null)
-  }
-
-  function resize() {
+  // Текст меняется и снаружи — при загрузке записи в редактирование
+  useEffect(() => {
     const el = textarea.current
     if (!el) return
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`
+  }, [draft.text])
+
+  useEffect(() => {
+    if (editingEntryId) textarea.current?.focus()
+  }, [editingEntryId])
+
+  if (!types || !projects) return null
+  const sortedTypes = [...types].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+  // Тип сохраняется для следующей записи; если его удалили — берём первый
+  const type = types.find((t) => t.id === draft.typeId) ?? sortedTypes[0]
+  const activeField = type.fields.find((f) => f.id === activeFieldId)
+  const hasValues = Object.keys(valuesForType(type, draft.values)).length > 0
+  const canSend = draft.text.trim() !== '' || hasValues
+  const selectedProjects = draft.projectIds.flatMap((id) => projects.find((p) => p.id === id) ?? [])
+
+  function selectType(id: string) {
+    update({ typeId: id })
+    setActiveFieldId(null)
   }
 
   async function send() {
     if (!canSend) return
-    await addEntry(
-      type,
-      text.trim(),
-      values,
-      selectedProjects.map((p) => p.id),
-    )
-    setText('')
-    setValues({})
+    const projectIds = selectedProjects.map((p) => p.id)
+    if (editingEntry) {
+      // Значения полей, которых нет в новом типе, пропадают — сначала предупреждаем
+      const lost = Object.keys(editingEntry.values).filter((id) => !type.fields.some((f) => f.id === id))
+      if (lost.length && !window.confirm(`Значения полей, которых нет в типе «${type.name}», пропадут. Сохранить?`)) return
+      await updateEntry(editingEntry.id, type, draft.text.trim(), draft.values, projectIds)
+      stopEditing()
+    } else {
+      await addEntry(type, draft.text.trim(), draft.values, projectIds)
+      clearAfterSend()
+    }
     setActiveFieldId(null)
-    requestAnimationFrame(resize)
   }
 
   return (
@@ -93,39 +90,47 @@ export function Composer() {
         {activeField && (
           <FieldInput
             field={activeField}
-            value={values[activeField.id]}
+            value={draft.values[activeField.id]}
             onChange={(value) => {
-              const next = { ...values }
+              const next = { ...draft.values }
               if (value === undefined) delete next[activeField.id]
               else next[activeField.id] = value
-              setValues(next)
+              update({ values: next })
             }}
             onClose={() => setActiveFieldId(null)}
           />
         )}
 
         <div className="rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
+          {editingEntry && (
+            <div className="mb-1 flex items-center gap-2 rounded-2xl bg-orange-50 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-orange-700">Редактирование</p>
+                <p className="truncate text-xs text-stone-500">{editingEntry.text || 'Запись без текста'}</p>
+              </div>
+              <button type="button" aria-label="Отменить редактирование" className="px-1 text-stone-400" onClick={stopEditing}>
+                ✕
+              </button>
+            </div>
+          )}
           {selectedProjects.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-2 pt-1">
               {selectedProjects.map((project) => (
                 <ProjectChip
                   key={project.id}
                   project={project}
-                  onRemove={() => setProjects(projectIds.filter((id) => id !== project.id))}
+                  onRemove={() => update({ projectIds: draft.projectIds.filter((id) => id !== project.id) })}
                 />
               ))}
             </div>
           )}
           <textarea
             ref={textarea}
-            value={text}
+            value={draft.text}
             rows={1}
             placeholder="Что произошло?"
             className="block max-h-[200px] w-full resize-none bg-transparent px-2 py-2 font-serif text-[15px] outline-none placeholder:text-stone-400"
-            onChange={(e) => {
-              setText(e.target.value)
-              resize()
-            }}
+            onChange={(e) => update({ text: e.target.value })}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
@@ -137,7 +142,7 @@ export function Composer() {
           {type.fields.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-1 pb-2">
               {type.fields.map((field) => {
-                const value = values[field.id]
+                const value = draft.values[field.id]
                 const filled = !isEmptyValue(value)
                 return (
                   <button
@@ -182,13 +187,13 @@ export function Composer() {
             </div>
             <button
               type="button"
-              aria-label="Отправить"
+              aria-label={editingEntry ? 'Сохранить' : 'Отправить'}
               disabled={!canSend}
               onClick={() => void send()}
               className="flex size-10 shrink-0 items-center justify-center rounded-full bg-orange-600 text-white disabled:bg-stone-200"
             >
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 19V5M5 12l7-7 7 7" />
+                <path d={editingEntry ? 'M5 12.5l4.5 4.5L19 7.5' : 'M12 19V5M5 12l7-7 7 7'} />
               </svg>
             </button>
           </div>
@@ -203,19 +208,21 @@ export function Composer() {
             selectType(t.id)
             setPicking(false)
           }}
-          onEdit={(t) => setEditing({ type: t })}
-          onCreate={() => setEditing({ type: null })}
+          onEdit={(t) => setTypeEditing({ type: t })}
+          onCreate={() => setTypeEditing({ type: null })}
           onClose={() => setPicking(false)}
         />
       )}
 
       {pickingProjects && (
         <ProjectPicker
-          selectedIds={projectIds}
+          selectedIds={draft.projectIds}
           onToggle={(project) =>
-            setProjects(
-              projectIds.includes(project.id) ? projectIds.filter((id) => id !== project.id) : [...projectIds, project.id],
-            )
+            update({
+              projectIds: draft.projectIds.includes(project.id)
+                ? draft.projectIds.filter((id) => id !== project.id)
+                : [...draft.projectIds, project.id],
+            })
           }
           onEdit={(project) => setEditingProjectId(project.id)}
           onClose={() => setPickingProjects(false)}
@@ -224,22 +231,22 @@ export function Composer() {
 
       {editingProjectId && <ProjectEditor projectId={editingProjectId} onClose={() => setEditingProjectId(null)} />}
 
-      {editing && (
+      {typeEditing && (
         <TypeEditor
-          type={editing.type}
+          type={typeEditing.type}
           types={sortedTypes}
           onSaved={(saved) => {
-            if (!editing.type) {
+            if (!typeEditing.type) {
               selectType(saved.id)
               setPicking(false)
             }
-            setEditing(null)
+            setTypeEditing(null)
           }}
           onDeleted={(targetTypeId) => {
-            if (editing.type?.id === type.id) selectType(targetTypeId)
-            setEditing(null)
+            if (typeEditing.type?.id === type.id) selectType(targetTypeId)
+            setTypeEditing(null)
           }}
-          onClose={() => setEditing(null)}
+          onClose={() => setTypeEditing(null)}
         />
       )}
     </>
