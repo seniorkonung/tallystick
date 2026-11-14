@@ -56,7 +56,7 @@ export function Feed() {
   const typesById = new Map(types.map((t) => [t.id, t]))
   const projectsById = new Map(projects.map((p) => [p.id, p]))
   // Записи и служебные отметки в одной хронологии; при равном времени отметка идёт раньше
-  const shownEntries = entries.filter((e) => matchEntry(filters, e))
+  const shownEntries = entries.filter((e) => matchEntry(filters, e, typesById))
   const items: Item[] = [
     ...marks.filter((m) => matchMark(filters, m)).map((mark): Item => ({ kind: 'mark', mark, time: mark.createdAt })),
     ...shownEntries.map((entry): Item => ({ kind: 'entry', entry, time: entry.createdAt })),

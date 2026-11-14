@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { FilterSheet } from './FilterSheet'
+import { formatCondition } from './conditions'
 import { db } from './db'
 import { isFiltered, useFilters, type Filters } from './filterStore'
 import { useMeasuredHeight } from './useMeasuredHeight'
@@ -35,6 +36,12 @@ export function TopBar() {
   }
   for (const id of filters.projectIds) {
     chips.push({ key: `p${id}`, label: projects?.find((p) => p.id === id)?.name ?? 'Проект', remove: { projectIds: filters.projectIds.filter((x) => x !== id) } })
+  }
+  if (filters.conditions.length > 1 && filters.conditionMode === 'any') {
+    chips.push({ key: 'mode', label: 'Любое из условий', remove: { conditionMode: 'all' } })
+  }
+  for (const c of filters.conditions) {
+    chips.push({ key: `c${c.id}`, label: formatCondition(c), remove: { conditions: filters.conditions.filter((x) => x.id !== c.id) } })
   }
   if (filters.text.trim() && !searching) {
     chips.push({ key: 'text', label: `Текст: ${filters.text.trim()}`, remove: { text: '' } })
