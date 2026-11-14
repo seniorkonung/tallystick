@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { EntryMenu } from './EntryMenu'
 import { ProjectChip } from './ProjectChip'
 import { db, isEmptyValue, type Entry, type EntryType, type Mark, type Project } from './db'
 import { formatValue } from './fields'
@@ -28,6 +29,7 @@ export function Feed() {
   const projects = useLiveQuery(() => db.projects.toArray())
   const marks = useLiveQuery(() => db.marks.toArray())
   const scroller = useRef<HTMLDivElement>(null)
+  const [menuEntryId, setMenuEntryId] = useState<string | null>(null)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
 
@@ -57,6 +59,8 @@ export function Feed() {
     else days.push({ key, time: item.time, items: [item] })
   }
 
+  const menuEntry = entries.find((e) => e.id === menuEntryId)
+
   return (
     // column-reverse держит прокрутку у нижнего края, как в мессенджере
     <div ref={scroller} className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain">
@@ -72,6 +76,7 @@ export function Feed() {
                   entry={item.entry}
                   type={typesById.get(item.entry.typeId)}
                   projects={item.entry.projectIds.flatMap((id) => projectsById.get(id) ?? [])}
+                  onOpen={() => setMenuEntryId(item.entry.id)}
                 />
               ) : (
                 <MarkLine key={item.mark.id} mark={item.mark} project={projectsById.get(item.mark.projectId)} />
@@ -80,6 +85,7 @@ export function Feed() {
           </section>
         ))}
       </div>
+      {menuEntry && <EntryMenu entry={menuEntry} onClose={() => setMenuEntryId(null)} />}
     </div>
   )
 }
@@ -107,45 +113,55 @@ function MarkLine({ mark, project }: { mark: Mark; project: Project | undefined 
   )
 }
 
-function EntryCard({ entry, type, projects }: { entry: Entry; type: EntryType | undefined; projects: Project[] }) {
+type EntryCardProps = { entry: Entry; type: EntryType | undefined; projects: Project[]; onOpen: () => void }
+
+function EntryCard({ entry, type, projects, onOpen }: EntryCardProps) {
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   return (
-    <article className="rounded-2xl border border-stone-200 bg-white px-4 py-3">
+    <article
+      onClick={onOpen}
+      className={`cursor-pointer rounded-2xl border border-stone-200 px-4 py-3 ${entry.actual ? 'bg-white' : 'bg-[#F3F1EA]'}`}
+    >
       <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
-        <span>{type?.name}</span>
+        <span>
+          {type?.name}
+          {!entry.actual && <span className="ml-2 rounded-full bg-stone-200 px-2 py-0.5 text-stone-600">Неактуально</span>}
+        </span>
         <span>{timeFormat.format(entry.createdAt)}</span>
       </div>
-      {projects.length > 0 && (
-        <div className="mb-1.5 flex flex-wrap gap-1">
-          {projects.map((project) => (
-            <ProjectChip key={project.id} project={project} />
-          ))}
-        </div>
-      )}
-      {entry.text && (
-        <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">{entry.text}</p>
-      )}
-      {fields.length > 0 && (
-        <dl className="mt-2 flex flex-col gap-1 text-sm">
-          {fields.map((field) => {
-            const labels = formatValue(field, entry.values[field.id])
-            return (
-              <div key={field.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <dt className="text-stone-500">{field.name}</dt>
-                {field.kind === 'multi' ? (
-                  labels.map((label, i) => (
-                    <dd key={i} className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-800">
-                      {label}
-                    </dd>
-                  ))
-                ) : (
-                  <dd className="text-stone-900">{labels[0]}</dd>
-                )}
-              </div>
-            )
-          })}
-        </dl>
-      )}
+      <div className={entry.actual ? '' : 'opacity-55'}>
+        {projects.length > 0 && (
+          <div className="mb-1.5 flex flex-wrap gap-1">
+            {projects.map((project) => (
+              <ProjectChip key={project.id} project={project} />
+            ))}
+          </div>
+        )}
+        {entry.text && (
+          <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">{entry.text}</p>
+        )}
+        {fields.length > 0 && (
+          <dl className="mt-2 flex flex-col gap-1 text-sm">
+            {fields.map((field) => {
+              const labels = formatValue(field, entry.values[field.id])
+              return (
+                <div key={field.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <dt className="text-stone-500">{field.name}</dt>
+                  {field.kind === 'multi' ? (
+                    labels.map((label, i) => (
+                      <dd key={i} className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-800">
+                        {label}
+                      </dd>
+                    ))
+                  ) : (
+                    <dd className="text-stone-900">{labels[0]}</dd>
+                  )}
+                </div>
+              )
+            })}
+          </dl>
+        )}
+      </div>
     </article>
   )
 }

@@ -28,6 +28,8 @@ export type Entry = {
   typeId: string
   values: FieldValues
   projectIds: string[]
+  // Неактуальная запись больше не требует внимания, но остаётся в ленте
+  actual: boolean
 }
 
 export type ProjectStatus = 'active' | 'completed'
@@ -100,6 +102,14 @@ db.version(3)
     })
   })
 
+db.version(4)
+  .stores({})
+  .upgrade(async (tx) => {
+    await tx.table('entries').toCollection().modify((entry) => {
+      entry.actual ??= true
+    })
+  })
+
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
   tx.table('types').add({ id: crypto.randomUUID(), name: 'Заметка', createdAt: Date.now(), fields: [] })
@@ -134,8 +144,13 @@ export async function addEntry(type: EntryType, text: string, values: FieldValue
       typeId: type.id,
       values: valuesForType(type, values),
       projectIds,
+      actual: true,
     })
   })
+}
+
+export async function setActual(entryId: string, actual: boolean) {
+  await db.entries.update(entryId, { actual })
 }
 
 async function addMark(projectId: string, kind: MarkKind, createdAt: number, entryCount: number | null = null) {
