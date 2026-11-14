@@ -30,6 +30,8 @@ export type Entry = {
   projectIds: string[]
   // Неактуальная запись больше не требует внимания, но остаётся в ленте
   actual: boolean
+  // Исходная запись, на которую это ответ
+  replyTo: string | null
 }
 
 export type ProjectStatus = 'active' | 'completed'
@@ -110,6 +112,14 @@ db.version(4)
     })
   })
 
+db.version(5)
+  .stores({})
+  .upgrade(async (tx) => {
+    await tx.table('entries').toCollection().modify((entry) => {
+      entry.replyTo ??= null
+    })
+  })
+
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
   tx.table('types').add({ id: crypto.randomUUID(), name: 'Заметка', createdAt: Date.now(), fields: [] })
@@ -130,7 +140,13 @@ export function valuesForType(type: EntryType, values: FieldValues): FieldValues
 }
 
 // Привязка записи к завершённому проекту возобновляет его
-export async function addEntry(type: EntryType, text: string, values: FieldValues, projectIds: string[]) {
+export async function addEntry(
+  type: EntryType,
+  text: string,
+  values: FieldValues,
+  projectIds: string[],
+  replyTo: string | null,
+) {
   await db.transaction('rw', db.entries, db.projects, db.categories, db.marks, async () => {
     const now = Date.now()
     const projects = await db.projects.bulkGet(projectIds)
@@ -145,6 +161,7 @@ export async function addEntry(type: EntryType, text: string, values: FieldValue
       values: valuesForType(type, values),
       projectIds,
       actual: true,
+      replyTo,
     })
   })
 }

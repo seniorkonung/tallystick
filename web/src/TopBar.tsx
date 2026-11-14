@@ -4,6 +4,7 @@ import { FilterSheet } from './FilterSheet'
 import { formatCondition } from './conditions'
 import { db } from './db'
 import { isFiltered, useFilters, type Filters } from './filterStore'
+import { useThread } from './threadStore'
 import { useMeasuredHeight } from './useMeasuredHeight'
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
@@ -22,6 +23,8 @@ export function TopBar() {
   const projects = useLiveQuery(() => db.projects.toArray())
   // Лента получает верхний отступ по высоте панели
   const measure = useMeasuredHeight('--topbar-height')
+  const inThread = useThread((s) => s.stack.length > 0)
+  const back = useThread((s) => s.back)
 
   const chips: { key: string; label: string; remove: Partial<Filters> }[] = []
   if (filters.actuality !== 'all') {
@@ -48,6 +51,23 @@ export function TopBar() {
   }
 
   const iconButton = 'pointer-events-auto flex size-10 items-center justify-center rounded-full border border-stone-200 bg-white shadow-sm'
+
+  // На экране ответов фильтры не действуют — вместо них «назад»
+  if (inThread) {
+    return (
+      <div
+        ref={measure}
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] flex items-center gap-3 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2"
+      >
+        <button type="button" aria-label="Назад" className={iconButton} onClick={back}>
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </button>
+        <span className="pointer-events-auto rounded-full bg-white/90 px-3 py-1.5 text-sm font-medium shadow-sm">Ответы</span>
+      </div>
+    )
+  }
 
   return (
     <>

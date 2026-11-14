@@ -14,10 +14,14 @@ type ComposerState = {
   editingEntryId: string | null
   // Черновик новой записи, отложенный на время редактирования
   stash: Draft | null
+  // Запись, на которую отвечает новая запись
+  replyToId: string | null
   update: (patch: Partial<Draft>) => void
   startEditing: (entry: Entry) => void
   stopEditing: () => void
   clearAfterSend: () => void
+  startReply: (entryId: string) => void
+  cancelReply: () => void
 }
 
 const typeStorageKey = 'tallystick.typeId'
@@ -32,6 +36,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
   },
   editingEntryId: null,
   stash: null,
+  replyToId: null,
 
   // Тип и проекты новой записи сохраняются для следующей; при редактировании — нет
   update: (patch) => {
@@ -44,6 +49,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
 
   startEditing: (entry) =>
     set((s) => ({
+      replyToId: null,
       editingEntryId: entry.id,
       stash: s.stash ?? s.draft,
       draft: { typeId: entry.typeId, text: entry.text, values: entry.values, projectIds: entry.projectIds },
@@ -52,5 +58,11 @@ export const useComposer = create<ComposerState>((set, get) => ({
   stopEditing: () =>
     set((s) => ({ editingEntryId: null, stash: null, draft: s.stash ?? s.draft })),
 
-  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {} } })),
+  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {} }, replyToId: null })),
+
+  // Ответ пишется в черновик новой записи: начатое редактирование отменяется
+  startReply: (entryId) =>
+    set((s) => ({ editingEntryId: null, stash: null, draft: s.stash ?? s.draft, replyToId: entryId })),
+
+  cancelReply: () => set({ replyToId: null }),
 }))

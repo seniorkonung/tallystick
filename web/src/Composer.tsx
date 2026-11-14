@@ -6,6 +6,7 @@ import { ProjectPicker } from './ProjectPicker'
 import { TypeEditor } from './TypeEditor'
 import { TypePicker } from './TypePicker'
 import { useComposer } from './composerStore'
+import { useThread } from './threadStore'
 import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType } from './db'
 import { formatValue } from './fields'
 import { useMeasuredHeight } from './useMeasuredHeight'
@@ -16,10 +17,17 @@ type TypeEditing = { type: EntryType | null } | null
 export function Composer() {
   const types = useLiveQuery(() => db.types.toArray())
   const projects = useLiveQuery(() => db.projects.toArray())
-  const { draft, editingEntryId, update, stopEditing, clearAfterSend } = useComposer()
+  const { draft, editingEntryId, update, stopEditing, clearAfterSend, replyToId, cancelReply } = useComposer()
+  const threadId = useThread((s) => s.stack.at(-1))
   const editingEntry = useLiveQuery(
     () => (editingEntryId ? db.entries.get(editingEntryId) : undefined),
     [editingEntryId],
+  )
+  // На экране ответов новая запись по умолчанию отвечает на его исходную запись
+  const replyTargetId = replyToId ?? threadId ?? null
+  const replyTarget = useLiveQuery(
+    () => (replyTargetId ? db.entries.get(replyTargetId) : undefined),
+    [replyTargetId],
   )
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
@@ -40,8 +48,8 @@ export function Composer() {
   }, [draft.text])
 
   useEffect(() => {
-    if (editingEntryId) textarea.current?.focus()
-  }, [editingEntryId])
+    if (editingEntryId || replyToId) textarea.current?.focus()
+  }, [editingEntryId, replyToId])
 
   if (!types || !projects) return null
   const sortedTypes = [...types].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
@@ -67,7 +75,7 @@ export function Composer() {
       await updateEntry(editingEntry.id, type, draft.text.trim(), draft.values, projectIds)
       stopEditing()
     } else {
-      await addEntry(type, draft.text.trim(), draft.values, projectIds)
+      await addEntry(type, draft.text.trim(), draft.values, projectIds, replyTarget?.id ?? null)
       clearAfterSend()
     }
     setActiveFieldId(null)
@@ -104,6 +112,19 @@ export function Composer() {
               <button type="button" aria-label="Отменить редактирование" className="px-1 text-stone-400" onClick={stopEditing}>
                 ✕
               </button>
+            </div>
+          )}
+          {!editingEntry && replyTarget && (
+            <div className="mb-1 flex items-center gap-2 rounded-2xl border-l-4 border-orange-500 bg-[#F7EFE8] px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-orange-700">Ответ на запись</p>
+                <p className="truncate text-xs text-stone-500">{replyTarget.text || 'Запись без текста'}</p>
+              </div>
+              {replyToId && (
+                <button type="button" aria-label="Отменить ответ" className="px-1 text-stone-400" onClick={cancelReply}>
+                  ✕
+                </button>
+              )}
             </div>
           )}
           <textarea

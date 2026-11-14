@@ -7,6 +7,7 @@ import { ProjectChip } from './ProjectChip'
 import { db, isEmptyValue, type Entry, type EntryType, type Mark, type Project } from './db'
 import { formatValue } from './fields'
 import { pluralRu } from './plural'
+import { useThread } from './threadStore'
 
 const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
 const dayWithYearFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -34,6 +35,9 @@ export function Feed() {
   const [menuEntryId, setMenuEntryId] = useState<string | null>(null)
   const editingEntryId = useComposer((s) => s.editingEntryId)
   const filters = useFilters((s) => s.filters)
+  const threadId = useThread((s) => s.stack.at(-1))
+  const openThread = useThread((s) => s.open)
+  const [highlightId, setHighlightId] = useState<string | null>(null)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
 
@@ -46,19 +50,28 @@ export function Feed() {
     prevLastId.current = lastId
   }, [lastId])
 
-  // Новый набор фильтров показывает ленту с самых свежих записей
+  // Новый набор фильтров или другой экран ответов показывают самые свежие записи
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 })
-  }, [filters])
+  }, [filters, threadId])
 
   if (!entries || !types || !projects || !marks) return <div className="flex-1" />
 
   const typesById = new Map(types.map((t) => [t.id, t]))
   const projectsById = new Map(projects.map((p) => [p.id, p]))
+  const entriesById = new Map(entries.map((e) => [e.id, e]))
+  const replyCounts = new Map<string, number>()
+  for (const e of entries) if (e.replyTo) replyCounts.set(e.replyTo, (replyCounts.get(e.replyTo) ?? 0) + 1)
+
+  // Экран ответов — хронология прямых ответов на исходную запись, фильтры на него не действуют
+  const root = threadId ? entriesById.get(threadId) : undefined
+  const shownEntries = root
+    ? entries.filter((e) => e.replyTo === root.id)
+    : entries.filter((e) => matchEntry(filters, e, typesById))
+  const shownMarks = root ? [] : marks.filter((m) => matchMark(filters, m))
   // Записи и служебные отметки в одной хронологии; при равном времени отметка идёт раньше
-  const shownEntries = entries.filter((e) => matchEntry(filters, e, typesById))
   const items: Item[] = [
-    ...marks.filter((m) => matchMark(filters, m)).map((mark): Item => ({ kind: 'mark', mark, time: mark.createdAt })),
+    ...shownMarks.map((mark): Item => ({ kind: 'mark', mark, time: mark.createdAt })),
     ...shownEntries.map((entry): Item => ({ kind: 'entry', entry, time: entry.createdAt })),
   ].sort((a, b) => a.time - b.time)
   const days: { key: string; time: number; items: Item[] }[] = []
@@ -71,28 +84,60 @@ export function Feed() {
 
   const menuEntry = entries.find((e) => e.id === menuEntryId)
 
+  // Исходная запись на экране — прокрутить к ней и подсветить, иначе открыть её ответы
+  function goToOriginal(id: string) {
+    const el = document.getElementById(`entry-${id}`)
+    if (!el) return openThread(id)
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    setHighlightId(id)
+    setTimeout(() => setHighlightId((current) => (current === id ? null : current)), 1600)
+  }
+
+  const card = (entry: Entry) => (
+    <EntryCard
+      key={entry.id}
+      entry={entry}
+      type={typesById.get(entry.typeId)}
+      projects={entry.projectIds.flatMap((id) => projectsById.get(id) ?? [])}
+      // На экране ответов цитата исходной записи не нужна — она наверху
+      quote={entry.replyTo && entry.replyTo !== root?.id ? entriesById.get(entry.replyTo) : undefined}
+      replyCount={entry.id === root?.id ? 0 : (replyCounts.get(entry.id) ?? 0)}
+      highlighted={entry.id === editingEntryId || entry.id === highlightId}
+      onOpen={() => setMenuEntryId(entry.id)}
+      onQuote={goToOriginal}
+      onReplies={() => openThread(entry.id)}
+    />
+  )
+
   return (
     // column-reverse держит прокрутку у нижнего края, как в мессенджере
     <div ref={scroller} className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain">
       <div className="flex flex-col gap-2 px-3 pt-[calc(var(--topbar-height,0px)+0.5rem)] pb-[calc(var(--composer-height,0px)+0.5rem)]">
-        {shownEntries.length === 0 && (
+        {root && (
+          <>
+            <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(root.createdAt)}</h2>
+            {card(root)}
+            <p className="py-2 text-center text-xs font-medium text-stone-500">
+              {shownEntries.length
+                ? `${shownEntries.length} ${pluralRu(shownEntries.length, ['ответ', 'ответа', 'ответов'])}`
+                : 'Ответов пока нет'}
+            </p>
+          </>
+        )}
+        {!root && shownEntries.length === 0 && (
           <p className="py-10 text-center text-sm text-stone-400">
             {isFiltered(filters) ? 'Под фильтры ничего не подходит' : 'Записей пока нет'}
           </p>
         )}
         {days.map((day) => (
           <section key={day.key} className="flex flex-col gap-2">
-            <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(day.time)}</h2>
+            {/* На экране ответов день исходной записи уже подписан над ней */}
+            {(!root || day.key !== dayKey(root.createdAt)) && (
+              <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(day.time)}</h2>
+            )}
             {day.items.map((item) =>
               item.kind === 'entry' ? (
-                <EntryCard
-                  key={item.entry.id}
-                  entry={item.entry}
-                  type={typesById.get(item.entry.typeId)}
-                  projects={item.entry.projectIds.flatMap((id) => projectsById.get(id) ?? [])}
-                  editing={item.entry.id === editingEntryId}
-                  onOpen={() => setMenuEntryId(item.entry.id)}
-                />
+                card(item.entry)
               ) : (
                 <MarkLine key={item.mark.id} mark={item.mark} project={projectsById.get(item.mark.projectId)} />
               ),
@@ -132,18 +177,24 @@ type EntryCardProps = {
   entry: Entry
   type: EntryType | undefined
   projects: Project[]
-  // Запись загружена в панель ввода — карточка подсвечена
-  editing: boolean
+  // Исходная запись, если это ответ
+  quote: Entry | undefined
+  replyCount: number
+  // Запись в редактировании или найдена по цитате
+  highlighted: boolean
   onOpen: () => void
+  onQuote: (entryId: string) => void
+  onReplies: () => void
 }
 
-function EntryCard({ entry, type, projects, editing, onOpen }: EntryCardProps) {
+function EntryCard({ entry, type, projects, quote, replyCount, highlighted, onOpen, onQuote, onReplies }: EntryCardProps) {
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   return (
     <article
+      id={`entry-${entry.id}`}
       onClick={onOpen}
-      className={`cursor-pointer rounded-2xl border px-4 py-3 ${entry.actual ? 'bg-white' : 'bg-[#F3F1EA]'} ${
-        editing ? 'border-orange-400 ring-2 ring-orange-200' : 'border-stone-200'
+      className={`cursor-pointer rounded-2xl border px-4 py-3 transition-shadow ${entry.actual ? 'bg-white' : 'bg-[#F3F1EA]'} ${
+        highlighted ? 'border-orange-400 ring-2 ring-orange-200' : 'border-stone-200'
       }`}
     >
       <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
@@ -154,6 +205,18 @@ function EntryCard({ entry, type, projects, editing, onOpen }: EntryCardProps) {
         <span>{timeFormat.format(entry.createdAt)}</span>
       </div>
       <div className={entry.actual ? '' : 'opacity-55'}>
+        {quote && (
+          <button
+            type="button"
+            className="mb-2 block w-full rounded-lg border-l-[3px] border-orange-500 bg-[#F7EFE8] px-2.5 py-1.5 text-left"
+            onClick={(e) => {
+              e.stopPropagation()
+              onQuote(quote.id)
+            }}
+          >
+            <span className="block truncate text-xs text-stone-600">{quote.text || 'Запись без текста'}</span>
+          </button>
+        )}
         {projects.length > 0 && (
           <div className="mb-1.5 flex flex-wrap gap-1">
             {projects.map((project) => (
@@ -186,6 +249,18 @@ function EntryCard({ entry, type, projects, editing, onOpen }: EntryCardProps) {
           </dl>
         )}
       </div>
+      {replyCount > 0 && (
+        <button
+          type="button"
+          className="mt-2 text-sm font-medium text-orange-700"
+          onClick={(e) => {
+            e.stopPropagation()
+            onReplies()
+          }}
+        >
+          {replyCount} {pluralRu(replyCount, ['ответ', 'ответа', 'ответов'])} →
+        </button>
+      )}
     </article>
   )
 }
