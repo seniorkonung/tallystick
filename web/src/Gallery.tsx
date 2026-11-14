@@ -4,6 +4,7 @@ import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { FilterChips } from './FilterChips'
 import { useFilterChips } from './useFilterChips'
 import { isImage, isVideo } from './attachments'
+import { plainText } from './format'
 import { extractLinks, linkHost } from './links'
 import { db, type Attachment } from './db'
 import { matchEntry, useFilters } from './filterStore'
@@ -28,7 +29,7 @@ export function Gallery({ onClose }: { onClose: () => void }) {
   // Ссылки не хранятся отдельно — извлекаются из текста записей, от новых к старым
   const links = shownEntries
     .sort((a, b) => b.createdAt - a.createdAt)
-    .flatMap((entry) => extractLinks(entry.text).map((link, i) => ({ key: `${entry.id}-${i}`, link, entry })))
+    .flatMap((entry) => extractLinks(plainText(entry.text, { skipCode: true })).map((link, i) => ({ key: `${entry.id}-${i}`, link, entry })))
   const shown = attachments.filter((a) => shownEntryIds.has(a.entryId))
   const media = shown.filter((a) => isImage(a.mime) || isVideo(a.mime))
   const files = shown.filter((a) => !isImage(a.mime) && !isVideo(a.mime))
@@ -77,7 +78,7 @@ export function Gallery({ onClose }: { onClose: () => void }) {
                     <span className="block truncate text-sm text-orange-700">{link.text}</span>
                   </a>
                   <div className="mt-1 flex items-center justify-between gap-3">
-                    <span className="truncate text-xs text-stone-400">{entry.text}</span>
+                    <span className="truncate text-xs text-stone-400">{plainText(entry.text, { hideSpoilers: true })}</span>
                     <button
                       type="button"
                       className="shrink-0 text-xs text-stone-500"

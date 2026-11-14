@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { matchCondition, type Condition } from './conditions'
 import type { Entry, EntryType, Mark } from './db'
+import { plainText } from './format'
 
 export type Actuality = 'all' | 'actual' | 'inactual'
 
@@ -84,7 +85,8 @@ export function matchEntry(f: Filters, entry: Entry, typesById: Map<string, Entr
   if (f.typeIds.length && !f.typeIds.includes(entry.typeId)) return false
   if (f.projectIds.length && !entry.projectIds.some((id) => f.projectIds.includes(id))) return false
   const text = f.text.trim().toLowerCase()
-  if (text && !entry.text.toLowerCase().includes(text)) return false
+  // Поиск по тексту без маркеров форматирования
+  if (text && !plainText(entry.text).toLowerCase().includes(text)) return false
   if (f.conditions.length) {
     const type = typesById.get(entry.typeId)
     const check = (c: Condition) => matchCondition(c, entry, type)

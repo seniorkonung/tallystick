@@ -2,7 +2,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { EntryMenu } from './EntryMenu'
-import { LinkedText } from './LinkedText'
+import { RichText } from './RichText'
+import { plainText } from './format'
 import { useComposer } from './composerStore'
 import { isFiltered, matchEntry, matchMark, useFilters } from './filterStore'
 import { ProjectChip } from './ProjectChip'
@@ -256,7 +257,9 @@ function EntryCard(props: EntryCardProps) {
               onQuote(quote.id)
             }}
           >
-            <span className="block truncate text-xs text-stone-600">{quote.text || 'Запись без текста'}</span>
+            <span className="block truncate text-xs text-stone-600">
+              {plainText(quote.text, { hideSpoilers: true }) || 'Запись без текста'}
+            </span>
           </button>
         )}
         {projects.length > 0 && (
@@ -266,11 +269,7 @@ function EntryCard(props: EntryCardProps) {
             ))}
           </div>
         )}
-        {entry.text && (
-          <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">
-              <LinkedText text={entry.text} />
-            </p>
-        )}
+        {entry.text && <RichText text={entry.text} />}
         {attachments.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {attachments.map((a) => (

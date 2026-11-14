@@ -11,6 +11,7 @@ import { useComposer } from './composerStore'
 import { useThread } from './threadStore'
 import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType, type PreparedFile } from './db'
 import { formatValue } from './fields'
+import { applyFormat, plainText, type FormatKind } from './format'
 import { useMeasuredHeight } from './useMeasuredHeight'
 
 // Редактор типа: null — новый тип
@@ -38,6 +39,8 @@ export function Composer() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
+  // Есть выделение в поле ввода — показываем панель форматирования
+  const [hasSelection, setHasSelection] = useState(false)
   const [preparing, setPreparing] = useState(false)
   const [viewing, setViewing] = useState<PreparedFile | null>(null)
   const galleryInput = useRef<HTMLInputElement>(null)
@@ -55,6 +58,16 @@ export function Composer() {
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`
   }, [draft.text])
 
+  // Выделение на телефоне меняется долгим тапом и маркерами — следим за selectionchange документа
+  useEffect(() => {
+    const onChange = () => {
+      const el = textarea.current
+      setHasSelection(!!el && document.activeElement === el && el.selectionStart !== el.selectionEnd)
+    }
+    document.addEventListener('selectionchange', onChange)
+    return () => document.removeEventListener('selectionchange', onChange)
+  }, [])
+
   useEffect(() => {
     if (editingEntryId || replyToId) textarea.current?.focus()
   }, [editingEntryId, replyToId])
@@ -71,6 +84,17 @@ export function Composer() {
   function selectType(id: string) {
     update({ typeId: id })
     setActiveFieldId(null)
+  }
+
+  function format(kind: FormatKind) {
+    const el = textarea.current
+    if (!el) return
+    const result = applyFormat(el.value, el.selectionStart, el.selectionEnd, kind)
+    update({ text: result.text })
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(result.selectionStart, result.selectionEnd)
+    })
   }
 
   // Превью строится сразу при выборе, чтобы отправка не ждала
@@ -125,6 +149,32 @@ export function Composer() {
         ref={measure}
         className="pointer-events-none absolute inset-x-0 bottom-0 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] *:pointer-events-auto"
       >
+        {hasSelection && (
+          <div className="mb-2 flex gap-1 overflow-x-auto rounded-3xl border border-stone-200 bg-white p-1.5 shadow-sm">
+            {(
+              [
+                ['bold', 'Ж', 'font-bold'],
+                ['italic', 'К', 'italic'],
+                ['strike', 'З', 'line-through'],
+                ['code', 'Моно', 'font-mono'],
+                ['codeblock', 'Код', 'font-mono'],
+                ['quote', 'Цитата', ''],
+                ['spoiler', 'Скрытый', ''],
+              ] as [FormatKind, string, string][]
+            ).map(([kind, label, style]) => (
+              <button
+                key={kind}
+                type="button"
+                className={`shrink-0 rounded-2xl px-3 py-2 text-sm text-stone-800 hover:bg-stone-100 ${style}`}
+                // Нажатие не должно снимать выделение и фокус с поля ввода
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => format(kind)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         {attachMenuOpen && (
           <div className="mb-2 flex gap-2 rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
             {[
@@ -166,7 +216,7 @@ export function Composer() {
             <div className="mb-1 flex items-center gap-2 rounded-2xl bg-orange-50 px-3 py-2">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-orange-700">Редактирование</p>
-                <p className="truncate text-xs text-stone-500">{editingEntry.text || 'Запись без текста'}</p>
+                <p className="truncate text-xs text-stone-500">{plainText(editingEntry.text, { hideSpoilers: true }) || 'Запись без текста'}</p>
               </div>
               <button type="button" aria-label="Отменить редактирование" className="px-1 text-stone-400" onClick={stopEditing}>
                 ✕
@@ -177,7 +227,7 @@ export function Composer() {
             <div className="mb-1 flex items-center gap-2 rounded-2xl border-l-4 border-orange-500 bg-[#F7EFE8] px-3 py-2">
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-orange-700">Ответ на запись</p>
-                <p className="truncate text-xs text-stone-500">{replyTarget.text || 'Запись без текста'}</p>
+                <p className="truncate text-xs text-stone-500">{plainText(replyTarget.text, { hideSpoilers: true }) || 'Запись без текста'}</p>
               </div>
               {replyToId && (
                 <button type="button" aria-label="Отменить ответ" className="px-1 text-stone-400" onClick={cancelReply}>

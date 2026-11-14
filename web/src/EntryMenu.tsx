@@ -1,5 +1,6 @@
 import { useComposer } from './composerStore'
 import { db, setActual, type Entry } from './db'
+import { plainText } from './format'
 
 // Действия с записью по тапу на карточку
 export function EntryMenu({ entry, onClose }: { entry: Entry; onClose: () => void }) {
@@ -12,7 +13,9 @@ export function EntryMenu({ entry, onClose }: { entry: Entry; onClose: () => voi
         onClick={(e) => e.stopPropagation()}
       >
         {entry.text && (
-          <p className="mb-4 line-clamp-3 px-1 font-serif text-[15px] whitespace-pre-wrap text-stone-600">{entry.text}</p>
+          <p className="mb-4 line-clamp-3 px-1 font-serif text-[15px] whitespace-pre-wrap text-stone-600">
+            {plainText(entry.text, { hideSpoilers: true })}
+          </p>
         )}
         <button
           type="button"
