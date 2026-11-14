@@ -59,8 +59,11 @@ dependencies:
     - name: serena
       registry: false
       transport: stdio
-      command: serena
+      command: mise
       args:
+        - exec
+        - --
+        - serena
         - start-mcp-server
         - --context
         - agent
