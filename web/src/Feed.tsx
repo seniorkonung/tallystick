@@ -43,6 +43,8 @@ export function Feed() {
   const attachments = useLiveQuery(() => db.attachments.orderBy('createdAt').toArray())
   const [viewing, setViewing] = useState<Attachment | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
+  // Ушли вверх дальше чем на экран — показываем кнопку «вниз»
+  const [farFromBottom, setFarFromBottom] = useState(false)
   const [menuEntryId, setMenuEntryId] = useState<string | null>(null)
   const editingEntryId = useComposer((s) => s.editingEntryId)
   const filters = useFilters((s) => s.filters)
@@ -117,53 +119,72 @@ export function Feed() {
 
   return (
     // column-reverse держит прокрутку у нижнего края, как в мессенджере
-    <div ref={scroller} className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain">
-      <div className="flex flex-col gap-2 px-3 pt-[calc(var(--topbar-height,0px)+0.5rem)] pb-[calc(var(--composer-height,0px)+0.5rem)]">
-        {root && (
-          <>
-            <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(root.createdAt)}</h2>
-            {card(root)}
-            <p className="py-2 text-center text-xs font-medium text-stone-500">
-              {shownEntries.length
-                ? `${shownEntries.length} ${pluralRu(shownEntries.length, ['ответ', 'ответа', 'ответов'])}`
-                : 'Ответов пока нет'}
+    <>
+      <div
+        ref={scroller}
+        className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain"
+        // В column-reverse прокрутка вверх отрицательная, ноль — самый низ
+        onScroll={(e) => setFarFromBottom(-e.currentTarget.scrollTop > e.currentTarget.clientHeight)}
+      >
+        <div className="flex flex-col gap-2 px-3 pt-[calc(var(--topbar-height,0px)+0.5rem)] pb-[calc(var(--composer-height,0px)+0.5rem)]">
+          {root && (
+            <>
+              <h2 className="py-2 text-center text-xs font-medium text-stone-400">{dayLabel(root.createdAt)}</h2>
+              {card(root)}
+              <p className="py-2 text-center text-xs font-medium text-stone-500">
+                {shownEntries.length
+                  ? `${shownEntries.length} ${pluralRu(shownEntries.length, ['ответ', 'ответа', 'ответов'])}`
+                  : 'Ответов пока нет'}
+              </p>
+            </>
+          )}
+          {!root && shownEntries.length === 0 && (
+            <p className="py-10 text-center text-sm text-stone-400">
+              {isFiltered(filters) ? 'Под фильтры ничего не подходит' : 'Записей пока нет'}
             </p>
-          </>
-        )}
-        {!root && shownEntries.length === 0 && (
-          <p className="py-10 text-center text-sm text-stone-400">
-            {isFiltered(filters) ? 'Под фильтры ничего не подходит' : 'Записей пока нет'}
-          </p>
-        )}
-        {days.map((day) => (
-          <section
-            key={day.key}
-            data-day={dayStart(day.time)}
-            className="flex scroll-mt-[calc(var(--topbar-height,0px)+0.5rem)] flex-col gap-2"
-          >
-            {/* На экране ответов день исходной записи уже подписан над ней */}
-            {(!root || day.key !== dayKey(root.createdAt)) && (
-              <button
-                type="button"
-                className="self-center py-2 text-xs font-medium text-stone-400"
-                onClick={() => useDateJump.setState({ open: true })}
-              >
-                {dayLabel(day.time)}
-              </button>
-            )}
-            {day.items.map((item) =>
-              item.kind === 'entry' ? (
-                card(item.entry)
-              ) : (
-                <MarkLine key={item.mark.id} mark={item.mark} project={projectsById.get(item.mark.projectId)} />
-              ),
-            )}
-          </section>
-        ))}
+          )}
+          {days.map((day) => (
+            <section
+              key={day.key}
+              data-day={dayStart(day.time)}
+              className="flex scroll-mt-[calc(var(--topbar-height,0px)+0.5rem)] flex-col gap-2"
+            >
+              {/* На экране ответов день исходной записи уже подписан над ней */}
+              {(!root || day.key !== dayKey(root.createdAt)) && (
+                <button
+                  type="button"
+                  className="self-center py-2 text-xs font-medium text-stone-400"
+                  onClick={() => useDateJump.setState({ open: true })}
+                >
+                  {dayLabel(day.time)}
+                </button>
+              )}
+              {day.items.map((item) =>
+                item.kind === 'entry' ? (
+                  card(item.entry)
+                ) : (
+                  <MarkLine key={item.mark.id} mark={item.mark} project={projectsById.get(item.mark.projectId)} />
+                ),
+              )}
+            </section>
+          ))}
+        </div>
+        {menuEntry && <EntryMenu entry={menuEntry} onClose={() => setMenuEntryId(null)} />}
+        {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
       </div>
-      {menuEntry && <EntryMenu entry={menuEntry} onClose={() => setMenuEntryId(null)} />}
-      {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
-    </div>
+      {farFromBottom && (
+        <button
+          type="button"
+          aria-label="Вниз к свежим записям"
+          className="absolute bottom-[calc(var(--composer-height,0px)+0.75rem)] left-1/2 flex size-11 -translate-x-1/2 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-md"
+          onClick={() => scroller.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12l7 7 7-7" />
+          </svg>
+        </button>
+      )}
+    </>
   )
 }
 
