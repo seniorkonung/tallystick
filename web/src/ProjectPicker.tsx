@@ -3,8 +3,8 @@ import { useState } from 'react'
 import { ProjectChip } from './ProjectChip'
 import { createCategory, createProject, db, deleteCategory, type Project } from './db'
 
-// Вкладка: все активные, одна категория или завершённые
-type Tab = { kind: 'all' } | { kind: 'category'; id: string } | { kind: 'completed' }
+// Вкладка: выбранные, все активные, одна категория или завершённые
+type Tab = { kind: 'selected' } | { kind: 'all' } | { kind: 'category'; id: string } | { kind: 'completed' }
 
 type Props = {
   selectedIds: string[]
@@ -18,16 +18,20 @@ const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'sh
 export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props) {
   const projects = useLiveQuery(() => db.projects.toArray())
   const categories = useLiveQuery(() => db.categories.orderBy('createdAt').toArray())
-  const [tab, setTab] = useState<Tab>({ kind: 'all' })
+  // Если что-то выбрано, шторка открывается на выбранных
+  const [chosenTab, setTab] = useState<Tab>(() => (selectedIds.length ? { kind: 'selected' } : { kind: 'all' }))
   const [query, setQuery] = useState('')
   if (!projects || !categories) return null
 
+  // Вкладка «Выбранные» системная и есть, только пока что-то выбрано
+  const tab: Tab = chosenTab.kind === 'selected' && selectedIds.length === 0 ? { kind: 'all' } : chosenTab
   const q = query.trim().toLowerCase()
   const activeCategory = tab.kind === 'category' ? categories.find((c) => c.id === tab.id) : undefined
   // Поиск идёт по всем проектам, без поиска — по выбранной вкладке
   const shown = projects
     .filter((p) => {
       if (q) return p.name.toLowerCase().includes(q)
+      if (tab.kind === 'selected') return selectedIds.includes(p.id)
       if (tab.kind === 'completed') return p.status === 'completed'
       if (p.status !== 'active') return false
       return tab.kind === 'all' || p.categoryId === tab.id
@@ -101,6 +105,11 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
         {!q && (
           <>
             <div className="flex gap-2 overflow-x-auto px-4 pb-2">
+              {selectedIds.length > 0 && (
+                <button type="button" className={tabClass(tab.kind === 'selected')} onClick={() => setTab({ kind: 'selected' })}>
+                  Выбранные · {selectedIds.length}
+                </button>
+              )}
               <button type="button" className={tabClass(tab.kind === 'all')} onClick={() => setTab({ kind: 'all' })}>
                 Все
               </button>

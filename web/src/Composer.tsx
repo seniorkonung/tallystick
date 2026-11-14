@@ -1,7 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { FieldInput } from './FieldInput'
-import { ProjectChip } from './ProjectChip'
 import { ProjectEditor } from './ProjectEditor'
 import { ProjectPicker } from './ProjectPicker'
 import { TypeEditor } from './TypeEditor'
@@ -105,17 +104,6 @@ export function Composer() {
               <button type="button" aria-label="Отменить редактирование" className="px-1 text-stone-400" onClick={stopEditing}>
                 ✕
               </button>
-            </div>
-          )}
-          {selectedProjects.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 px-2 pt-1">
-              {selectedProjects.map((project) => (
-                <ProjectChip
-                  key={project.id}
-                  project={project}
-                  onRemove={() => update({ projectIds: draft.projectIds.filter((id) => id !== project.id) })}
-                />
-              ))}
             </div>
           )}
           <textarea
