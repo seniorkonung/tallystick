@@ -4,11 +4,12 @@ import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { FilterChips } from './FilterChips'
 import { useFilterChips } from './useFilterChips'
 import { isImage, isVideo } from './attachments'
+import { extractLinks, linkHost } from './links'
 import { db, type Attachment } from './db'
 import { matchEntry, useFilters } from './filterStore'
 import { focusEntry } from './focusEntry'
 
-type Tab = 'media' | 'files'
+type Tab = 'media' | 'files' | 'links'
 
 // Вложения записей, которые проходят текущие фильтры ленты, — от новых к старым
 export function Gallery({ onClose }: { onClose: () => void }) {
@@ -22,11 +23,16 @@ export function Gallery({ onClose }: { onClose: () => void }) {
   if (!entries || !types || !attachments) return null
 
   const typesById = new Map(types.map((t) => [t.id, t]))
-  const shownEntryIds = new Set(entries.filter((e) => matchEntry(filters, e, typesById)).map((e) => e.id))
+  const shownEntries = entries.filter((e) => matchEntry(filters, e, typesById))
+  const shownEntryIds = new Set(shownEntries.map((e) => e.id))
+  // Ссылки не хранятся отдельно — извлекаются из текста записей, от новых к старым
+  const links = shownEntries
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .flatMap((entry) => extractLinks(entry.text).map((link, i) => ({ key: `${entry.id}-${i}`, link, entry })))
   const shown = attachments.filter((a) => shownEntryIds.has(a.entryId))
   const media = shown.filter((a) => isImage(a.mime) || isVideo(a.mime))
   const files = shown.filter((a) => !isImage(a.mime) && !isVideo(a.mime))
-  const list = tab === 'media' ? media : files
+  const list = tab === 'media' ? media : tab === 'files' ? files : []
 
   const tabClass = (active: boolean) =>
     `rounded-full px-3 py-1.5 text-sm ${active ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-700'}`
@@ -49,6 +55,9 @@ export function Gallery({ onClose }: { onClose: () => void }) {
         <button type="button" className={tabClass(tab === 'files')} onClick={() => setTab('files')}>
           Файлы · {files.length}
         </button>
+        <button type="button" className={tabClass(tab === 'links')} onClick={() => setTab('links')}>
+          Ссылки · {links.length}
+        </button>
       </div>
       {chips.length > 0 && (
         <div className="px-4 pb-3">
@@ -57,12 +66,43 @@ export function Gallery({ onClose }: { onClose: () => void }) {
       )}
 
       <div className="flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {list.length === 0 && <p className="py-10 text-center text-sm text-stone-400">Вложений нет</p>}
-        <div className={tab === 'media' ? 'grid grid-cols-4 gap-2' : 'flex flex-col gap-2'}>
-          {list.map((a) => (
-            <AttachmentTile key={a.id} file={a} onOpen={() => setViewing(a)} />
-          ))}
-        </div>
+        {tab === 'links' ? (
+          <>
+            {links.length === 0 && <p className="py-10 text-center text-sm text-stone-400">Ссылок нет</p>}
+            <ul className="flex flex-col gap-2">
+              {links.map(({ key, link, entry }) => (
+                <li key={key} className="rounded-2xl border border-stone-200 bg-white px-3 py-2.5">
+                  <a href={link.href} target="_blank" rel="noopener noreferrer" className="block">
+                    <span className="block font-medium text-stone-900">{linkHost(link.text)}</span>
+                    <span className="block truncate text-sm text-orange-700">{link.text}</span>
+                  </a>
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <span className="truncate text-xs text-stone-400">{entry.text}</span>
+                    <button
+                      type="button"
+                      className="shrink-0 text-xs text-stone-500"
+                      onClick={() => {
+                        onClose()
+                        requestAnimationFrame(() => focusEntry(entry.id))
+                      }}
+                    >
+                      К записи
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            {list.length === 0 && <p className="py-10 text-center text-sm text-stone-400">Вложений нет</p>}
+            <div className={tab === 'media' ? 'grid grid-cols-4 gap-2' : 'flex flex-col gap-2'}>
+              {list.map((a) => (
+                <AttachmentTile key={a.id} file={a} onOpen={() => setViewing(a)} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {viewing && (

@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { EntryMenu } from './EntryMenu'
+import { LinkedText } from './LinkedText'
 import { useComposer } from './composerStore'
 import { isFiltered, matchEntry, matchMark, useFilters } from './filterStore'
 import { ProjectChip } from './ProjectChip'
@@ -266,7 +267,9 @@ function EntryCard(props: EntryCardProps) {
           </div>
         )}
         {entry.text && (
-          <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">{entry.text}</p>
+          <p className="font-serif text-[15px] leading-relaxed whitespace-pre-wrap text-stone-900">
+              <LinkedText text={entry.text} />
+            </p>
         )}
         {attachments.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
