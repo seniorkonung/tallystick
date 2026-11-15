@@ -33,14 +33,13 @@ type ComposerState = {
 }
 
 const typeStorageKey = 'tallystick.typeId'
-const projectsStorageKey = 'tallystick.projectIds'
 
 export const useComposer = create<ComposerState>((set, get) => ({
   draft: {
     typeId: localStorage.getItem(typeStorageKey) ?? '',
     text: '',
     values: {},
-    projectIds: JSON.parse(localStorage.getItem(projectsStorageKey) ?? '[]'),
+    projectIds: [],
     attachments: [],
   },
   editingEntryId: null,
@@ -48,11 +47,10 @@ export const useComposer = create<ComposerState>((set, get) => ({
   replyToId: null,
   fromChatId: null,
 
-  // Тип и проекты новой записи сохраняются для следующей; при редактировании — нет
+  // Тип новой записи сохраняется для следующей; при редактировании — нет
   update: (patch) => {
     if (!get().editingEntryId) {
       if (patch.typeId !== undefined) localStorage.setItem(typeStorageKey, patch.typeId)
-      if (patch.projectIds !== undefined) localStorage.setItem(projectsStorageKey, JSON.stringify(patch.projectIds))
     }
     set((s) => ({ draft: { ...s.draft, ...patch } }))
   },
@@ -75,7 +73,8 @@ export const useComposer = create<ComposerState>((set, get) => ({
   stopEditing: () =>
     set((s) => ({ editingEntryId: null, stash: null, draft: s.stash ?? s.draft })),
 
-  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {}, attachments: [] }, replyToId: null, fromChatId: null })),
+  // Проекты выбираются для каждой записи заново
+  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {}, projectIds: [], attachments: [] }, replyToId: null, fromChatId: null })),
 
   // Ответ пишется в черновик новой записи: начатое редактирование отменяется
   startReply: (entryId) =>

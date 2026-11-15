@@ -19,12 +19,11 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
   const projects = useLiveQuery(() => db.projects.toArray())
   const categories = useLiveQuery(() => db.categories.orderBy('createdAt').toArray())
   // Если что-то выбрано, шторка открывается на выбранных
-  const [chosenTab, setTab] = useState<Tab>(() => (selectedIds.length ? { kind: 'selected' } : { kind: 'all' }))
+  const [tab, setTab] = useState<Tab>(() => (selectedIds.length ? { kind: 'selected' } : { kind: 'all' }))
   const [query, setQuery] = useState('')
   if (!projects || !categories) return null
-
-  // Вкладка «Выбранные» системная и есть, только пока что-то выбрано
-  const tab: Tab = chosenTab.kind === 'selected' && selectedIds.length === 0 ? { kind: 'all' } : chosenTab
+  // Вкладка «Выбранные» пропадает вместе с выбором — активной становится соседняя «Все» и остаётся ею
+  if (tab.kind === 'selected' && selectedIds.length === 0) setTab({ kind: 'all' })
   const q = query.trim().toLowerCase()
   const activeCategory = tab.kind === 'category' ? categories.find((c) => c.id === tab.id) : undefined
   // Поиск идёт по всем проектам, без поиска — по выбранной вкладке
