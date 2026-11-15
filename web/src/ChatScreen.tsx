@@ -5,11 +5,11 @@ import { AttachSheet } from './AttachSheet'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { Markdown } from './Markdown'
 import { prepareFile } from './attachments'
-import { answerApproval, lastModel, pendingApprovals, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
+import { answerApproval, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
 import { approvalLabels, permissionLabels, toolLabels } from './assistantTools'
 import { closeChat, useChatView } from './chatView'
 import { useComposer } from './composerStore'
-import { db, type ChatFile, type Permission, type PreparedFile } from './db'
+import { db, type ChatFile, type Permission, type PreparedFile, type Reasoning } from './db'
 import { plainText } from './format'
 
 export function ChatScreen() {
@@ -35,6 +35,7 @@ function ChatView({ chatId }: { chatId: string }) {
   const [choice, setChoice] = useState<string | null>(null)
   // Права нового чата до первого сообщения
   const [newPermission, setNewPermission] = useState<Permission>('ask')
+  const [newReasoning, setNewReasoning] = useState(lastReasoning)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const [files, setFiles] = useState<{ key: string; file: PreparedFile }[]>([])
   const [preparing, setPreparing] = useState(false)
@@ -56,6 +57,7 @@ function ChatView({ chatId }: { chatId: string }) {
   const selected = options.find((o) => o.value === (choice ?? saved)) ?? options[0]
   const running = runState?.running ?? false
   const permission = chat?.permission ?? newPermission
+  const reasoning = chat?.reasoning ?? newReasoning
   const approvals = running ? [] : pendingApprovals(messages)
   const canSend = !running && !preparing && approvals.length === 0 && !!selected && (text.trim() !== '' || files.length > 0)
   const filesByMessage = new Map<string, ChatFile[]>()
@@ -78,13 +80,19 @@ function ChatView({ chatId }: { chatId: string }) {
     else setNewPermission(next)
   }
 
+  function changeReasoning(next: Reasoning) {
+    rememberReasoning(next)
+    if (chat) void db.chats.update(chat.id, { reasoning: next })
+    else setNewReasoning(next)
+  }
+
   async function send() {
     if (!canSend) return
     const message = text.trim()
     const attached = files.map((f) => f.file)
     setText('')
     setFiles([])
-    const id = await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission)
+    const id = await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission, reasoning)
     // Новый чат получил id: экран остаётся тем же шагом истории
     if (isNew) useChatView.setState({ chatId: id })
   }
@@ -159,21 +167,8 @@ function ChatView({ chatId }: { chatId: string }) {
             </div>
           )}
           {preparing && <p className="px-2 pt-1 text-xs text-stone-400">Готовлю вложения…</p>}
-          <textarea
-            ref={textarea}
-            value={text}
-            rows={1}
-            placeholder="Спросите ассистента"
-            className="block max-h-[200px] w-full resize-none bg-transparent px-2 py-2 text-[15px] outline-none placeholder:text-stone-400"
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault()
-                void send()
-              }
-            }}
-          />
-          <div className="flex items-center justify-between gap-1">
+          {/* Как в мессенджере: вложения, текст и отправка одной строкой, настройки ассистента под ней */}
+          <div className="flex items-end gap-1">
             <button
               type="button"
               aria-label="Вложения"
@@ -182,38 +177,20 @@ function ChatView({ chatId }: { chatId: string }) {
             >
               +
             </button>
-            <select
-              aria-label="Права ассистента"
-              value={permission}
-              onChange={(e) => changePermission(e.target.value as Permission)}
-              className="w-0 min-w-0 flex-1 truncate rounded-full bg-transparent px-2 py-2 text-sm text-stone-600 hover:bg-stone-100"
-            >
-              {(Object.keys(permissionLabels) as Permission[]).map((p) => (
-                <option key={p} value={p}>
-                  {permissionLabels[p]}
-                </option>
-              ))}
-            </select>
-            {options.length > 0 ? (
-              <select
-                aria-label="Модель"
-                value={selected.value}
-                onChange={(e) => setChoice(e.target.value)}
-                className="w-0 min-w-0 flex-1 truncate rounded-full bg-transparent px-2 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
-              >
-                {providers.map((p) => (
-                  <optgroup key={p.id} label={p.name}>
-                    {p.models.map((model) => (
-                      <option key={model} value={`${p.id}|${model}`}>
-                        {model}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            ) : (
-              <p className="px-2 text-xs text-stone-500">Добавьте провайдера в настройках — шестерёнка в боковой панели</p>
-            )}
+            <textarea
+              ref={textarea}
+              value={text}
+              rows={1}
+              placeholder="Спросите ассистента"
+              className="block max-h-[200px] min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] outline-none placeholder:text-stone-400"
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                  e.preventDefault()
+                  void send()
+                }
+              }}
+            />
             {running ? (
               <button
                 type="button"
@@ -236,6 +213,55 @@ function ChatView({ chatId }: { chatId: string }) {
                 </svg>
               </button>
             )}
+          </div>
+          {/* Каждый список шириной в выбранное значение; не помещаются — строка прокручивается */}
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {options.length > 0 ? (
+              <>
+                <select
+                  aria-label="Модель"
+                  value={selected.value}
+                  onChange={(e) => setChoice(e.target.value)}
+                  className="shrink-0 field-sizing-content rounded-full bg-transparent px-2 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+                >
+                  {providers.map((p) => (
+                    <optgroup key={p.id} label={p.name}>
+                      {p.models.map((model) => (
+                        <option key={model} value={`${p.id}|${model}`}>
+                          {model}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <select
+                  aria-label="Глубина размышлений"
+                  value={reasoning}
+                  onChange={(e) => changeReasoning(e.target.value as Reasoning)}
+                  className="shrink-0 field-sizing-content rounded-full bg-transparent px-2 py-2 text-sm text-stone-600 hover:bg-stone-100"
+                >
+                  {(Object.keys(reasoningLabels) as Reasoning[]).map((r) => (
+                    <option key={r} value={r}>
+                      {reasoningLabels[r]}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <p className="px-2 text-xs text-stone-500">Добавьте провайдера в настройках — шестерёнка в боковой панели</p>
+            )}
+            <select
+              aria-label="Права ассистента"
+              value={permission}
+              onChange={(e) => changePermission(e.target.value as Permission)}
+              className="shrink-0 field-sizing-content rounded-full bg-transparent px-2 py-2 text-sm text-stone-600 hover:bg-stone-100"
+            >
+              {(Object.keys(permissionLabels) as Permission[]).map((p) => (
+                <option key={p} value={p}>
+                  {permissionLabels[p]}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

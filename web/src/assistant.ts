@@ -2,7 +2,7 @@ import { APICallError, RetryError, generateText, isStepCount, streamText, type M
 import { create } from 'zustand'
 import { activeToolsFor, approvalFor, localTime, readTools, writeTools } from './assistantTools'
 import { fileForModel } from './modelFiles'
-import { db, type Chat, type ChatFile, type ChatMessage, type Permission, type PreparedFile } from './db'
+import { db, type Chat, type ChatFile, type ChatMessage, type Permission, type PreparedFile, type Reasoning } from './db'
 import { languageModel } from './llm'
 
 // То, что ассистент выдаёт прямо сейчас; после ответа это становится сообщениями чата
@@ -19,6 +19,27 @@ const lastModelKey = 'tallystick.chatModel'
 
 export function lastModel(): { providerId: string; model: string } | null {
   return JSON.parse(localStorage.getItem(lastModelKey) ?? 'null')
+}
+
+export const reasoningLabels: Record<Reasoning, string> = {
+  'provider-default': 'Авто',
+  none: 'Без размышлений',
+  low: 'Низкое',
+  medium: 'Среднее',
+  high: 'Высокое',
+  xhigh: 'Очень высокое',
+  max: 'Максимум',
+}
+
+const lastReasoningKey = 'tallystick.chatReasoning'
+
+// Новый чат начинается с последней выбранной глубины размышлений
+export function lastReasoning(): Reasoning {
+  return (localStorage.getItem(lastReasoningKey) as Reasoning | null) ?? 'provider-default'
+}
+
+export function rememberReasoning(reasoning: Reasoning) {
+  localStorage.setItem(lastReasoningKey, reasoning)
 }
 
 function setRun(chatId: string, patch: Partial<Run>) {
@@ -67,11 +88,12 @@ export async function sendMessage(
   providerId: string,
   model: string,
   permission: Permission,
+  reasoning: Reasoning,
 ) {
   localStorage.setItem(lastModelKey, JSON.stringify({ providerId, model }))
   let id = chatId
   if (id === 'new') {
-    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || 'Чат').slice(0, 60), providerId, model, permission }
+    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || 'Чат').slice(0, 60), providerId, model, permission, reasoning }
     await db.chats.add(chat)
     id = chat.id
   } else {
@@ -116,6 +138,8 @@ export async function run(chatId: string) {
       tools: { ...readTools, ...writeTools(chatId) },
       activeTools: activeToolsFor(chat.permission, provider.kind),
       toolApproval: approvalFor(chat.permission),
+      // AI SDK переводит глубину размышлений в настройку провайдера; неподдерживаемую моделью — в ближайшую
+      reasoning: chat.reasoning,
       stopWhen: isStepCount(20),
       abortSignal: controller.signal,
     })

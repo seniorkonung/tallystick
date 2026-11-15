@@ -117,6 +117,9 @@ export type Provider = {
 // Что ассистент может делать с лентой без запроса пользователю
 export type Permission = 'read' | 'ask' | 'ask-delete' | 'full'
 
+// Насколько глубоко модель размышляет перед ответом; provider-default — как решит провайдер
+export type Reasoning = 'provider-default' | 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+
 // Переписка с ассистентом; не запись и не часть ленты
 export type Chat = {
   id: string
@@ -127,6 +130,7 @@ export type Chat = {
   providerId: string | null
   model: string | null
   permission: Permission
+  reasoning: Reasoning
 }
 
 // Сообщение в формате AI SDK: текст, вызовы инструментов и их результаты
@@ -286,6 +290,14 @@ db.version(16)
   .upgrade(async (tx) => {
     await tx.table('types').toCollection().modify((type) => {
       for (const field of type.fields) delete field.unit
+    })
+  })
+
+db.version(17)
+  .stores({})
+  .upgrade(async (tx) => {
+    await tx.table('chats').toCollection().modify((chat) => {
+      chat.reasoning ??= 'provider-default'
     })
   })
 
