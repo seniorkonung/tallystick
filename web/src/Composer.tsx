@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
+import { AttachSheet } from './AttachSheet'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { FieldsSheet } from './FieldsSheet'
 import { TagChip } from './TagChip'
@@ -44,9 +45,6 @@ export function Composer() {
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null)
   const [preparing, setPreparing] = useState(false)
   const [viewing, setViewing] = useState<PreparedFile | null>(null)
-  const galleryInput = useRef<HTMLInputElement>(null)
-  const cameraInput = useRef<HTMLInputElement>(null)
-  const fileInput = useRef<HTMLInputElement>(null)
 
   // Лента получает нижний отступ по высоте панели, чтобы последняя запись не пряталась под ней
   const measure = useMeasuredHeight('--composer-height')
@@ -99,12 +97,11 @@ export function Composer() {
   }
 
   // Превью строится сразу при выборе, чтобы отправка не ждала
-  async function attach(list: FileList | null) {
-    setAttachMenuOpen(false)
-    if (!list?.length) return
+  async function attach(list: File[]) {
+    if (!list.length) return
     setPreparing(true)
     try {
-      const prepared = await Promise.all([...list].map(prepareFile))
+      const prepared = await Promise.all(list.map(prepareFile))
       const current = useComposer.getState().draft.attachments
       update({
         attachments: [...current, ...prepared.map((file) => ({ key: crypto.randomUUID(), existingId: null, file }))],
@@ -202,27 +199,6 @@ export function Composer() {
             </div>
           )
         )}
-        {attachMenuOpen && (
-          <div className="mb-2 flex gap-2 rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
-            {[
-              { label: 'Фото или видео', input: galleryInput },
-              { label: 'Камера', input: cameraInput },
-              { label: 'Файл', input: fileInput },
-            ].map(({ label, input }) => (
-              <button
-                key={label}
-                type="button"
-                className="flex-1 rounded-2xl bg-stone-100 px-2 py-3 text-sm text-stone-800"
-                onClick={() => input.current?.click()}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
-        <input ref={galleryInput} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
-        <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
-        <input ref={fileInput} type="file" multiple hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
 
         <div className="rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
           {editingEntry && (
@@ -301,8 +277,8 @@ export function Composer() {
               <button
                 type="button"
                 aria-label="Вложения"
-                className={`flex size-9 items-center justify-center rounded-full text-xl text-stone-600 hover:bg-stone-100 ${attachMenuOpen ? 'bg-stone-100' : ''}`}
-                onClick={() => setAttachMenuOpen(!attachMenuOpen)}
+                className="flex size-9 items-center justify-center rounded-full text-xl text-stone-600 hover:bg-stone-100"
+                onClick={() => setAttachMenuOpen(true)}
               >
                 +
               </button>
@@ -373,6 +349,7 @@ export function Composer() {
         />
       )}
 
+      <AttachSheet open={attachMenuOpen} onClose={() => setAttachMenuOpen(false)} onFiles={(files) => void attach(files)} />
       {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
 
       {activeFieldId && type.fields.some((f) => f.id === activeFieldId) && (
