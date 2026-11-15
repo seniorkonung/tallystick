@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useChatView } from './chatView'
 
 type ThreadState = {
   // Стек открытых экранов ответов: последний — текущий
@@ -17,6 +18,8 @@ export const useThread = create<ThreadState>((set) => ({
   back: () => history.back(),
 }))
 
+// Чат открывается поверх экрана ответов, поэтому «назад» сначала закрывает его
 window.addEventListener('popstate', () => {
+  if (useChatView.getState().chatId) return useChatView.setState({ chatId: null })
   useThread.setState((s) => ({ stack: s.stack.slice(0, -1) }))
 })

@@ -1,3 +1,4 @@
+import type { ModelMessage } from 'ai'
 import Dexie, { type EntityTable } from 'dexie'
 import type { Filters } from './filterStore'
 
@@ -108,6 +109,25 @@ export type Provider = {
   createdAt: number
 }
 
+// Переписка с ассистентом; не запись и не часть ленты
+export type Chat = {
+  id: string
+  createdAt: number
+  // Время последнего сообщения: по нему упорядочен список чатов
+  updatedAt: number
+  title: string
+  providerId: string | null
+  model: string | null
+}
+
+// Сообщение в формате AI SDK: текст, вызовы инструментов и их результаты
+export type ChatMessage = {
+  id: string
+  chatId: string
+  createdAt: number
+  message: ModelMessage
+}
+
 export const db = new Dexie('tallystick') as Dexie & {
   types: EntityTable<EntryType, 'id'>
   entries: EntityTable<Entry, 'id'>
@@ -117,6 +137,8 @@ export const db = new Dexie('tallystick') as Dexie & {
   attachments: EntityTable<Attachment, 'id'>
   presets: EntityTable<Preset, 'id'>
   providers: EntityTable<Provider, 'id'>
+  chats: EntityTable<Chat, 'id'>
+  chatMessages: EntityTable<ChatMessage, 'id'>
 }
 
 db.version(1).stores({
@@ -169,6 +191,8 @@ db.version(6).stores({ attachments: 'id, entryId, createdAt' })
 db.version(7).stores({ presets: 'id, order' })
 
 db.version(8).stores({ providers: 'id, createdAt' })
+
+db.version(9).stores({ chats: 'id, updatedAt', chatMessages: 'id, chatId, createdAt' })
 
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {

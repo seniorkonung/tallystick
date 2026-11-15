@@ -1,3 +1,4 @@
+import { ChatScreen } from './ChatScreen'
 import { Composer } from './Composer'
 import { DateJump } from './DateJump'
 import { Feed } from './Feed'
@@ -10,6 +11,7 @@ export default function App() {
       <TopBar />
       <Composer />
       <DateJump />
+      <ChatScreen />
     </div>
   )
 }

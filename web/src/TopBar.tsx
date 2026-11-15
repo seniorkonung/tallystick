@@ -3,6 +3,7 @@ import { FilterSheet } from './FilterSheet'
 import { useDateJump } from './dateJumpStore'
 import { Gallery } from './Gallery'
 import { Settings } from './Settings'
+import { Chats } from './Chats'
 import { Sidebar } from './Sidebar'
 import { FilterChips } from './FilterChips'
 import { useFilterChips } from './useFilterChips'
@@ -18,6 +19,7 @@ export function TopBar() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [chatsOpen, setChatsOpen] = useState(false)
   // Лента получает верхний отступ по высоте панели
   const measure = useMeasuredHeight('--topbar-height')
   const inThread = useThread((s) => s.stack.length > 0)
@@ -106,10 +108,16 @@ export function TopBar() {
 
       {sheetOpen && <FilterSheet onClose={() => setSheetOpen(false)} />}
       {sidebarOpen && (
-        <Sidebar onOpenGallery={() => setGalleryOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          onOpenGallery={() => setGalleryOpen(true)}
+          onOpenChats={() => setChatsOpen(true)}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onClose={() => setSidebarOpen(false)}
+        />
       )}
       {galleryOpen && <Gallery onClose={() => setGalleryOpen(false)} />}
       {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
+      {chatsOpen && <Chats onClose={() => setChatsOpen(false)} />}
     </>
   )
 }

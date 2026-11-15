@@ -1,0 +1,166 @@
+import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage } from 'ai'
+import { create } from 'zustand'
+import { readTools } from './assistantTools'
+import { db, type Chat } from './db'
+import { languageModel } from './llm'
+
+// То, что ассистент выдаёт прямо сейчас; после ответа это становится сообщениями чата
+export type RunItem = { kind: 'text'; text: string } | { kind: 'tool'; id: string; name: string; failed: boolean }
+
+export type Run = { items: RunItem[]; running: boolean; error: string | null }
+
+// Ответ идёт и тогда, когда чат закрыт: состояние живёт вне экрана
+export const useRuns = create<Record<string, Run>>(() => ({}))
+
+const controllers = new Map<string, AbortController>()
+
+const lastModelKey = 'tallystick.chatModel'
+
+export function lastModel(): { providerId: string; model: string } | null {
+  return JSON.parse(localStorage.getItem(lastModelKey) ?? 'null')
+}
+
+function setRun(chatId: string, patch: Partial<Run>) {
+  useRuns.setState((s) => ({ [chatId]: { ...(s[chatId] ?? { items: [], running: false, error: null }), ...patch } }))
+}
+
+function instructions() {
+  const now = new Date()
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const date = now.toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return `You are the assistant inside Tallystick, the user's personal feed app. The feed holds everything the user records: thoughts, meals, workouts, project notes.
+
+Domain:
+- Entry: a feed item with text, attachments, field values of its type, projects, an optional reply-to entry, and actuality (actual or no longer actual). Its creation time is fixed.
+- Type: a user-defined kind of entry with an ordered list of fields (single choice, multiple choice, number with optional unit, string).
+- Project: a goal or direction with a start and an end, active or completed; an entry can belong to several projects.
+
+Use the tools to look at the user's data instead of guessing. Fetch types or projects first when you need their ids for filtering. Page through results when the total exceeds the page.
+
+Current local time: ${date} (${zone}). Entry times are in this zone.
+
+Reply in the user's language, concisely, using Markdown.`
+}
+
+function errorText(error: unknown): string {
+  if (RetryError.isInstance(error)) return errorText(error.lastError)
+  if (APICallError.isInstance(error)) return `${error.statusCode ?? ''} ${error.responseBody?.slice(0, 300) ?? error.message}`.trim()
+  return error instanceof Error ? error.message : String(error)
+}
+
+async function saveMessages(chatId: string, messages: ModelMessage[]) {
+  const now = Date.now()
+  await db.transaction('rw', db.chatMessages, db.chats, async () => {
+    // Порядок сообщений — порядок добавления
+    await db.chatMessages.bulkAdd(messages.map((message, i) => ({ id: crypto.randomUUID(), chatId, createdAt: now + i, message })))
+    await db.chats.update(chatId, { updatedAt: now + messages.length })
+  })
+}
+
+// Первое сообщение создаёт чат; возвращает id чата
+export async function sendMessage(chatId: string | 'new', text: string, providerId: string, model: string) {
+  localStorage.setItem(lastModelKey, JSON.stringify({ providerId, model }))
+  let id = chatId
+  if (id === 'new') {
+    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: text.slice(0, 60), providerId, model }
+    await db.chats.add(chat)
+    id = chat.id
+  } else {
+    await db.chats.update(id, { providerId, model })
+  }
+  await saveMessages(id, [{ role: 'user', content: text }])
+  void run(id)
+  return id
+}
+
+export function stop(chatId: string) {
+  controllers.get(chatId)?.abort()
+}
+
+export async function run(chatId: string) {
+  const chat = await db.chats.get(chatId)
+  const provider = chat?.providerId ? await db.providers.get(chat.providerId) : undefined
+  if (!chat || !provider || !chat.model) return setRun(chatId, { error: 'Провайдер чата не найден — выберите модель', running: false })
+
+  const history = (await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')).map((m) => m.message)
+  const controller = new AbortController()
+  controllers.set(chatId, controller)
+  setRun(chatId, { items: [], running: true, error: null })
+
+  const items: RunItem[] = []
+  const show = () => setRun(chatId, { items: [...items] })
+  let aborted = false
+  try {
+    const result = streamText({
+      model: languageModel(provider, chat.model),
+      instructions: instructions(),
+      messages: history,
+      tools: readTools,
+      stopWhen: isStepCount(20),
+      abortSignal: controller.signal,
+    })
+    let failure: unknown = null
+    for await (const part of result.stream) {
+      switch (part.type) {
+        case 'text-delta': {
+          const last = items.at(-1)
+          if (last?.kind === 'text') last.text += part.text
+          else items.push({ kind: 'text', text: part.text })
+          show()
+          break
+        }
+        case 'tool-call':
+          items.push({ kind: 'tool', id: part.toolCallId, name: part.toolName, failed: false })
+          show()
+          break
+        case 'tool-error': {
+          const item = items.find((i) => i.kind === 'tool' && i.id === part.toolCallId)
+          if (item?.kind === 'tool') item.failed = true
+          show()
+          break
+        }
+        case 'abort':
+          aborted = true
+          break
+        case 'error':
+          failure = part.error
+          break
+      }
+    }
+    if (failure) throw failure
+    if (!aborted) {
+      await saveMessages(chatId, await result.responseMessages)
+      if (history.length === 1) void nameChat(chatId, provider, chat.model, history[0])
+    }
+  } catch (error) {
+    if (!controller.signal.aborted) {
+      setRun(chatId, { running: false, error: errorText(error) })
+      controllers.delete(chatId)
+      return
+    }
+    aborted = true
+  }
+  // Остановленный ответ сохраняется только текстом: незавершённые вызовы инструментов сломали бы историю
+  if (aborted) {
+    const text = items.flatMap((i) => (i.kind === 'text' ? [i.text] : [])).join('\n\n')
+    if (text) await saveMessages(chatId, [{ role: 'assistant', content: text }])
+  }
+  controllers.delete(chatId)
+  setRun(chatId, { items: [], running: false, error: null })
+}
+
+// Название по первому сообщению; если не вышло — остаётся начало сообщения
+async function nameChat(chatId: string, provider: Parameters<typeof languageModel>[0], model: string, first: ModelMessage) {
+  try {
+    const { text } = await generateText({
+      model: languageModel(provider, model),
+      instructions: 'Write a title of 2-6 words for a chat that starts with the given message, in the language of the message. Reply with the title only, without quotes.',
+      prompt: typeof first.content === 'string' ? first.content : JSON.stringify(first.content),
+      maxOutputTokens: 30,
+    })
+    const title = text.trim().replace(/^["«]|["»]$/g, '')
+    if (title) await db.chats.update(chatId, { title })
+  } catch {
+    // Название не важно для работы чата
+  }
+}

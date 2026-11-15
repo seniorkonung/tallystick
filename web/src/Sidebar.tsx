@@ -1,16 +1,18 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
+import { openChat } from './chatView'
 import { db, type Preset } from './db'
 import { isFiltered, normalizeFilters, sameFilters, useFilters } from './filterStore'
 
 type Props = {
   onOpenGallery: () => void
+  onOpenChats: () => void
   onOpenSettings: () => void
   onClose: () => void
 }
 
 // Пресеты — быстрое применение фильтров к единственной ленте, а не отдельные ленты
-export function Sidebar({ onOpenGallery, onOpenSettings, onClose }: Props) {
+export function Sidebar({ onOpenGallery, onOpenChats, onOpenSettings, onClose }: Props) {
   const presets = useLiveQuery(() => db.presets.orderBy('order').toArray())
   const { filters, set, reset } = useFilters()
   const [editing, setEditing] = useState(false)
@@ -84,6 +86,26 @@ export function Sidebar({ onOpenGallery, onOpenSettings, onClose }: Props) {
             }}
           >
             Вложения
+          </button>
+          <button
+            type="button"
+            className={itemClass(false)}
+            onClick={() => {
+              onOpenChats()
+              onClose()
+            }}
+          >
+            Чаты
+          </button>
+          <button
+            type="button"
+            className={itemClass(false)}
+            onClick={() => {
+              onClose()
+              openChat('new')
+            }}
+          >
+            Новый чат
           </button>
         </div>
 
