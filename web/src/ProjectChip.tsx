@@ -11,7 +11,15 @@ export function ProjectChip({ project, onRemove }: { project: Project; onRemove?
       <span className="size-1.5 rounded-full" style={{ background: color.dot }} />
       {project.name}
       {onRemove && (
-        <button type="button" aria-label={`Убрать ${project.name}`} className="-mr-1 px-1" onClick={onRemove}>
+        <button
+          type="button"
+          aria-label={`Убрать ${project.name}`}
+          className="-mr-1 px-1"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRemove()
+          }}
+        >
           ✕
         </button>
       )}

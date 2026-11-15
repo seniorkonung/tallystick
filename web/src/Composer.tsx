@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { FieldsSheet } from './FieldsSheet'
+import { ProjectChip } from './ProjectChip'
 import { ProjectEditor } from './ProjectEditor'
 import { ProjectPicker } from './ProjectPicker'
 import { TypeEditor } from './TypeEditor'
@@ -244,6 +245,17 @@ export function Composer() {
             </div>
           )}
           {preparing && <p className="px-2 pt-1 text-xs text-stone-400">Готовлю вложения…</p>}
+          {/* Выбранные проекты своей строкой; тап открывает выбор, крестик убирает проект */}
+          {selectedProjects.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto px-1 pt-1 pb-1">
+              {selectedProjects.map((project) => (
+                // Не button: внутри плашки своя кнопка «Убрать»
+                <div key={project.id} role="button" tabIndex={0} className="shrink-0 cursor-pointer whitespace-nowrap" onClick={() => setPickingProjects(true)}>
+                  <ProjectChip project={project} onRemove={() => update({ projectIds: draft.projectIds.filter((id) => id !== project.id) })} />
+                </div>
+              ))}
+            </div>
+          )}
           {/* Поля типа одной строкой над текстом; тап открывает панель со всеми полями */}
           {type.fields.length > 0 && (
             <div className="flex gap-1.5 overflow-x-auto px-1 pt-1 pb-1">
@@ -311,7 +323,7 @@ export function Composer() {
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 </svg>
-                {selectedProjects.length > 0 ? selectedProjects.length : 'Проект'}
+                {selectedProjects.length === 0 && 'Проект'}
               </button>
             </div>
             <button
