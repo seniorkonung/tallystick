@@ -34,6 +34,8 @@ export type Entry = {
   actual: boolean
   // Исходная запись, на которую это ответ
   replyTo: string | null
+  // Чат, из которого запись попала в ленту
+  chatId: string | null
 }
 
 export type ProjectStatus = 'active' | 'completed'
@@ -109,6 +111,9 @@ export type Provider = {
   createdAt: number
 }
 
+// Что ассистент может делать с лентой без запроса пользователю
+export type Permission = 'read' | 'ask' | 'ask-delete' | 'full'
+
 // Переписка с ассистентом; не запись и не часть ленты
 export type Chat = {
   id: string
@@ -118,6 +123,7 @@ export type Chat = {
   title: string
   providerId: string | null
   model: string | null
+  permission: Permission
 }
 
 // Сообщение в формате AI SDK: текст, вызовы инструментов и их результаты
@@ -194,6 +200,17 @@ db.version(8).stores({ providers: 'id, createdAt' })
 
 db.version(9).stores({ chats: 'id, updatedAt', chatMessages: 'id, chatId, createdAt' })
 
+db.version(10)
+  .stores({})
+  .upgrade(async (tx) => {
+    await tx.table('entries').toCollection().modify((entry) => {
+      entry.chatId ??= null
+    })
+    await tx.table('chats').toCollection().modify((chat) => {
+      chat.permission ??= 'ask'
+    })
+  })
+
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
   tx.table('types').add({ id: crypto.randomUUID(), name: 'Заметка', createdAt: Date.now(), fields: [] })
@@ -221,8 +238,9 @@ export async function addEntry(
   projectIds: string[],
   replyTo: string | null,
   files: PreparedFile[],
+  chatId: string | null = null,
 ) {
-  await db.transaction('rw', [db.entries, db.projects, db.categories, db.marks, db.attachments], async () => {
+  return db.transaction('rw', [db.entries, db.projects, db.categories, db.marks, db.attachments], async () => {
     const now = Date.now()
     const projects = await db.projects.bulkGet(projectIds)
     for (const project of projects) {
@@ -239,7 +257,9 @@ export async function addEntry(
       projectIds,
       actual: true,
       replyTo,
+      chatId,
     })
+    return entryId
   })
 }
 

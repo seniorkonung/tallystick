@@ -20,7 +20,7 @@ type TypeEditing = { type: EntryType | null } | null
 export function Composer() {
   const types = useLiveQuery(() => db.types.toArray())
   const projects = useLiveQuery(() => db.projects.toArray())
-  const { draft, editingEntryId, update, stopEditing, clearAfterSend, replyToId, cancelReply } = useComposer()
+  const { draft, editingEntryId, update, stopEditing, clearAfterSend, replyToId, cancelReply, fromChatId, cancelFromChat } = useComposer()
   const threadId = useThread((s) => s.stack.at(-1))
   const editingEntry = useLiveQuery(
     () => (editingEntryId ? db.entries.get(editingEntryId) : undefined),
@@ -69,8 +69,8 @@ export function Composer() {
   }, [])
 
   useEffect(() => {
-    if (editingEntryId || replyToId) textarea.current?.focus()
-  }, [editingEntryId, replyToId])
+    if (editingEntryId || replyToId || fromChatId) textarea.current?.focus()
+  }, [editingEntryId, replyToId, fromChatId])
 
   if (!types || !projects) return null
   const sortedTypes = [...types].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
@@ -126,7 +126,7 @@ export function Composer() {
         await updateEntry(editingEntry.id, type, draft.text.trim(), draft.values, projectIds, kept, newFiles)
         stopEditing()
       } else {
-        await addEntry(type, draft.text.trim(), draft.values, projectIds, replyTarget?.id ?? null, newFiles)
+        await addEntry(type, draft.text.trim(), draft.values, projectIds, replyTarget?.id ?? null, newFiles, fromChatId)
         clearAfterSend()
       }
     } catch (error) {
@@ -234,6 +234,14 @@ export function Composer() {
                   ✕
                 </button>
               )}
+            </div>
+          )}
+          {!editingEntry && fromChatId && (
+            <div className="mb-1 flex items-center gap-2 rounded-2xl bg-stone-100 px-3 py-2">
+              <p className="flex-1 text-xs font-medium text-stone-600">Из чата — выберите тип и проекты</p>
+              <button type="button" aria-label="Не связывать с чатом" className="px-1 text-stone-400" onClick={cancelFromChat}>
+                ✕
+              </button>
             </div>
           )}
           {draft.attachments.length > 0 && (

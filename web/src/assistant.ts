@@ -1,7 +1,7 @@
 import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage } from 'ai'
 import { create } from 'zustand'
-import { readTools } from './assistantTools'
-import { db, type Chat } from './db'
+import { activeToolsFor, approvalFor, readTools, writeTools } from './assistantTools'
+import { db, type Chat, type ChatMessage, type Permission } from './db'
 import { languageModel } from './llm'
 
 // То, что ассистент выдаёт прямо сейчас; после ответа это становится сообщениями чата
@@ -24,7 +24,7 @@ function setRun(chatId: string, patch: Partial<Run>) {
   useRuns.setState((s) => ({ [chatId]: { ...(s[chatId] ?? { items: [], running: false, error: null }), ...patch } }))
 }
 
-function instructions() {
+function instructions(permission: Permission) {
   const now = new Date()
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const date = now.toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -35,7 +35,13 @@ Domain:
 - Type: a user-defined kind of entry with an ordered list of fields (single choice, multiple choice, number with optional unit, string).
 - Project: a goal or direction with a start and an end, active or completed; an entry can belong to several projects.
 
-Use the tools to look at the user's data instead of guessing. Fetch types or projects first when you need their ids for filtering. Page through results when the total exceeds the page.
+Use the tools to look at the user's data instead of guessing. Fetch types or projects first when you need their ids. Page through results when the total exceeds the page.
+
+${
+    permission === 'read'
+      ? "This chat is read-only: you cannot change data. If the user asks for a change, tell them to switch the chat's permission mode."
+      : 'Changes may need the user\'s approval in the app. When a tool execution is not approved, do not retry it. Entries you create are marked as coming from this chat.'
+  }
 
 Current local time: ${date} (${zone}). Entry times are in this zone.
 
@@ -58,11 +64,11 @@ async function saveMessages(chatId: string, messages: ModelMessage[]) {
 }
 
 // Первое сообщение создаёт чат; возвращает id чата
-export async function sendMessage(chatId: string | 'new', text: string, providerId: string, model: string) {
+export async function sendMessage(chatId: string | 'new', text: string, providerId: string, model: string, permission: Permission) {
   localStorage.setItem(lastModelKey, JSON.stringify({ providerId, model }))
   let id = chatId
   if (id === 'new') {
-    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: text.slice(0, 60), providerId, model }
+    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: text.slice(0, 60), providerId, model, permission }
     await db.chats.add(chat)
     id = chat.id
   } else {
@@ -93,9 +99,11 @@ export async function run(chatId: string) {
   try {
     const result = streamText({
       model: languageModel(provider, chat.model),
-      instructions: instructions(),
+      instructions: instructions(chat.permission),
       messages: history,
-      tools: readTools,
+      tools: { ...readTools, ...writeTools(chatId) },
+      activeTools: activeToolsFor(chat.permission),
+      toolApproval: approvalFor(chat.permission),
       stopWhen: isStepCount(20),
       abortSignal: controller.signal,
     })
@@ -147,6 +155,34 @@ export async function run(chatId: string) {
   }
   controllers.delete(chatId)
   setRun(chatId, { items: [], running: false, error: null })
+}
+
+// Запросы разрешения, на которые пользователь ещё не ответил
+export function pendingApprovals(messages: ChatMessage[]) {
+  const calls = new Map<string, { toolName: string; input: unknown }>()
+  const requests: { approvalId: string; toolCallId: string }[] = []
+  const answered = new Set<string>()
+  for (const { message } of messages) {
+    if (typeof message.content === 'string') continue
+    for (const part of message.content) {
+      if (part.type === 'tool-call') calls.set(part.toolCallId, { toolName: part.toolName, input: part.input })
+      if (part.type === 'tool-approval-request') requests.push({ approvalId: part.approvalId, toolCallId: part.toolCallId })
+      if (part.type === 'tool-approval-response') answered.add(part.approvalId)
+    }
+  }
+  return requests
+    .filter((r) => !answered.has(r.approvalId))
+    .flatMap((r) => {
+      const call = calls.get(r.toolCallId)
+      return call ? [{ approvalId: r.approvalId, ...call }] : []
+    })
+}
+
+// Ассистент продолжает, когда отвечены все запросы его шага
+export async function answerApproval(chatId: string, approvalId: string, approved: boolean) {
+  await saveMessages(chatId, [{ role: 'tool', content: [{ type: 'tool-approval-response', approvalId, approved }] }])
+  const messages = await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')
+  if (pendingApprovals(messages).length === 0) void run(chatId)
 }
 
 // Название по первому сообщению; если не вышло — остаётся начало сообщения

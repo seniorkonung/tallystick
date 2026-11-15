@@ -13,6 +13,7 @@ import { pluralRu } from './plural'
 import { useDateJump } from './dateJumpStore'
 import { focusEntry, useHighlight } from './focusEntry'
 import { useThread } from './threadStore'
+import { openChat } from './chatView'
 
 const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
 const dayWithYearFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -243,6 +244,18 @@ function EntryCard(props: EntryCardProps) {
       <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
         <span>
           {type?.name}
+          {entry.chatId && (
+            <button
+              type="button"
+              className="ml-2 text-orange-700"
+              onClick={(e) => {
+                e.stopPropagation()
+                openChat(entry.chatId!)
+              }}
+            >
+              из чата
+            </button>
+          )}
           {!entry.actual && <span className="ml-2 rounded-full bg-stone-200 px-2 py-0.5 text-stone-600">Неактуально</span>}
         </span>
         <span>{timeFormat.format(entry.createdAt)}</span>

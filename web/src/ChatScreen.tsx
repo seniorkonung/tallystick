@@ -2,10 +2,12 @@ import type { ModelMessage } from 'ai'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { Markdown } from './Markdown'
-import { lastModel, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
-import { toolLabels } from './assistantTools'
+import { answerApproval, lastModel, pendingApprovals, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
+import { approvalLabels, permissionLabels, toolLabels } from './assistantTools'
 import { closeChat, useChatView } from './chatView'
-import { db } from './db'
+import { useComposer } from './composerStore'
+import { db, type Permission } from './db'
+import { plainText } from './format'
 
 export function ChatScreen() {
   const chatId = useChatView((s) => s.chatId)
@@ -27,6 +29,8 @@ function ChatView({ chatId }: { chatId: string }) {
   const runState = useRuns((s) => s[chatId])
   const [text, setText] = useState('')
   const [choice, setChoice] = useState<string | null>(null)
+  // Права нового чата до первого сообщения
+  const [newPermission, setNewPermission] = useState<Permission>('ask')
   const textarea = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -43,13 +47,20 @@ function ChatView({ chatId }: { chatId: string }) {
   const saved = chat?.providerId ? `${chat.providerId}|${chat.model}` : lastModel() && `${lastModel()!.providerId}|${lastModel()!.model}`
   const selected = options.find((o) => o.value === (choice ?? saved)) ?? options[0]
   const running = runState?.running ?? false
-  const canSend = !running && !!selected && text.trim() !== ''
+  const permission = chat?.permission ?? newPermission
+  const approvals = running ? [] : pendingApprovals(messages)
+  const canSend = !running && approvals.length === 0 && !!selected && text.trim() !== ''
+
+  function changePermission(next: Permission) {
+    if (chat) void db.chats.update(chat.id, { permission: next })
+    else setNewPermission(next)
+  }
 
   async function send() {
     if (!canSend) return
     const message = text.trim()
     setText('')
-    const id = await sendMessage(chatId, message, selected.provider.id, selected.model)
+    const id = await sendMessage(chatId, message, selected.provider.id, selected.model, permission)
     // Новый чат получил id: экран остаётся тем же шагом истории
     if (isNew) useChatView.setState({ chatId: id })
   }
@@ -72,10 +83,32 @@ function ChatView({ chatId }: { chatId: string }) {
             <p className="py-10 text-center text-sm text-stone-400">Спросите о своих записях: ассистент видит всю ленту</p>
           )}
           {messages.map((m) => (
-            <MessageView key={m.id} message={m.message} />
+            <MessageView key={m.id} chatId={chatId} message={m.message} />
           ))}
           {runState?.items.map((item, i) => <RunItemView key={i} item={item} />)}
           {running && runState.items.length === 0 && <p className="text-sm text-stone-400">Думаю…</p>}
+          {approvals.map((a) => (
+            <div key={a.approvalId} className="rounded-2xl border border-orange-200 bg-white px-3 py-2.5">
+              <p className="text-sm font-medium">{approvalLabels[a.toolName] ?? a.toolName}</p>
+              <ApprovalDetails input={a.input as Record<string, unknown>} />
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  className="flex-1 rounded-xl bg-stone-900 py-2 text-sm font-medium text-white"
+                  onClick={() => void answerApproval(chatId, a.approvalId, true)}
+                >
+                  Разрешить
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 rounded-xl bg-stone-100 py-2 text-sm font-medium text-stone-800"
+                  onClick={() => void answerApproval(chatId, a.approvalId, false)}
+                >
+                  Отклонить
+                </button>
+              </div>
+            </div>
+          ))}
           {runState?.error && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <p className="break-words">Ошибка: {runState.error}</p>
@@ -103,13 +136,25 @@ function ChatView({ chatId }: { chatId: string }) {
               }
             }}
           />
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-1">
+            <select
+              aria-label="Права ассистента"
+              value={permission}
+              onChange={(e) => changePermission(e.target.value as Permission)}
+              className="min-w-0 shrink rounded-full bg-transparent px-2 py-2 text-sm text-stone-600 hover:bg-stone-100"
+            >
+              {(Object.keys(permissionLabels) as Permission[]).map((p) => (
+                <option key={p} value={p}>
+                  {permissionLabels[p]}
+                </option>
+              ))}
+            </select>
             {options.length > 0 ? (
               <select
                 aria-label="Модель"
                 value={selected.value}
                 onChange={(e) => setChoice(e.target.value)}
-                className="min-w-0 rounded-full bg-transparent px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+                className="min-w-0 flex-1 rounded-full bg-transparent px-2 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
               >
                 {providers.map((p) => (
                   <optgroup key={p.id} label={p.name}>
@@ -153,21 +198,68 @@ function ChatView({ chatId }: { chatId: string }) {
   )
 }
 
-function MessageView({ message }: { message: ModelMessage }) {
+// Что именно ассистент хочет изменить: текст или исходная запись
+function ApprovalDetails({ input }: { input: Record<string, unknown> }) {
+  const entry = useLiveQuery(() => (typeof input.id === 'string' ? db.entries.get(input.id) : undefined), [input.id])
+  const text = typeof input.text === 'string' ? input.text : entry ? plainText(entry.text, { hideSpoilers: true }) : ''
+  const fields = input.fields && typeof input.fields === 'object' ? Object.entries(input.fields) : []
+  return (
+    <div className="mt-1 text-sm text-stone-600">
+      {text && <p className="line-clamp-4 whitespace-pre-wrap">{text}</p>}
+      {fields.length > 0 && (
+        <p className="mt-1 text-xs text-stone-500">{fields.map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : String(v)}`).join(' · ')}</p>
+      )}
+      {typeof input.actual === 'boolean' && <p className="mt-1 text-xs text-stone-500">{input.actual ? 'Снова актуально' : 'Больше не актуально'}</p>}
+    </div>
+  )
+}
+
+// Текст ответа уходит в панель ввода ленты: тип и проекты выбирает пользователь
+function saveToFeed(chatId: string, text: string) {
+  const composer = useComposer.getState()
+  if (composer.draft.text.trim() && !window.confirm('В панели ввода ленты есть черновик. Заменить его ответом ассистента?')) return
+  composer.startFromChat(chatId, text)
+  closeChat()
+}
+
+function AssistantText({ chatId, text }: { chatId: string; text: string }) {
+  return (
+    <div>
+      <Markdown text={text} />
+      <button type="button" className="mt-1 text-xs text-stone-400 hover:text-stone-700" onClick={() => saveToFeed(chatId, text)}>
+        В ленту
+      </button>
+    </div>
+  )
+}
+
+function MessageView({ chatId, message }: { chatId: string; message: ModelMessage }) {
   switch (message.role) {
     case 'user':
       return (
         <div className="max-w-[85%] self-end rounded-2xl bg-white px-3.5 py-2 text-[15px] whitespace-pre-wrap shadow-sm">{textOf(message)}</div>
       )
     case 'assistant':
-      if (typeof message.content === 'string') return <Markdown text={message.content} />
+      if (typeof message.content === 'string') return <AssistantText chatId={chatId} text={message.content} />
       return (
         <>
           {message.content.map((part, i) =>
             part.type === 'text' ? (
-              <Markdown key={i} text={part.text} />
+              <AssistantText key={i} chatId={chatId} text={part.text} />
             ) : part.type === 'tool-call' ? (
               <ToolLine key={i} name={part.toolName} failed={false} />
+            ) : null,
+          )}
+        </>
+      )
+    case 'tool':
+      return (
+        <>
+          {message.content.map((part, i) =>
+            part.type === 'tool-approval-response' ? (
+              <p key={i} className={`text-xs ${part.approved ? 'text-stone-400' : 'text-red-600'}`}>
+                {part.approved ? 'Разрешено' : 'Отклонено'}
+              </p>
             ) : null,
           )}
         </>

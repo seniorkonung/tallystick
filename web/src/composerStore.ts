@@ -20,12 +20,16 @@ type ComposerState = {
   stash: Draft | null
   // Запись, на которую отвечает новая запись
   replyToId: string | null
+  // Чат, из которого в новую запись перенесён ответ ассистента
+  fromChatId: string | null
   update: (patch: Partial<Draft>) => void
   startEditing: (entry: Entry, attachments: Attachment[]) => void
   stopEditing: () => void
   clearAfterSend: () => void
   startReply: (entryId: string) => void
   cancelReply: () => void
+  startFromChat: (chatId: string, text: string) => void
+  cancelFromChat: () => void
 }
 
 const typeStorageKey = 'tallystick.typeId'
@@ -42,6 +46,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
   editingEntryId: null,
   stash: null,
   replyToId: null,
+  fromChatId: null,
 
   // Тип и проекты новой записи сохраняются для следующей; при редактировании — нет
   update: (patch) => {
@@ -55,6 +60,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
   startEditing: (entry, attachments) =>
     set((s) => ({
       replyToId: null,
+      fromChatId: null,
       editingEntryId: entry.id,
       stash: s.stash ?? s.draft,
       draft: {
@@ -69,11 +75,23 @@ export const useComposer = create<ComposerState>((set, get) => ({
   stopEditing: () =>
     set((s) => ({ editingEntryId: null, stash: null, draft: s.stash ?? s.draft })),
 
-  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {}, attachments: [] }, replyToId: null })),
+  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {}, attachments: [] }, replyToId: null, fromChatId: null })),
 
   // Ответ пишется в черновик новой записи: начатое редактирование отменяется
   startReply: (entryId) =>
     set((s) => ({ editingEntryId: null, stash: null, draft: s.stash ?? s.draft, replyToId: entryId })),
 
   cancelReply: () => set({ replyToId: null }),
+
+  // Как и ответ, пишется в черновик новой записи
+  startFromChat: (chatId, text) =>
+    set((s) => ({
+      editingEntryId: null,
+      stash: null,
+      replyToId: null,
+      fromChatId: chatId,
+      draft: { ...(s.stash ?? s.draft), text, values: {}, attachments: [] },
+    })),
+
+  cancelFromChat: () => set({ fromChatId: null }),
 }))
