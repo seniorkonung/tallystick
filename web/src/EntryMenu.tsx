@@ -1,3 +1,4 @@
+import { copyEntryText } from './clipboard'
 import { useComposer } from './composerStore'
 import { db, deleteEntry, setActual, type Entry } from './db'
 import { plainText } from './format'
@@ -55,6 +56,18 @@ export function EntryMenu({ entry, onClose }: { entry: Entry; onClose: () => voi
         >
           Редактировать
         </button>
+        {entry.text && (
+          <button
+            type="button"
+            className="mb-2 w-full rounded-2xl bg-stone-100 px-4 py-3 text-left font-medium text-stone-900"
+            onClick={() => {
+              void copyEntryText(entry)
+              onClose()
+            }}
+          >
+            Копировать текст
+          </button>
+        )}
         <button
           type="button"
           className="w-full rounded-2xl bg-stone-100 px-4 py-3 text-left font-medium text-stone-900"

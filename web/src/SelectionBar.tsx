@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { TagEditor } from './TagEditor'
 import { TagPicker } from './TagPicker'
+import { copyEntriesText } from './clipboard'
 import { useComposer } from './composerStore'
 import { db, deleteEntries, setEntriesActual, setEntriesTag } from './db'
 import { pluralRu } from './plural'
@@ -65,6 +66,14 @@ export function SelectionBar() {
             </button>
             <button type="button" className={actionClass} disabled={!entries.length} onClick={() => void setEntriesActual(selectedIds, !allActual).then(clearSelection)}>
               {allActual ? 'Неактуально' : 'Актуально'}
+            </button>
+            <button
+              type="button"
+              className={actionClass}
+              disabled={!entries.some((e) => e.text)}
+              onClick={() => void copyEntriesText(entries).then(clearSelection)}
+            >
+              Копировать
             </button>
             <button type="button" className={`${actionClass} bg-red-50 text-red-700`} disabled={!entries.length} onClick={() => void remove()}>
               Удалить
