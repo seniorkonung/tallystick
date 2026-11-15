@@ -150,7 +150,8 @@ export function Composer() {
         ref={measure}
         className="pointer-events-none absolute inset-x-0 bottom-0 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] *:pointer-events-auto"
       >
-        {selection && (
+        {/* Над полем ввода: поля типа, а пока выделен текст — панель форматирования на их месте */}
+        {selection ? (
           <div className="mb-2 flex gap-1 overflow-x-auto rounded-3xl border border-stone-200 bg-white p-1.5 shadow-sm">
             {(
               [
@@ -176,6 +177,30 @@ export function Composer() {
               </button>
             ))}
           </div>
+        ) : (
+          type.fields.length > 0 && (
+            // Отступы внутри строки, чтобы прокрутка не обрезала тень плашек
+            <div className="mb-1 flex gap-1.5 overflow-x-auto pt-0.5 pb-1">
+              {type.fields.map((field) => {
+                const value = draft.values[field.id]
+                const filled = !isEmptyValue(value)
+                return (
+                  <button
+                    key={field.id}
+                    type="button"
+                    onClick={() => setActiveFieldId(field.id)}
+                    className={`flex shrink-0 items-center rounded-full border bg-white px-3 py-1.5 text-sm whitespace-nowrap text-stone-500 shadow-sm ${
+                      filled ? 'border-stone-200' : 'border-dashed border-stone-300'
+                    }`}
+                  >
+                    {field.name}
+                    {/* Название приглушено, значение выделено цветом */}
+                    {filled && value !== undefined && <span className="ml-1.5 font-medium text-stone-900">{formatValue(field, value).join(', ')}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )
         )}
         {attachMenuOpen && (
           <div className="mb-2 flex gap-2 rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
@@ -254,29 +279,6 @@ export function Composer() {
                   <ProjectChip project={project} onRemove={() => update({ projectIds: draft.projectIds.filter((id) => id !== project.id) })} />
                 </div>
               ))}
-            </div>
-          )}
-          {/* Поля типа одной строкой над текстом; тап открывает панель со всеми полями */}
-          {type.fields.length > 0 && (
-            <div className="flex gap-1.5 overflow-x-auto px-1 pt-1 pb-1">
-              {type.fields.map((field) => {
-                const value = draft.values[field.id]
-                const filled = !isEmptyValue(value)
-                return (
-                  <button
-                    key={field.id}
-                    type="button"
-                    onClick={() => setActiveFieldId(field.id)}
-                    className={`flex shrink-0 items-center rounded-full px-3 py-1 text-sm whitespace-nowrap ${
-                      filled ? 'bg-stone-100 text-stone-500' : 'border border-dashed border-stone-300 text-stone-500'
-                    }`}
-                  >
-                    {field.name}
-                    {/* Название приглушено, значение выделено цветом */}
-                    {filled && value !== undefined && <span className="ml-1.5 font-medium text-stone-900">{formatValue(field, value).join(', ')}</span>}
-                  </button>
-                )
-              })}
             </div>
           )}
           <textarea
