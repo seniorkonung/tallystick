@@ -1,6 +1,6 @@
 import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage } from 'ai'
 import { create } from 'zustand'
-import { activeToolsFor, approvalFor, readTools, writeTools } from './assistantTools'
+import { activeToolsFor, approvalFor, localTime, readTools, writeTools } from './assistantTools'
 import { fileForModel } from './modelFiles'
 import { db, type Chat, type ChatFile, type ChatMessage, type Permission, type PreparedFile } from './db'
 import { languageModel } from './llm'
@@ -25,10 +25,9 @@ function setRun(chatId: string, patch: Partial<Run>) {
   useRuns.setState((s) => ({ [chatId]: { ...(s[chatId] ?? { items: [], running: false, error: null }), ...patch } }))
 }
 
-function instructions(permission: Permission) {
-  const now = new Date()
+// Инструкции не меняются от запроса к запросу: Anthropic привязывает подписи размышлений модели к началу запроса
+function instructions() {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const date = now.toLocaleString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
   return `You are the assistant inside Tallystick, the user's personal feed app. The feed holds everything the user records: thoughts, meals, workouts, project notes.
 
 Domain:
@@ -38,13 +37,9 @@ Domain:
 
 Use the tools to look at the user's data instead of guessing. Fetch types or projects first when you need their ids. Page through results when the total exceeds the page.
 
-${
-    permission === 'read'
-      ? "This chat is read-only: you cannot change data. If the user asks for a change, tell them to switch the chat's permission mode."
-      : 'Changes may need the user\'s approval in the app. When a tool execution is not approved, do not retry it. Entries you create are marked as coming from this chat.'
-  }
+Some changes need the user's approval in the app; when a tool execution is not approved, do not retry it. If you have no tool to change data, the chat is read-only: tell the user to switch the chat's permission mode. Entries you create are marked as coming from this chat.
 
-Current local time: ${date} (${zone}). Entry times are in this zone.
+Each user message starts with the local time it was sent, in brackets. Use the latest one as the current time. Time zone: ${zone}; entry times are in this zone.
 
 Reply in the user's language, concisely, using Markdown.`
 }
@@ -105,7 +100,7 @@ export async function run(chatId: string) {
 
   const stored = await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')
   const files = new Map((await db.chatFiles.where('chatId').equals(chatId).toArray()).map((f) => [f.id, f]))
-  const history = await Promise.all(stored.map((m) => withFiles(m, files)))
+  const history = withoutOldReasoning(await Promise.all(stored.map((m) => toModelMessage(m, files))))
   const controller = new AbortController()
   controllers.set(chatId, controller)
   setRun(chatId, { items: [], running: true, error: null })
@@ -116,7 +111,7 @@ export async function run(chatId: string) {
   try {
     const result = streamText({
       model: languageModel(provider, chat.model),
-      instructions: instructions(chat.permission),
+      instructions: instructions(),
       messages: history,
       tools: { ...readTools, ...writeTools(chatId) },
       activeTools: activeToolsFor(chat.permission, provider.kind),
@@ -174,11 +169,23 @@ export async function run(chatId: string) {
   setRun(chatId, { items: [], running: false, error: null })
 }
 
-async function withFiles(m: ChatMessage, files: Map<string, ChatFile>): Promise<ModelMessage> {
-  if (m.message.role !== 'user' || !m.fileIds?.length) return m.message
-  const text = typeof m.message.content === 'string' ? m.message.content : ''
-  const parts = await Promise.all(m.fileIds.flatMap((id) => files.get(id) ?? []).map(fileForModel))
-  return { role: 'user', content: [...(text ? [{ type: 'text' as const, text }] : []), ...parts] }
+// К сообщению пользователя добавляются время отправки и вложения; время берётся из сообщения, чтобы запрос не менялся
+async function toModelMessage(m: ChatMessage, files: Map<string, ChatFile>): Promise<ModelMessage> {
+  if (m.message.role !== 'user') return m.message
+  const weekday = new Date(m.createdAt).toLocaleDateString('en-GB', { weekday: 'long' })
+  const text = `[${localTime(m.createdAt)}, ${weekday}]\n${typeof m.message.content === 'string' ? m.message.content : ''}`
+  const parts = await Promise.all((m.fileIds ?? []).flatMap((id) => files.get(id) ?? []).map(fileForModel))
+  return { role: 'user', content: [{ type: 'text', text }, ...parts] }
+}
+
+// Размышления модели нужны только в текущем ходе, например после разрешения; в прошлых ходах провайдер их всё равно отбрасывает
+function withoutOldReasoning(history: ModelMessage[]) {
+  const lastUser = history.findLastIndex((m) => m.role === 'user')
+  return history.flatMap((m, i) => {
+    if (i > lastUser || m.role !== 'assistant' || typeof m.content === 'string') return [m]
+    const content = m.content.filter((p) => p.type !== 'reasoning' && p.type !== 'reasoning-file')
+    return content.length ? [{ ...m, content }] : []
+  })
 }
 
 // Запросы разрешения, на которые пользователь ещё не ответил
