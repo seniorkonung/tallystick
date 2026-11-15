@@ -94,6 +94,9 @@ export type Preset = {
   filters: Filters
 }
 
+// Настройки приложения по ключу. tagTabOrder — порядок вкладок выбора тегов: 'all', 'archived' и id категорий
+export type Setting = { id: 'tagTabOrder'; value: string[] }
+
 // Вложение, подготовленное к сохранению: превью уже построено
 export type PreparedFile = Omit<Attachment, 'id' | 'entryId' | 'createdAt'>
 
@@ -156,6 +159,7 @@ export const db = new Dexie('tallystick') as Dexie & {
   chats: EntityTable<Chat, 'id'>
   chatMessages: EntityTable<ChatMessage, 'id'>
   chatFiles: EntityTable<ChatFile, 'id'>
+  settings: EntityTable<Setting, 'id'>
 }
 
 db.version(1).stores({
@@ -273,6 +277,8 @@ db.version(14)
       delete preset.filters.projectIds
     })
   })
+
+db.version(15).stores({ settings: 'id' })
 
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
@@ -416,12 +422,6 @@ export async function restoreTag(tag: Tag, now = Date.now()) {
     })
     await addMark(tag.id, 'restored', now)
   })
-}
-
-export async function createCategory(name: string) {
-  const category: Category = { id: crypto.randomUUID(), name, createdAt: Date.now() }
-  await db.categories.add(category)
-  return category
 }
 
 // Теги удалённой категории остаются без категории

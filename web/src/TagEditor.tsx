@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { archiveTag, db, restoreTag, type Tag } from './db'
 import { emptyFilters, useFilters } from './filterStore'
 import { pluralRu } from './plural'
+import { useTagTabs } from './tagTabs'
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -15,9 +16,11 @@ type Props = {
 
 export function TagEditor({ tagId, onClose, onShowEntries }: Props) {
   const tag = useLiveQuery(() => db.tags.get(tagId), [tagId])
-  const categories = useLiveQuery(() => db.categories.orderBy('createdAt').toArray())
+  const tabs = useTagTabs()
   const count = useLiveQuery(() => db.entries.where('tagIds').equals(tagId).count(), [tagId])
-  if (!tag || !categories || count === undefined) return null
+  if (!tag || !tabs || count === undefined) return null
+  // Категории в порядке вкладок выбора тегов
+  const categories = tabs.flatMap((t) => (t.kind === 'category' ? [t.category] : []))
   return (
     <Form key={tag.id} tag={tag} categories={categories} count={count} onClose={onClose} onShowEntries={onShowEntries} />
   )

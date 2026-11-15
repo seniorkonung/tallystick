@@ -1,10 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { TagChip } from './TagChip'
-import { createCategory, createTag, db, deleteCategory, type Tag } from './db'
-
-// Вкладка: все активные, одна категория или архив
-type Tab = { kind: 'all' } | { kind: 'category'; id: string } | { kind: 'archived' }
+import { TagTabsSheet } from './TagTabsSheet'
+import { createTag, db, type Tag } from './db'
+import { tabKey, useTagTabs } from './tagTabs'
 
 type Props = {
   selectedIds: string[]
@@ -17,19 +16,23 @@ const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'sh
 
 export function TagPicker({ selectedIds, onToggle, onEdit, onClose }: Props) {
   const tags = useLiveQuery(() => db.tags.toArray())
-  const categories = useLiveQuery(() => db.categories.orderBy('createdAt').toArray())
-  const [tab, setTab] = useState<Tab>({ kind: 'all' })
+  const tabs = useTagTabs()
+  const [tabId, setTabId] = useState<string | null>(null)
+  const [editingTabs, setEditingTabs] = useState(false)
   const [query, setQuery] = useState('')
-  if (!tags || !categories) return null
+  if (!tags || !tabs) return null
+  const categories = tabs.flatMap((t) => (t.kind === 'category' ? [t.category] : []))
+  // Открывается первая вкладка; если выбранную категорию удалили — тоже
+  const tab = tabs.find((t) => tabKey(t) === tabId) ?? tabs[0]
   const q = query.trim().toLowerCase()
-  const activeCategory = tab.kind === 'category' ? categories.find((c) => c.id === tab.id) : undefined
+  const activeCategory = tab.kind === 'category' ? tab.category : undefined
   // Поиск идёт по всем тегам, без поиска — по выбранной вкладке
   const shown = tags
     .filter((p) => {
       if (q) return p.name.toLowerCase().includes(q)
       if (tab.kind === 'archived') return p.status === 'archived'
       if (p.status !== 'active') return false
-      return tab.kind === 'all' || p.categoryId === tab.id
+      return tab.kind === 'all' || p.categoryId === activeCategory?.id
     })
     .sort((a, b) =>
       a.status !== b.status
@@ -46,26 +49,6 @@ export function TagPicker({ selectedIds, onToggle, onEdit, onClose }: Props) {
     const tag = await createTag(query.trim(), activeCategory?.id ?? null)
     setQuery('')
     onToggle(tag)
-  }
-
-  async function addCategory() {
-    const name = window.prompt('Название категории')?.trim()
-    if (!name) return
-    const category = await createCategory(name)
-    setTab({ kind: 'category', id: category.id })
-  }
-
-  async function renameCategory() {
-    if (!activeCategory) return
-    const name = window.prompt('Название категории', activeCategory.name)?.trim()
-    if (name) await db.categories.update(activeCategory.id, { name })
-  }
-
-  async function removeCategory() {
-    if (!activeCategory) return
-    if (!window.confirm(`Удалить категорию «${activeCategory.name}»? Её теги останутся без категории.`)) return
-    await deleteCategory(activeCategory.id)
-    setTab({ kind: 'all' })
   }
 
   const tabClass = (active: boolean) =>
@@ -98,43 +81,24 @@ export function TagPicker({ selectedIds, onToggle, onEdit, onClose }: Props) {
         </div>
 
         {!q && (
-          <>
-            <div className="flex gap-2 overflow-x-auto px-4 pb-2">
-              <button type="button" className={tabClass(tab.kind === 'all')} onClick={() => setTab({ kind: 'all' })}>
-                Все
+          <div className="flex gap-2 overflow-x-auto px-4 pb-2">
+            {tabs.map((t) => (
+              <button key={tabKey(t)} type="button" className={tabClass(t === tab)} onClick={() => setTabId(tabKey(t))}>
+                {t.kind === 'category' ? t.category.name : t.kind === 'all' ? 'Все' : 'Архив'}
               </button>
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={tabClass(tab.kind === 'category' && tab.id === c.id)}
-                  onClick={() => setTab({ kind: 'category', id: c.id })}
-                >
-                  {c.name}
-                </button>
-              ))}
-              <button
-                type="button"
-                className={tabClass(tab.kind === 'archived')}
-                onClick={() => setTab({ kind: 'archived' })}
-              >
-                Архив
-              </button>
-              <button type="button" aria-label="Новая категория" className={tabClass(false)} onClick={() => void addCategory()}>
-                +
-              </button>
-            </div>
-            {activeCategory && (
-              <div className="flex gap-4 px-5 pb-2 text-xs">
-                <button type="button" className="text-stone-500" onClick={() => void renameCategory()}>
-                  Переименовать категорию
-                </button>
-                <button type="button" className="text-red-600" onClick={() => void removeCategory()}>
-                  Удалить
-                </button>
-              </div>
-            )}
-          </>
+            ))}
+            {/* Пунктир и без заливки: действие, а не ещё одна категория */}
+            <button
+              type="button"
+              aria-label="Изменить вкладки"
+              className="flex shrink-0 items-center rounded-full border border-dashed border-stone-300 px-3 text-stone-500"
+              onClick={() => setEditingTabs(true)}
+            >
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+              </svg>
+            </button>
+          </div>
         )}
 
         <ul className="flex-1 overflow-y-auto px-2">
@@ -191,6 +155,7 @@ export function TagPicker({ selectedIds, onToggle, onEdit, onClose }: Props) {
           )}
         </ul>
       </div>
+      {editingTabs && <TagTabsSheet tabs={tabs} onClose={() => setEditingTabs(false)} />}
     </div>
   )
 }
