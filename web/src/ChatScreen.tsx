@@ -1,12 +1,14 @@
 import type { ModelMessage } from 'ai'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
+import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { Markdown } from './Markdown'
+import { prepareFile } from './attachments'
 import { answerApproval, lastModel, pendingApprovals, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
 import { approvalLabels, permissionLabels, toolLabels } from './assistantTools'
 import { closeChat, useChatView } from './chatView'
 import { useComposer } from './composerStore'
-import { db, type Permission } from './db'
+import { db, type ChatFile, type Permission, type PreparedFile } from './db'
 import { plainText } from './format'
 
 export function ChatScreen() {
@@ -26,12 +28,20 @@ function ChatView({ chatId }: { chatId: string }) {
   const chat = useLiveQuery(() => (isNew ? undefined : db.chats.get(chatId)), [chatId])
   const messages = useLiveQuery(() => (isNew ? [] : db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')), [chatId])
   const providers = useLiveQuery(() => db.providers.orderBy('createdAt').toArray())
+  const chatFiles = useLiveQuery(() => (isNew ? [] : db.chatFiles.where('chatId').equals(chatId).sortBy('createdAt')), [chatId])
   const runState = useRuns((s) => s[chatId])
   const [text, setText] = useState('')
   const [choice, setChoice] = useState<string | null>(null)
   // Права нового чата до первого сообщения
   const [newPermission, setNewPermission] = useState<Permission>('ask')
   const textarea = useRef<HTMLTextAreaElement>(null)
+  const [files, setFiles] = useState<{ key: string; file: PreparedFile }[]>([])
+  const [preparing, setPreparing] = useState(false)
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false)
+  const [viewing, setViewing] = useState<PreparedFile | null>(null)
+  const galleryInput = useRef<HTMLInputElement>(null)
+  const cameraInput = useRef<HTMLInputElement>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const el = textarea.current
@@ -40,7 +50,7 @@ function ChatView({ chatId }: { chatId: string }) {
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`
   }, [text])
 
-  if (!messages || !providers) return null
+  if (!messages || !providers || !chatFiles) return null
 
   const options = providers.flatMap((p) => p.models.map((model) => ({ value: `${p.id}|${model}`, provider: p, model })))
   // Модель чата, иначе последняя выбранная, иначе первая доступная
@@ -49,7 +59,22 @@ function ChatView({ chatId }: { chatId: string }) {
   const running = runState?.running ?? false
   const permission = chat?.permission ?? newPermission
   const approvals = running ? [] : pendingApprovals(messages)
-  const canSend = !running && approvals.length === 0 && !!selected && text.trim() !== ''
+  const canSend = !running && !preparing && approvals.length === 0 && !!selected && (text.trim() !== '' || files.length > 0)
+  const filesByMessage = new Map<string, ChatFile[]>()
+  for (const f of chatFiles) filesByMessage.set(f.messageId, [...(filesByMessage.get(f.messageId) ?? []), f])
+
+  // Превью строится сразу при выборе, чтобы отправка не ждала
+  async function attach(list: FileList | null) {
+    setAttachMenuOpen(false)
+    if (!list?.length) return
+    setPreparing(true)
+    try {
+      const prepared = await Promise.all([...list].map(prepareFile))
+      setFiles((current) => [...current, ...prepared.map((file) => ({ key: crypto.randomUUID(), file }))])
+    } finally {
+      setPreparing(false)
+    }
+  }
 
   function changePermission(next: Permission) {
     if (chat) void db.chats.update(chat.id, { permission: next })
@@ -59,8 +84,10 @@ function ChatView({ chatId }: { chatId: string }) {
   async function send() {
     if (!canSend) return
     const message = text.trim()
+    const attached = files.map((f) => f.file)
     setText('')
-    const id = await sendMessage(chatId, message, selected.provider.id, selected.model, permission)
+    setFiles([])
+    const id = await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission)
     // Новый чат получил id: экран остаётся тем же шагом истории
     if (isNew) useChatView.setState({ chatId: id })
   }
@@ -83,7 +110,7 @@ function ChatView({ chatId }: { chatId: string }) {
             <p className="py-10 text-center text-sm text-stone-400">Спросите о своих записях: ассистент видит всю ленту</p>
           )}
           {messages.map((m) => (
-            <MessageView key={m.id} chatId={chatId} message={m.message} />
+            <MessageView key={m.id} chatId={chatId} message={m.message} files={filesByMessage.get(m.id) ?? []} onFile={setViewing} />
           ))}
           {runState?.items.map((item, i) => <RunItemView key={i} item={item} />)}
           {running && runState.items.length === 0 && <p className="text-sm text-stone-400">Думаю…</p>}
@@ -121,7 +148,41 @@ function ChatView({ chatId }: { chatId: string }) {
       </div>
 
       <div className="px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {attachMenuOpen && (
+          <div className="mb-2 flex gap-2 rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
+            {[
+              { label: 'Фото или видео', input: galleryInput },
+              { label: 'Камера', input: cameraInput },
+              { label: 'Файл', input: fileInput },
+            ].map(({ label, input }) => (
+              <button
+                key={label}
+                type="button"
+                className="flex-1 rounded-2xl bg-stone-100 px-2 py-3 text-sm text-stone-800"
+                onClick={() => input.current?.click()}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+        <input ref={galleryInput} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
+        <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
+        <input ref={fileInput} type="file" multiple hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
         <div className="rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
+          {files.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto px-1 pt-2 pb-1">
+              {files.map((f) => (
+                <AttachmentTile
+                  key={f.key}
+                  file={f.file}
+                  onOpen={() => setViewing(f.file)}
+                  onRemove={() => setFiles(files.filter((x) => x.key !== f.key))}
+                />
+              ))}
+            </div>
+          )}
+          {preparing && <p className="px-2 pt-1 text-xs text-stone-400">Готовлю вложения…</p>}
           <textarea
             ref={textarea}
             value={text}
@@ -137,11 +198,19 @@ function ChatView({ chatId }: { chatId: string }) {
             }}
           />
           <div className="flex items-center justify-between gap-1">
+            <button
+              type="button"
+              aria-label="Вложения"
+              className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xl text-stone-600 hover:bg-stone-100 ${attachMenuOpen ? 'bg-stone-100' : ''}`}
+              onClick={() => setAttachMenuOpen(!attachMenuOpen)}
+            >
+              +
+            </button>
             <select
               aria-label="Права ассистента"
               value={permission}
               onChange={(e) => changePermission(e.target.value as Permission)}
-              className="min-w-0 shrink rounded-full bg-transparent px-2 py-2 text-sm text-stone-600 hover:bg-stone-100"
+              className="w-0 min-w-0 flex-1 truncate rounded-full bg-transparent px-2 py-2 text-sm text-stone-600 hover:bg-stone-100"
             >
               {(Object.keys(permissionLabels) as Permission[]).map((p) => (
                 <option key={p} value={p}>
@@ -154,7 +223,7 @@ function ChatView({ chatId }: { chatId: string }) {
                 aria-label="Модель"
                 value={selected.value}
                 onChange={(e) => setChoice(e.target.value)}
-                className="min-w-0 flex-1 rounded-full bg-transparent px-2 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+                className="w-0 min-w-0 flex-1 truncate rounded-full bg-transparent px-2 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
               >
                 {providers.map((p) => (
                   <optgroup key={p.id} label={p.name}>
@@ -194,6 +263,7 @@ function ChatView({ chatId }: { chatId: string }) {
           </div>
         </div>
       </div>
+      {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
 }
@@ -233,11 +303,22 @@ function AssistantText({ chatId, text }: { chatId: string; text: string }) {
   )
 }
 
-function MessageView({ chatId, message }: { chatId: string; message: ModelMessage }) {
+type MessageProps = { chatId: string; message: ModelMessage; files: ChatFile[]; onFile: (file: ChatFile) => void }
+
+function MessageView({ chatId, message, files, onFile }: MessageProps) {
   switch (message.role) {
     case 'user':
       return (
-        <div className="max-w-[85%] self-end rounded-2xl bg-white px-3.5 py-2 text-[15px] whitespace-pre-wrap shadow-sm">{textOf(message)}</div>
+        <div className="flex max-w-[85%] flex-col items-end gap-1.5 self-end">
+          {files.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-2">
+              {files.map((f) => (
+                <AttachmentTile key={f.id} file={f} onOpen={() => onFile(f)} />
+              ))}
+            </div>
+          )}
+          {textOf(message) && <div className="rounded-2xl bg-white px-3.5 py-2 text-[15px] whitespace-pre-wrap shadow-sm">{textOf(message)}</div>}
+        </div>
       )
     case 'assistant':
       if (typeof message.content === 'string') return <AssistantText chatId={chatId} text={message.content} />

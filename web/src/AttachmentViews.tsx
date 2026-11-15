@@ -79,11 +79,11 @@ export function AttachmentTile({ file, onOpen, onRemove }: TileProps) {
 type ViewerProps = {
   file: PreparedFile
   onClose: () => void
-  // Есть, когда просмотр открыт не из самой записи
-  onGoToEntry?: () => void
+  // Переход к записи или чату вложения, когда просмотр открыт не из них самих
+  goTo?: { label: string; action: () => void }
 }
 
-export function AttachmentViewer({ file, onClose, onGoToEntry }: ViewerProps) {
+export function AttachmentViewer({ file, onClose, goTo }: ViewerProps) {
   const imageRef = useBlobRef<HTMLImageElement>(file.blob)
   const videoRef = useBlobRef<HTMLVideoElement>(file.blob)
   const linkRef = useBlobRef<HTMLAnchorElement>(file.blob)
@@ -93,16 +93,16 @@ export function AttachmentViewer({ file, onClose, onGoToEntry }: ViewerProps) {
       <div className="flex items-center justify-between gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 text-white">
         <span className="min-w-0 truncate text-sm">{file.name}</span>
         <div className="flex shrink-0 gap-4 text-sm">
-          {onGoToEntry && (
+          {goTo && (
             <button
               type="button"
               className="text-white/80"
               onClick={(e) => {
                 e.stopPropagation()
-                onGoToEntry()
+                goTo.action()
               }}
             >
-              К записи
+              {goTo.label}
             </button>
           )}
           <a ref={linkRef} download={file.name} className="text-white/80" onClick={(e) => e.stopPropagation()}>

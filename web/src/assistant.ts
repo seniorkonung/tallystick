@@ -1,7 +1,8 @@
-import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage } from 'ai'
+import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage, type UserContent } from 'ai'
 import { create } from 'zustand'
 import { activeToolsFor, approvalFor, readTools, writeTools } from './assistantTools'
-import { db, type Chat, type ChatMessage, type Permission } from './db'
+import { formatSize, imageForModel, isImage } from './attachments'
+import { db, type Chat, type ChatFile, type ChatMessage, type Permission, type PreparedFile } from './db'
 import { languageModel } from './llm'
 
 // То, что ассистент выдаёт прямо сейчас; после ответа это становится сообщениями чата
@@ -64,17 +65,31 @@ async function saveMessages(chatId: string, messages: ModelMessage[]) {
 }
 
 // Первое сообщение создаёт чат; возвращает id чата
-export async function sendMessage(chatId: string | 'new', text: string, providerId: string, model: string, permission: Permission) {
+export async function sendMessage(
+  chatId: string | 'new',
+  text: string,
+  files: PreparedFile[],
+  providerId: string,
+  model: string,
+  permission: Permission,
+) {
   localStorage.setItem(lastModelKey, JSON.stringify({ providerId, model }))
   let id = chatId
   if (id === 'new') {
-    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: text.slice(0, 60), providerId, model, permission }
+    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || 'Чат').slice(0, 60), providerId, model, permission }
     await db.chats.add(chat)
     id = chat.id
   } else {
     await db.chats.update(id, { providerId, model })
   }
-  await saveMessages(id, [{ role: 'user', content: text }])
+  const now = Date.now()
+  const messageId = crypto.randomUUID()
+  const chatFiles: ChatFile[] = files.map((f, i) => ({ ...f, id: crypto.randomUUID(), chatId: id, messageId, createdAt: now + i }))
+  await db.transaction('rw', db.chatMessages, db.chatFiles, db.chats, async () => {
+    await db.chatFiles.bulkAdd(chatFiles)
+    await db.chatMessages.add({ id: messageId, chatId: id, createdAt: now, message: { role: 'user', content: text }, fileIds: chatFiles.map((f) => f.id) })
+    await db.chats.update(id, { updatedAt: now })
+  })
   void run(id)
   return id
 }
@@ -88,7 +103,9 @@ export async function run(chatId: string) {
   const provider = chat?.providerId ? await db.providers.get(chat.providerId) : undefined
   if (!chat || !provider || !chat.model) return setRun(chatId, { error: 'Провайдер чата не найден — выберите модель', running: false })
 
-  const history = (await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')).map((m) => m.message)
+  const stored = await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')
+  const files = new Map((await db.chatFiles.where('chatId').equals(chatId).toArray()).map((f) => [f.id, f]))
+  const history = await Promise.all(stored.map((m) => withFiles(m, files)))
   const controller = new AbortController()
   controllers.set(chatId, controller)
   setRun(chatId, { items: [], running: true, error: null })
@@ -138,7 +155,7 @@ export async function run(chatId: string) {
     if (failure) throw failure
     if (!aborted) {
       await saveMessages(chatId, await result.responseMessages)
-      if (history.length === 1) void nameChat(chatId, provider, chat.model, history[0])
+      if (stored.length === 1) void nameChat(chatId, provider, chat.model, stored[0])
     }
   } catch (error) {
     if (!controller.signal.aborted) {
@@ -155,6 +172,31 @@ export async function run(chatId: string) {
   }
   controllers.delete(chatId)
   setRun(chatId, { items: [], running: false, error: null })
+}
+
+const textFile = /^text\/|json|xml|csv|markdown|yaml/
+const textExtension = /\.(txt|md|csv|json|xml|ya?ml|log)$/i
+
+// Фото и PDF модели читают сами, текстовые файлы уходят текстом; об остальных модель знает только имя
+async function filePart(f: ChatFile): Promise<Exclude<UserContent, string>[number]> {
+  const note = (why: string) => ({ type: 'text' as const, text: `[Attached file "${f.name}" (${f.mime}, ${formatSize(f.size)}): ${why}]` })
+  if (isImage(f.mime)) {
+    const image = await imageForModel(f.blob).catch(() => null)
+    if (!image) return note('the image could not be read')
+    return { type: 'file', mediaType: 'image/jpeg', filename: f.name, data: new Uint8Array(await image.arrayBuffer()) }
+  }
+  if (f.mime === 'application/pdf') return { type: 'file', mediaType: 'application/pdf', filename: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) }
+  if ((textFile.test(f.mime) || textExtension.test(f.name)) && f.size <= 200 * 1024) {
+    return { type: 'text', text: `File "${f.name}":\n${await f.blob.text()}` }
+  }
+  return note('its contents are not available to you')
+}
+
+async function withFiles(m: ChatMessage, files: Map<string, ChatFile>): Promise<ModelMessage> {
+  if (m.message.role !== 'user' || !m.fileIds?.length) return m.message
+  const text = typeof m.message.content === 'string' ? m.message.content : ''
+  const parts = await Promise.all(m.fileIds.flatMap((id) => files.get(id) ?? []).map(filePart))
+  return { role: 'user', content: [...(text ? [{ type: 'text' as const, text }] : []), ...parts] }
 }
 
 // Запросы разрешения, на которые пользователь ещё не ответил
@@ -186,12 +228,14 @@ export async function answerApproval(chatId: string, approvalId: string, approve
 }
 
 // Название по первому сообщению; если не вышло — остаётся начало сообщения
-async function nameChat(chatId: string, provider: Parameters<typeof languageModel>[0], model: string, first: ModelMessage) {
+async function nameChat(chatId: string, provider: Parameters<typeof languageModel>[0], model: string, first: ChatMessage) {
+  const files = first.fileIds?.length ? (await db.chatFiles.bulkGet(first.fileIds)).flatMap((f) => (f ? [f.name] : [])) : []
+  const prompt = [typeof first.message.content === 'string' ? first.message.content : '', ...files.map((name) => `[file: ${name}]`)].join('\n').trim()
   try {
     const { text } = await generateText({
       model: languageModel(provider, model),
       instructions: 'Write a title of 2-6 words for a chat that starts with the given message, in the language of the message. Reply with the title only, without quotes.',
-      prompt: typeof first.content === 'string' ? first.content : JSON.stringify(first.content),
+      prompt,
       maxOutputTokens: 30,
     })
     const title = text.trim().replace(/^["«]|["»]$/g, '')

@@ -95,6 +95,12 @@ export function matchEntry(f: Filters, entry: Entry, typesById: Map<string, Entr
   return inPeriod(f, entry.createdAt)
 }
 
+// Чат — не запись: при фильтрах по свойствам записей его вложения и ссылки скрыты, период действует по времени сообщения
+export function matchChatItem(f: Filters, time: number) {
+  if (f.actuality !== 'all' || f.typeIds.length || f.projectIds.length || f.text.trim() || f.conditions.length) return false
+  return inPeriod(f, time)
+}
+
 // У отметки нет типа, текста, полей и актуальности: при таких фильтрах отметки скрыты
 export function matchMark(f: Filters, mark: Mark) {
   if (f.actuality !== 'all' || f.typeIds.length || f.text.trim() || f.conditions.length) return false

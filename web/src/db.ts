@@ -132,6 +132,16 @@ export type ChatMessage = {
   chatId: string
   createdAt: number
   message: ModelMessage
+  // Вложения сообщения пользователя: модели они уходят только при запросе
+  fileIds?: string[]
+}
+
+// Вложение сообщения в чате; устроено как вложение записи
+export type ChatFile = PreparedFile & {
+  id: string
+  chatId: string
+  messageId: string
+  createdAt: number
 }
 
 export const db = new Dexie('tallystick') as Dexie & {
@@ -145,6 +155,7 @@ export const db = new Dexie('tallystick') as Dexie & {
   providers: EntityTable<Provider, 'id'>
   chats: EntityTable<Chat, 'id'>
   chatMessages: EntityTable<ChatMessage, 'id'>
+  chatFiles: EntityTable<ChatFile, 'id'>
 }
 
 db.version(1).stores({
@@ -210,6 +221,8 @@ db.version(10)
       chat.permission ??= 'ask'
     })
   })
+
+db.version(11).stores({ chatFiles: 'id, chatId, createdAt' })
 
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {

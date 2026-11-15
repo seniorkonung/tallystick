@@ -6,13 +6,23 @@ const thumbSize = 480
 export const isImage = (mime: string) => mime.startsWith('image/')
 export const isVideo = (mime: string) => mime.startsWith('video/')
 
-function drawThumb(source: CanvasImageSource, width: number, height: number) {
-  const scale = Math.min(1, thumbSize / Math.max(width, height))
+function drawThumb(source: CanvasImageSource, width: number, height: number, size = thumbSize) {
+  const scale = Math.min(1, size / Math.max(width, height))
   const canvas = document.createElement('canvas')
   canvas.width = Math.round(width * scale)
   canvas.height = Math.round(height * scale)
   canvas.getContext('2d')?.drawImage(source, 0, 0, canvas.width, canvas.height)
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.8))
+}
+
+// Копия фото для модели: провайдеры ограничивают размер картинки, а HEIC не принимают вовсе
+export async function imageForModel(blob: Blob) {
+  const bitmap = await createImageBitmap(blob)
+  try {
+    return await drawThumb(bitmap, bitmap.width, bitmap.height, 1568)
+  } finally {
+    bitmap.close()
+  }
 }
 
 async function imageThumb(file: File) {
