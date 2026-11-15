@@ -14,6 +14,8 @@ import { useDateJump } from './dateJumpStore'
 import { focusEntry, useHighlight } from './focusEntry'
 import { useThread } from './threadStore'
 import { openChat } from './chatView'
+import { clearSelection, toggleSelected, useSelection } from './selectionStore'
+import { swipeThreshold, useSwipeSelect } from './useSwipeSelect'
 
 const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
 const dayWithYearFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -54,6 +56,7 @@ export function Feed() {
   const threadId = useThread((s) => s.stack.at(-1))
   const openThread = useThread((s) => s.open)
   const highlightId = useHighlight((s) => s.id)
+  const selectedIds = useSelection((s) => s.ids)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
 
@@ -66,9 +69,11 @@ export function Feed() {
     prevLastId.current = lastId
   }, [lastId])
 
-  // Новый набор фильтров или другой экран ответов показывают самые свежие записи
+  // Новый набор фильтров или другой экран ответов показывают самые свежие записи.
+  // Выделение снимается, чтобы действия не задели записи, которых уже не видно
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 })
+    clearSelection()
   }, [filters, threadId])
 
   if (!entries || !types || !tags || !marks || !attachments) return <div className="flex-1" />
@@ -114,6 +119,9 @@ export function Feed() {
       quote={entry.replyTo && entry.replyTo !== root?.id ? (entriesById.get(entry.replyTo) ?? 'deleted') : undefined}
       replyCount={entry.id === root?.id ? 0 : (replyCounts.get(entry.id) ?? 0)}
       highlighted={entry.id === editingEntryId || entry.id === highlightId}
+      selecting={selectedIds.length > 0}
+      selected={selectedIds.includes(entry.id)}
+      onSelect={() => toggleSelected(entry.id)}
       onOpen={() => setMenuEntryId(entry.id)}
       onQuote={focusEntry}
       onReplies={() => openThread(entry.id)}
@@ -222,111 +230,151 @@ type EntryCardProps = {
   replyCount: number
   // Запись в редактировании или найдена по цитате
   highlighted: boolean
+  // Режим выделения: тап по записи переключает её выделение
+  selecting: boolean
+  selected: boolean
+  onSelect: () => void
   onOpen: () => void
   onQuote: (entryId: string) => void
   onReplies: () => void
 }
 
 function EntryCard(props: EntryCardProps) {
-  const { entry, type, tags, attachments, onAttachment, quote, replyCount, highlighted, onOpen, onQuote, onReplies } = props
+  const { entry, type, tags, attachments, onAttachment, quote, replyCount, highlighted, selecting, selected, onSelect, onOpen, onQuote, onReplies } = props
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
+  const swipe = useSwipeSelect(onSelect)
   return (
-    <article
-      id={`entry-${entry.id}`}
-      onClick={onOpen}
-      className={`cursor-pointer rounded-2xl border px-4 py-3 transition-shadow ${entry.actual ? 'bg-white' : 'bg-[#F3F1EA]'} ${
-        highlighted ? 'border-orange-400 ring-2 ring-orange-200' : 'border-stone-200'
-      }`}
-    >
-      <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
-        <span>
-          {type?.name}
-          {entry.chatId && (
-            <button
-              type="button"
-              className="ml-2 text-orange-700"
-              onClick={(e) => {
-                e.stopPropagation()
-                openChat(entry.chatId!)
-              }}
-            >
-              из чата
-            </button>
-          )}
-          {!entry.actual && <span className="ml-2 rounded-full bg-stone-200 px-2 py-0.5 text-stone-600">Неактуально</span>}
-        </span>
-        <span>{timeFormat.format(entry.createdAt)}</span>
-      </div>
-      <div className={entry.actual ? '' : 'opacity-55'}>
-        {quote === 'deleted' && (
-          <p className="mb-2 rounded-lg border-l-[3px] border-stone-300 bg-stone-100 px-2.5 py-1.5 text-xs text-stone-500">
-            Запись удалена
-          </p>
-        )}
-        {quote && quote !== 'deleted' && (
-          <button
-            type="button"
-            className="mb-2 block w-full rounded-lg border-l-[3px] border-orange-500 bg-[#F7EFE8] px-2.5 py-1.5 text-left"
-            onClick={(e) => {
-              e.stopPropagation()
-              onQuote(quote.id)
-            }}
-          >
-            <span className="block truncate text-xs text-stone-600">
-              {plainText(quote.text, { hideSpoilers: true }) || 'Запись без текста'}
-            </span>
-          </button>
-        )}
-        {tags.length > 0 && (
-          <div className="mb-1.5 flex flex-wrap gap-1">
-            {tags.map((tag) => (
-              <TagChip key={tag.id} tag={tag} />
-            ))}
-          </div>
-        )}
-        {entry.text && <CollapsibleText text={entry.text} actual={entry.actual} />}
-        {attachments.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {attachments.map((a) => (
-              <AttachmentTile key={a.id} file={a} onOpen={() => onAttachment(a)} />
-            ))}
-          </div>
-        )}
-        {fields.length > 0 && (
-          <dl className="mt-2 flex flex-col gap-1 text-sm">
-            {fields.map((field) => {
-              const labels = formatValue(field, entry.values[field.id])
-              return (
-                <div key={field.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                  <dt className="text-stone-500">{field.name}</dt>
-                  {field.kind === 'multi' ? (
-                    labels.map((label, i) => (
-                      <dd key={i} className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-800">
-                        {label}
-                      </dd>
-                    ))
-                  ) : (
-                    <dd className="text-stone-900">{labels[0]}</dd>
-                  )}
-                </div>
-              )
-            })}
-          </dl>
-        )}
-      </div>
-      {replyCount > 0 && (
+    <div className="flex items-center gap-2">
+      {selecting && (
         <button
           type="button"
-          className="mt-2 text-sm font-medium text-orange-700"
-          onClick={(e) => {
-            e.stopPropagation()
-            onReplies()
-          }}
+          aria-label={selected ? 'Снять выделение' : 'Выделить'}
+          onClick={onSelect}
+          className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-xs text-white ${
+            selected ? 'border-orange-600 bg-orange-600' : 'border-stone-300 bg-white'
+          }`}
         >
-          {replyCount} {pluralRu(replyCount, ['ответ', 'ответа', 'ответов'])} →
+          {selected && '✓'}
         </button>
       )}
-    </article>
+      <div className="relative min-w-0 flex-1">
+        {/* Проступает из-под записи, когда её тянут влево */}
+        <span
+          className={`absolute top-1/2 right-4 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-white ${
+            swipe.offset <= -swipeThreshold ? 'bg-orange-600' : 'bg-stone-300'
+          }`}
+          style={{ opacity: Math.min(1, -swipe.offset / swipeThreshold) }}
+        >
+          ✓
+        </span>
+        <article
+          id={`entry-${entry.id}`}
+          {...swipe.handlers}
+          onClickCapture={(e) => {
+            // Клик после жеста ничего не делает; в режиме выделения тап в любом месте записи переключает её выделение
+            if (swipe.swallowClick()) return e.stopPropagation()
+            if (!selecting) return
+            e.stopPropagation()
+            onSelect()
+          }}
+          onClick={onOpen}
+          style={{ transform: swipe.offset ? `translateX(${swipe.offset}px)` : undefined }}
+          // Горизонтальные движения достаются жесту, вертикальные — прокрутке ленты
+          className={`relative cursor-pointer touch-pan-y rounded-2xl border px-4 py-3 ${swipe.offset ? '' : 'transition-[transform,box-shadow]'} ${
+            entry.actual ? 'bg-white' : 'bg-[#F3F1EA]'
+          } ${highlighted || selected ? 'border-orange-400 ring-2 ring-orange-200' : 'border-stone-200'}`}
+        >
+          <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
+            <span>
+              {type?.name}
+              {entry.chatId && (
+                <button
+                  type="button"
+                  className="ml-2 text-orange-700"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openChat(entry.chatId!)
+                  }}
+                >
+                  из чата
+                </button>
+              )}
+              {!entry.actual && <span className="ml-2 rounded-full bg-stone-200 px-2 py-0.5 text-stone-600">Неактуально</span>}
+            </span>
+            <span>{timeFormat.format(entry.createdAt)}</span>
+          </div>
+          <div className={entry.actual ? '' : 'opacity-55'}>
+            {quote === 'deleted' && (
+              <p className="mb-2 rounded-lg border-l-[3px] border-stone-300 bg-stone-100 px-2.5 py-1.5 text-xs text-stone-500">
+                Запись удалена
+              </p>
+            )}
+            {quote && quote !== 'deleted' && (
+              <button
+                type="button"
+                className="mb-2 block w-full rounded-lg border-l-[3px] border-orange-500 bg-[#F7EFE8] px-2.5 py-1.5 text-left"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onQuote(quote.id)
+                }}
+              >
+                <span className="block truncate text-xs text-stone-600">
+                  {plainText(quote.text, { hideSpoilers: true }) || 'Запись без текста'}
+                </span>
+              </button>
+            )}
+            {tags.length > 0 && (
+              <div className="mb-1.5 flex flex-wrap gap-1">
+                {tags.map((tag) => (
+                  <TagChip key={tag.id} tag={tag} />
+                ))}
+              </div>
+            )}
+            {entry.text && <CollapsibleText text={entry.text} actual={entry.actual} />}
+            {attachments.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {attachments.map((a) => (
+                  <AttachmentTile key={a.id} file={a} onOpen={() => onAttachment(a)} />
+                ))}
+              </div>
+            )}
+            {fields.length > 0 && (
+              <dl className="mt-2 flex flex-col gap-1 text-sm">
+                {fields.map((field) => {
+                  const labels = formatValue(field, entry.values[field.id])
+                  return (
+                    <div key={field.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <dt className="text-stone-500">{field.name}</dt>
+                      {field.kind === 'multi' ? (
+                        labels.map((label, i) => (
+                          <dd key={i} className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-800">
+                            {label}
+                          </dd>
+                        ))
+                      ) : (
+                        <dd className="text-stone-900">{labels[0]}</dd>
+                      )}
+                    </div>
+                  )
+                })}
+              </dl>
+            )}
+          </div>
+          {replyCount > 0 && (
+            <button
+              type="button"
+              className="mt-2 text-sm font-medium text-orange-700"
+              onClick={(e) => {
+                e.stopPropagation()
+                onReplies()
+              }}
+            >
+              {replyCount} {pluralRu(replyCount, ['ответ', 'ответа', 'ответов'])} →
+            </button>
+          )}
+        </article>
+      </div>
+    </div>
   )
 }
 

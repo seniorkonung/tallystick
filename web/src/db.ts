@@ -377,6 +377,34 @@ export async function setActual(entryId: string, actual: boolean) {
   await db.entries.update(entryId, { actual })
 }
 
+// Групповые действия над выделенными записями
+
+export async function deleteEntries(entryIds: string[]) {
+  await db.transaction('rw', db.entries, db.attachments, async () => {
+    await db.attachments.where('entryId').anyOf(entryIds).delete()
+    await db.entries.bulkDelete(entryIds)
+  })
+}
+
+export async function setEntriesActual(entryIds: string[], actual: boolean) {
+  await db.entries.where('id').anyOf(entryIds).modify({ actual })
+}
+
+// Тег добавляется всем записям или снимается со всех; добавленный тег из архива возвращается
+export async function setEntriesTag(entryIds: string[], tag: Tag, on: boolean) {
+  await db.transaction('rw', [db.entries, db.tags, db.categories, db.marks], async () => {
+    if (on && tag.status === 'archived') await restoreTag(tag)
+    await db.entries
+      .where('id')
+      .anyOf(entryIds)
+      .modify((entry) => {
+        const has = entry.tagIds.includes(tag.id)
+        if (on && !has) entry.tagIds = [...entry.tagIds, tag.id]
+        if (!on && has) entry.tagIds = entry.tagIds.filter((id) => id !== tag.id)
+      })
+  })
+}
+
 async function addMark(tagId: string, kind: MarkKind, createdAt: number, entryCount: number | null = null) {
   await db.marks.add({ id: crypto.randomUUID(), createdAt, tagId, kind, entryCount })
 }
