@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { FilterSheet } from './FilterSheet'
 import { useDateJump } from './dateJumpStore'
 import { Gallery } from './Gallery'
+import { Settings } from './Settings'
 import { Sidebar } from './Sidebar'
 import { FilterChips } from './FilterChips'
 import { useFilterChips } from './useFilterChips'
@@ -16,6 +17,7 @@ export function TopBar() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   // Лента получает верхний отступ по высоте панели
   const measure = useMeasuredHeight('--topbar-height')
   const inThread = useThread((s) => s.stack.length > 0)
@@ -103,8 +105,11 @@ export function TopBar() {
       </div>
 
       {sheetOpen && <FilterSheet onClose={() => setSheetOpen(false)} />}
-      {sidebarOpen && <Sidebar onOpenGallery={() => setGalleryOpen(true)} onClose={() => setSidebarOpen(false)} />}
+      {sidebarOpen && (
+        <Sidebar onOpenGallery={() => setGalleryOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onClose={() => setSidebarOpen(false)} />
+      )}
       {galleryOpen && <Gallery onClose={() => setGalleryOpen(false)} />}
+      {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
     </>
   )
 }

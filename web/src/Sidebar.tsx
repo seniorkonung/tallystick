@@ -5,11 +5,12 @@ import { isFiltered, normalizeFilters, sameFilters, useFilters } from './filterS
 
 type Props = {
   onOpenGallery: () => void
+  onOpenSettings: () => void
   onClose: () => void
 }
 
 // Пресеты — быстрое применение фильтров к единственной ленте, а не отдельные ленты
-export function Sidebar({ onOpenGallery, onClose }: Props) {
+export function Sidebar({ onOpenGallery, onOpenSettings, onClose }: Props) {
   const presets = useLiveQuery(() => db.presets.orderBy('order').toArray())
   const { filters, set, reset } = useFilters()
   const [editing, setEditing] = useState(false)
@@ -47,6 +48,22 @@ export function Sidebar({ onOpenGallery, onClose }: Props) {
         className="flex h-full w-72 max-w-[85vw] flex-col bg-white pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="flex justify-end px-3 pb-1">
+          <button
+            type="button"
+            aria-label="Настройки"
+            className="flex size-10 items-center justify-center rounded-full text-stone-600 hover:bg-stone-100"
+            onClick={() => {
+              onOpenSettings()
+              onClose()
+            }}
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
         <div className="flex flex-col gap-1 px-3">
           <button
             type="button"

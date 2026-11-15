@@ -94,6 +94,20 @@ export type Preset = {
 // Вложение, подготовленное к сохранению: превью уже построено
 export type PreparedFile = Omit<Attachment, 'id' | 'entryId' | 'createdAt'>
 
+export type ProviderKind = 'anthropic' | 'openai' | 'openai-compatible'
+
+// Провайдер языковых моделей с ключом пользователя
+export type Provider = {
+  id: string
+  name: string
+  kind: ProviderKind
+  // Пустой — адрес провайдера по умолчанию; у совместимого с OpenAI обязателен
+  baseURL: string
+  apiKey: string
+  models: string[]
+  createdAt: number
+}
+
 export const db = new Dexie('tallystick') as Dexie & {
   types: EntityTable<EntryType, 'id'>
   entries: EntityTable<Entry, 'id'>
@@ -102,6 +116,7 @@ export const db = new Dexie('tallystick') as Dexie & {
   marks: EntityTable<Mark, 'id'>
   attachments: EntityTable<Attachment, 'id'>
   presets: EntityTable<Preset, 'id'>
+  providers: EntityTable<Provider, 'id'>
 }
 
 db.version(1).stores({
@@ -152,6 +167,8 @@ db.version(5)
 db.version(6).stores({ attachments: 'id, entryId, createdAt' })
 
 db.version(7).stores({ presets: 'id, order' })
+
+db.version(8).stores({ providers: 'id, createdAt' })
 
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
