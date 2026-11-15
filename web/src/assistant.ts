@@ -1,7 +1,7 @@
-import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage, type UserContent } from 'ai'
+import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage } from 'ai'
 import { create } from 'zustand'
 import { activeToolsFor, approvalFor, readTools, writeTools } from './assistantTools'
-import { formatSize, imageForModel, isImage } from './attachments'
+import { fileForModel } from './modelFiles'
 import { db, type Chat, type ChatFile, type ChatMessage, type Permission, type PreparedFile } from './db'
 import { languageModel } from './llm'
 
@@ -119,7 +119,7 @@ export async function run(chatId: string) {
       instructions: instructions(chat.permission),
       messages: history,
       tools: { ...readTools, ...writeTools(chatId) },
-      activeTools: activeToolsFor(chat.permission),
+      activeTools: activeToolsFor(chat.permission, provider.kind),
       toolApproval: approvalFor(chat.permission),
       stopWhen: isStepCount(20),
       abortSignal: controller.signal,
@@ -174,28 +174,10 @@ export async function run(chatId: string) {
   setRun(chatId, { items: [], running: false, error: null })
 }
 
-const textFile = /^text\/|json|xml|csv|markdown|yaml/
-const textExtension = /\.(txt|md|csv|json|xml|ya?ml|log)$/i
-
-// Фото и PDF модели читают сами, текстовые файлы уходят текстом; об остальных модель знает только имя
-async function filePart(f: ChatFile): Promise<Exclude<UserContent, string>[number]> {
-  const note = (why: string) => ({ type: 'text' as const, text: `[Attached file "${f.name}" (${f.mime}, ${formatSize(f.size)}): ${why}]` })
-  if (isImage(f.mime)) {
-    const image = await imageForModel(f.blob).catch(() => null)
-    if (!image) return note('the image could not be read')
-    return { type: 'file', mediaType: 'image/jpeg', filename: f.name, data: new Uint8Array(await image.arrayBuffer()) }
-  }
-  if (f.mime === 'application/pdf') return { type: 'file', mediaType: 'application/pdf', filename: f.name, data: new Uint8Array(await f.blob.arrayBuffer()) }
-  if ((textFile.test(f.mime) || textExtension.test(f.name)) && f.size <= 200 * 1024) {
-    return { type: 'text', text: `File "${f.name}":\n${await f.blob.text()}` }
-  }
-  return note('its contents are not available to you')
-}
-
 async function withFiles(m: ChatMessage, files: Map<string, ChatFile>): Promise<ModelMessage> {
   if (m.message.role !== 'user' || !m.fileIds?.length) return m.message
   const text = typeof m.message.content === 'string' ? m.message.content : ''
-  const parts = await Promise.all(m.fileIds.flatMap((id) => files.get(id) ?? []).map(filePart))
+  const parts = await Promise.all(m.fileIds.flatMap((id) => files.get(id) ?? []).map(fileForModel))
   return { role: 'user', content: [...(text ? [{ type: 'text' as const, text }] : []), ...parts] }
 }
 

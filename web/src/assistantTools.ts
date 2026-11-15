@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
-import { addEntry, db, deleteEntry, setActual, updateEntry, type Entry, type EntryType, type FieldValues, type Permission, type Project } from './db'
+import { addEntry, db, deleteEntry, setActual, updateEntry, type Entry, type EntryType, type FieldValues, type Permission, type Project, type ProviderKind } from './db'
+import { fileForModel } from './modelFiles'
 import { emptyFilters, matchEntry, type Filters } from './filterStore'
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -121,11 +122,33 @@ export const readTools = {
             projects: e.projectIds.flatMap((id) => projects.find((p) => p.id === id)?.name ?? []),
             actual: e.actual,
             replyTo: e.replyTo,
-            attachments: attachments.filter((a) => a.entryId === e.id).map((a) => ({ name: a.name, mime: a.mime })),
+            attachments: attachments.filter((a) => a.entryId === e.id).map((a) => ({ id: a.id, name: a.name, mime: a.mime })),
           }
         }),
       }
     },
+  }),
+
+  view_attachments: tool({
+    description: 'Look at attachments of entries: photos and PDFs are shown to you, text files come as text. Get attachment ids from search_entries.',
+    inputSchema: z.object({ ids: z.array(z.string()).min(1).max(5) }),
+    execute: async ({ ids }) => {
+      const found = await db.attachments.bulkGet(ids)
+      return Promise.all(
+        ids.map(async (id, i) => {
+          const a = found[i]
+          return a ? { id, entryId: a.entryId, file: await fileForModel(a) } : { id, entryId: null, file: { type: 'text' as const, text: `[No attachment with id ${id}]` } }
+        }),
+      )
+    },
+    // Картинки и PDF уходят модели как файлы, а не как JSON с байтами
+    toModelOutput: ({ output }) => ({
+      type: 'content',
+      value: output.flatMap(({ id, entryId, file }) => [
+        { type: 'text' as const, text: `Attachment ${id} of entry ${entryId}:` },
+        file.type === 'text' ? file : { type: 'file' as const, mediaType: file.mediaType, filename: file.filename, data: { type: 'data' as const, data: file.data } },
+      ]),
+    }),
   }),
 }
 
@@ -260,8 +283,9 @@ export function approvalFor(permission: Permission) {
   return Object.fromEntries(ask.map((name) => [name, 'user-approval' as const]))
 }
 
-export function activeToolsFor(permission: Permission) {
-  const read = Object.keys(readTools) as (keyof typeof readTools)[]
+// Совместимые с OpenAI API не принимают файлы в ответе инструмента: картинка ушла бы строкой base64
+export function activeToolsFor(permission: Permission, providerKind: ProviderKind) {
+  const read = (Object.keys(readTools) as (keyof typeof readTools)[]).filter((name) => name !== 'view_attachments' || providerKind !== 'openai-compatible')
   return permission === 'read' ? read : [...read, ...writeToolNames]
 }
 
@@ -276,6 +300,7 @@ export const toolLabels: Record<string, string> = {
   list_types: 'Смотрю типы',
   list_projects: 'Смотрю проекты',
   search_entries: 'Ищу записи',
+  view_attachments: 'Смотрю вложения',
   create_entry: 'Создаю запись',
   update_entry: 'Правлю запись',
   set_actuality: 'Меняю актуальность',
