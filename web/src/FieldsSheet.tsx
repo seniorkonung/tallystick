@@ -79,27 +79,7 @@ function FieldEditor({ field, value, autoFocus, onChange, onClose }: EditorProps
         return <p className="px-1 text-sm text-stone-400">Нет вариантов — добавьте их в настройке типа</p>
       }
       const selected = Array.isArray(value) ? value : value === undefined ? [] : [String(value)]
-      return (
-        <div className="flex flex-wrap gap-2">
-          {field.options.map((option) => {
-            const active = selected.includes(option.id)
-            return (
-              <button
-                key={option.id}
-                type="button"
-                className={`rounded-full px-3 py-2 text-sm ${active ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-800'}`}
-                onClick={() => {
-                  if (field.kind === 'single') return onChange(active ? undefined : option.id)
-                  const next = active ? selected.filter((id) => id !== option.id) : [...selected, option.id]
-                  onChange(next.length ? next : undefined)
-                }}
-              >
-                {option.label || 'Без названия'}
-              </button>
-            )
-          })}
-        </div>
-      )
+      return <OptionsDropdown field={field} selected={selected} onChange={onChange} />
     }
     case 'number':
       return <NumberEditor unit={field.unit} value={value} autoFocus={autoFocus} onChange={onChange} onClose={onClose} />
@@ -135,6 +115,56 @@ function NumberEditor({ unit, value, autoFocus, onChange, onClose }: { unit: str
         className="w-full rounded-2xl bg-stone-100 px-3 py-2 outline-none"
       />
       {unit && <span className="text-sm text-stone-500">{unit}</span>}
+    </div>
+  )
+}
+
+// Выпадающий список вариантов: свёрнутым занимает одну строку, раскрывается под ней
+function OptionsDropdown({ field, selected, onChange }: { field: Extract<Field, { kind: 'single' | 'multi' }>; selected: string[]; onChange: (value: FieldValue | undefined) => void }) {
+  const [open, setOpen] = useState(false)
+  const multi = field.kind === 'multi'
+  const labels = field.options.filter((o) => selected.includes(o.id)).map((o) => o.label || 'Без названия')
+
+  function pick(id: string) {
+    const active = selected.includes(id)
+    if (!multi) {
+      onChange(active ? undefined : id)
+      setOpen(false)
+      return
+    }
+    const next = active ? selected.filter((x) => x !== id) : [...selected, id]
+    onChange(next.length ? next : undefined)
+  }
+
+  return (
+    <div className="rounded-2xl bg-stone-100">
+      <button type="button" aria-expanded={open} className="flex w-full items-center gap-2 px-3 py-2 text-left" onClick={() => setOpen(!open)}>
+        <span className={`min-w-0 flex-1 truncate ${labels.length ? 'text-stone-900' : 'text-stone-400'}`}>{labels.join(', ') || 'Не выбрано'}</span>
+        <svg viewBox="0 0 24 24" className={`size-4 shrink-0 text-stone-500 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="max-h-60 overflow-y-auto border-t border-stone-200 py-1">
+          {field.options.map((option) => {
+            const active = selected.includes(option.id)
+            return (
+              <li key={option.id}>
+                <button type="button" className="flex w-full items-center gap-3 px-3 py-2 text-left" onClick={() => pick(option.id)}>
+                  <span
+                    className={`flex size-5 shrink-0 items-center justify-center border text-xs ${multi ? 'rounded-md' : 'rounded-full'} ${
+                      active ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-300 bg-white'
+                    }`}
+                  >
+                    {active && '✓'}
+                  </span>
+                  <span className="text-stone-800">{option.label || 'Без названия'}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
