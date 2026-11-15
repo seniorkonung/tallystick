@@ -29,14 +29,14 @@ function fieldValues(entry: Entry, type: EntryType | undefined) {
   return result
 }
 
-function describeProject(p: Project, categoryName: string | null) {
+// Ассистент видит теги под их названием в продукте; в хранилище они по-прежнему проекты
+function describeTag(p: Project, categoryName: string | null) {
   return {
     id: p.id,
     name: p.name,
-    status: p.status,
+    status: p.status === 'completed' ? 'archived' : 'active',
     category: categoryName,
-    startedAt: localTime(p.startedAt),
-    completedAt: p.completedAt ? localTime(p.completedAt) : null,
+    archivedAt: p.completedAt ? localTime(p.completedAt) : null,
   }
 }
 
@@ -59,13 +59,13 @@ export const readTools = {
     },
   }),
 
-  list_projects: tool({
-    description: 'List all projects, active and completed, with their categories.',
+  list_tags: tool({
+    description: 'List all tags, active and archived, with their categories.',
     inputSchema: z.object({}),
     execute: async () => {
       const [projects, categories] = await Promise.all([db.projects.toArray(), db.categories.toArray()])
       return projects.map((p) =>
-        describeProject(p, p.status === 'completed' ? p.frozenCategoryName : (categories.find((c) => c.id === p.categoryId)?.name ?? null)),
+        describeTag(p, p.status === 'completed' ? p.frozenCategoryName : (categories.find((c) => c.id === p.categoryId)?.name ?? null)),
       )
     },
   }),
@@ -76,7 +76,7 @@ export const readTools = {
       'Returns the total number of matches and one page of entries.',
     inputSchema: z.object({
       typeIds: z.array(z.string()).optional().describe('Entry type ids; an entry matches any of them'),
-      projectIds: z.array(z.string()).optional().describe('Project ids; an entry matches if it has any of them'),
+      tagIds: z.array(z.string()).optional().describe('Tag ids; an entry matches if it has any of them'),
       from: z.string().optional().describe('First day of the period, inclusive, YYYY-MM-DD in local time'),
       to: z.string().optional().describe('Last day of the period, inclusive, YYYY-MM-DD in local time'),
       text: z.string().optional().describe('Case-insensitive substring of the entry text'),
@@ -97,7 +97,7 @@ export const readTools = {
       const filters: Filters = {
         ...emptyFilters,
         typeIds: input.typeIds ?? [],
-        projectIds: input.projectIds ?? [],
+        projectIds: input.tagIds ?? [],
         from: input.from ?? '',
         to: input.to ?? '',
         text: input.text ?? '',
@@ -119,7 +119,7 @@ export const readTools = {
             type: type?.name ?? null,
             text: e.text,
             fields: fieldValues(e, type),
-            projects: e.projectIds.flatMap((id) => projects.find((p) => p.id === id)?.name ?? []),
+            tags: e.projectIds.flatMap((id) => projects.find((p) => p.id === id)?.name ?? []),
             actual: e.actual,
             replyTo: e.replyTo,
             attachments: attachments.filter((a) => a.entryId === e.id).map((a) => ({ id: a.id, name: a.name, mime: a.mime })),
@@ -200,10 +200,10 @@ async function getEntry(id: string) {
   return entry
 }
 
-async function checkProjects(ids: string[]) {
+async function checkTags(ids: string[]) {
   const found = await db.projects.bulkGet(ids)
   const missing = ids.filter((_, i) => !found[i])
-  if (missing.length) throw new Error(`No projects with ids ${missing.join(', ')}`)
+  if (missing.length) throw new Error(`No tags with ids ${missing.join(', ')}`)
 }
 
 const fieldsSchema = z
@@ -214,19 +214,19 @@ const fieldsSchema = z
 export function writeTools(chatId: string) {
   return {
     create_entry: tool({
-      description: 'Create a new entry in the feed at the current time. Linking a completed project reopens it.',
+      description: 'Create a new entry in the feed at the current time. Adding an archived tag brings it back from the archive.',
       inputSchema: z.object({
         typeId: z.string(),
         text: z.string(),
         fields: fieldsSchema.optional(),
-        projectIds: z.array(z.string()).optional(),
+        tagIds: z.array(z.string()).optional(),
         replyTo: z.string().optional().describe('Id of the entry this one replies to'),
       }),
       execute: async (input) => {
         const type = await getType(input.typeId)
         if (input.replyTo) await getEntry(input.replyTo)
-        await checkProjects(input.projectIds ?? [])
-        const id = await addEntry(type, input.text.trim(), toValues(type, input.fields ?? {}, {}), input.projectIds ?? [], input.replyTo ?? null, [], chatId)
+        await checkTags(input.tagIds ?? [])
+        const id = await addEntry(type, input.text.trim(), toValues(type, input.fields ?? {}, {}), input.tagIds ?? [], input.replyTo ?? null, [], chatId)
         return { id }
       },
     }),
@@ -240,15 +240,15 @@ export function writeTools(chatId: string) {
         text: z.string().optional(),
         typeId: z.string().optional(),
         fields: fieldsSchema.optional(),
-        projectIds: z.array(z.string()).optional().describe('Replaces the whole list of projects'),
+        tagIds: z.array(z.string()).optional().describe('Replaces the whole list of tags'),
       }),
       execute: async (input) => {
         const entry = await getEntry(input.id)
         const type = await getType(input.typeId ?? entry.typeId)
-        if (input.projectIds) await checkProjects(input.projectIds)
+        if (input.tagIds) await checkTags(input.tagIds)
         const kept = (await db.attachments.where('entryId').equals(entry.id).primaryKeys()) as string[]
         const values = toValues(type, input.fields ?? {}, entry.values)
-        await updateEntry(entry.id, type, input.text?.trim() ?? entry.text, values, input.projectIds ?? entry.projectIds, kept, [])
+        await updateEntry(entry.id, type, input.text?.trim() ?? entry.text, values, input.tagIds ?? entry.projectIds, kept, [])
         return { ok: true }
       },
     }),
@@ -298,7 +298,7 @@ export const permissionLabels: Record<Permission, string> = {
 
 export const toolLabels: Record<string, string> = {
   list_types: 'Смотрю типы',
-  list_projects: 'Смотрю проекты',
+  list_tags: 'Смотрю теги',
   search_entries: 'Ищу записи',
   view_attachments: 'Смотрю вложения',
   create_entry: 'Создаю запись',

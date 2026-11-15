@@ -194,17 +194,14 @@ export function Feed() {
 type Item = { kind: 'entry'; entry: Entry; time: number } | { kind: 'mark'; mark: Mark; time: number }
 
 function MarkLine({ mark, project }: { mark: Mark; project: Project | undefined }) {
-  const name = `«${project?.name ?? 'Проект'}»`
+  const name = `«${project?.name ?? 'Тег'}»`
   let text: string
   switch (mark.kind) {
-    case 'started':
-      text = `${name} начат`
-      break
     case 'completed':
-      text = `${name} завершён · ${mark.entryCount ?? 0} ${pluralRu(mark.entryCount ?? 0, ['запись', 'записи', 'записей'])}`
+      text = `${name} в архиве · ${mark.entryCount ?? 0} ${pluralRu(mark.entryCount ?? 0, ['запись', 'записи', 'записей'])}`
       break
     case 'reopened':
-      text = `${name} снова в работе`
+      text = `${name} возвращён из архива`
       break
   }
   return (
@@ -333,7 +330,7 @@ function EntryCard(props: EntryCardProps) {
   )
 }
 
-// Длинный текст записи обрезается по высоте; поля, проекты и вложения показываются всегда
+// Длинный текст записи обрезается по высоте; поля, теги и вложения показываются всегда
 function CollapsibleText({ text, actual }: { text: string; actual: boolean }) {
   const box = useRef<HTMLDivElement>(null)
   const [expanded, setExpanded] = useState(false)

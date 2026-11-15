@@ -33,7 +33,7 @@ export function useFilterChips({ withText }: { withText: boolean }) {
     chips.push({ key: `t${id}`, label: types?.find((t) => t.id === id)?.name ?? 'Тип', remove: { typeIds: filters.typeIds.filter((x) => x !== id) } })
   }
   for (const id of filters.projectIds) {
-    chips.push({ key: `p${id}`, label: projects?.find((p) => p.id === id)?.name ?? 'Проект', remove: { projectIds: filters.projectIds.filter((x) => x !== id) } })
+    chips.push({ key: `p${id}`, label: projects?.find((p) => p.id === id)?.name ?? 'Тег', remove: { projectIds: filters.projectIds.filter((x) => x !== id) } })
   }
   if (filters.conditions.length > 1 && filters.conditionMode === 'any') {
     chips.push({ key: 'mode', label: 'Любое из условий', remove: { conditionMode: 'all' } })

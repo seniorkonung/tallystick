@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ProjectChip } from './ProjectChip'
 import { createCategory, createProject, db, deleteCategory, type Project } from './db'
 
-// Вкладка: все активные, одна категория или завершённые
+// Вкладка: все активные, одна категория или архив
 type Tab = { kind: 'all' } | { kind: 'category'; id: string } | { kind: 'completed' }
 
 type Props = {
@@ -23,7 +23,7 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
   if (!projects || !categories) return null
   const q = query.trim().toLowerCase()
   const activeCategory = tab.kind === 'category' ? categories.find((c) => c.id === tab.id) : undefined
-  // Поиск идёт по всем проектам, без поиска — по выбранной вкладке
+  // Поиск идёт по всем тегам, без поиска — по выбранной вкладке
   const shown = projects
     .filter((p) => {
       if (q) return p.name.toLowerCase().includes(q)
@@ -63,7 +63,7 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
 
   async function removeCategory() {
     if (!activeCategory) return
-    if (!window.confirm(`Удалить категорию «${activeCategory.name}»? Её проекты останутся без категории.`)) return
+    if (!window.confirm(`Удалить категорию «${activeCategory.name}»? Её теги останутся без категории.`)) return
     await deleteCategory(activeCategory.id)
     setTab({ kind: 'all' })
   }
@@ -78,7 +78,7 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
-          <h2 className="font-semibold">Проекты</h2>
+          <h2 className="font-semibold">Теги</h2>
           <button type="button" className="text-sm font-medium text-orange-700" onClick={onClose}>
             Готово
           </button>
@@ -86,7 +86,7 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
         <div className="px-4 pb-2">
           <input
             value={query}
-            placeholder="Найти или создать проект"
+            placeholder="Найти или создать тег"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key !== 'Enter') return
@@ -118,7 +118,7 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
                 className={tabClass(tab.kind === 'completed')}
                 onClick={() => setTab({ kind: 'completed' })}
               >
-                Завершённые
+                Архив
               </button>
               <button type="button" aria-label="Новая категория" className={tabClass(false)} onClick={() => void addCategory()}>
                 +
@@ -170,7 +170,7 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
                     {(categoryName || project.status === 'completed') && (
                       <span className="mt-0.5 truncate text-xs text-stone-400">
                         {project.status === 'completed' && project.completedAt
-                          ? `${dateFormat.format(project.startedAt)} — ${dateFormat.format(project.completedAt)}`
+                          ? `в архиве с ${dateFormat.format(project.completedAt)}`
                           : ''}
                         {project.status === 'completed' && categoryName ? ' · ' : ''}
                         {categoryName}
@@ -186,7 +186,7 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
           })}
           {shown.length === 0 && !canCreate && (
             <li className="px-3 py-4 text-sm text-stone-400">
-              {tab.kind === 'completed' ? 'Завершённых проектов нет' : 'Проектов нет — введите название, чтобы создать'}
+              {tab.kind === 'completed' ? 'В архиве тегов нет' : 'Тегов нет — введите название, чтобы создать'}
             </li>
           )}
         </ul>

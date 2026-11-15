@@ -73,7 +73,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
   stopEditing: () =>
     set((s) => ({ editingEntryId: null, stash: null, draft: s.stash ?? s.draft })),
 
-  // Проекты выбираются для каждой записи заново
+  // Теги выбираются для каждой записи заново
   clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {}, projectIds: [], attachments: [] }, replyToId: null, fromChatId: null })),
 
   // Ответ пишется в черновик новой записи: начатое редактирование отменяется

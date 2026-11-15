@@ -251,7 +251,7 @@ export function Composer() {
           )}
           {!editingEntry && fromChatId && (
             <div className="mb-1 flex items-center gap-2 rounded-2xl bg-stone-100 px-3 py-2">
-              <p className="flex-1 text-xs font-medium text-stone-600">Из чата — выберите тип и проекты</p>
+              <p className="flex-1 text-xs font-medium text-stone-600">Из чата — выберите тип и теги</p>
               <button type="button" aria-label="Не связывать с чатом" className="px-1 text-stone-400" onClick={cancelFromChat}>
                 ✕
               </button>
@@ -270,7 +270,7 @@ export function Composer() {
             </div>
           )}
           {preparing && <p className="px-2 pt-1 text-xs text-stone-400">Готовлю вложения…</p>}
-          {/* Выбранные проекты своей строкой; тап открывает выбор, крестик убирает проект */}
+          {/* Выбранные теги своей строкой; тап открывает выбор, крестик убирает тег */}
           {selectedProjects.length > 0 && (
             <div className="flex gap-1.5 overflow-x-auto px-1 pt-1 pb-1">
               {selectedProjects.map((project) => (
@@ -318,14 +318,14 @@ export function Composer() {
               </button>
               <button
                 type="button"
-                aria-label="Проекты"
+                aria-label="Теги"
                 className="flex items-center gap-1 rounded-full px-3 py-2 text-sm text-stone-600 hover:bg-stone-100"
                 onClick={() => setPickingProjects(true)}
               >
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 </svg>
-                {selectedProjects.length > 0 ? selectedProjects.length : 'Проект'}
+                {selectedProjects.length > 0 ? selectedProjects.length : 'Тег'}
               </button>
             </div>
             <button

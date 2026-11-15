@@ -284,7 +284,7 @@ function ApprovalDetails({ input }: { input: Record<string, unknown> }) {
   )
 }
 
-// Текст ответа уходит в панель ввода ленты: тип и проекты выбирает пользователь
+// Текст ответа уходит в панель ввода ленты: тип и теги выбирает пользователь
 function saveToFeed(chatId: string, text: string) {
   const composer = useComposer.getState()
   if (composer.draft.text.trim() && !window.confirm('В панели ввода ленты есть черновик. Заменить его ответом ассистента?')) return

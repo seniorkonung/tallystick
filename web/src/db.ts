@@ -38,6 +38,7 @@ export type Entry = {
   chatId: string | null
 }
 
+// Тег — пометка записей; в коде и хранилище он по-прежнему называется project. completed — в архиве
 export type ProjectStatus = 'active' | 'completed'
 
 export type Project = {
@@ -47,9 +48,9 @@ export type Project = {
   color: number
   status: ProjectStatus
   categoryId: string | null
-  // Название категории на момент завершения: завершённый проект её замораживает
+  // Название категории на момент ухода в архив: тег в архиве её замораживает
   frozenCategoryName: string | null
-  startedAt: number
+  // Дата ухода в архив; даты начала у тега нет
   completedAt: number | null
 }
 
@@ -59,7 +60,7 @@ export type Category = {
   createdAt: number
 }
 
-export type MarkKind = 'started' | 'completed' | 'reopened'
+export type MarkKind = 'completed' | 'reopened'
 
 // Служебная отметка в ленте — её создаёт приложение, это не запись
 export type Mark = {
@@ -67,7 +68,7 @@ export type Mark = {
   createdAt: number
   projectId: string
   kind: MarkKind
-  // Число записей проекта на момент завершения
+  // Число записей тега на момент ухода в архив
   entryCount: number | null
 }
 
@@ -224,6 +225,16 @@ db.version(10)
 
 db.version(11).stores({ chatFiles: 'id, chatId, createdAt' })
 
+// У тега нет даты начала, а его создание больше не отмечается в ленте
+db.version(12)
+  .stores({})
+  .upgrade(async (tx) => {
+    await tx.table('marks').filter((mark) => mark.kind === 'started').delete()
+    await tx.table('projects').toCollection().modify((project) => {
+      delete project.startedAt
+    })
+  })
+
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
   tx.table('types').add({ id: crypto.randomUUID(), name: 'Заметка', createdAt: Date.now(), fields: [] })
@@ -243,7 +254,7 @@ export function valuesForType(type: EntryType, values: FieldValues): FieldValues
   return result
 }
 
-// Привязка записи к завершённому проекту возобновляет его
+// Привязка записи к тегу в архиве возвращает его из архива
 export async function addEntry(
   type: EntryType,
   text: string,
@@ -276,7 +287,7 @@ export async function addEntry(
   })
 }
 
-// Время записи не меняется; добавленный завершённый проект возобновляется, как и при создании
+// Время записи не меняется; добавленный тег из архива возвращается, как и при создании
 export async function updateEntry(
   entryId: string,
   type: EntryType,
@@ -333,13 +344,10 @@ export async function createProject(name: string, categoryId: string | null) {
     status: 'active',
     categoryId,
     frozenCategoryName: null,
-    startedAt: Date.now(),
     completedAt: null,
   }
-  await db.transaction('rw', db.projects, db.marks, async () => {
-    await db.projects.add(project)
-    await addMark(project.id, 'started', project.startedAt)
-  })
+  // Создание тега в ленте не отмечается
+  await db.projects.add(project)
   return project
 }
 
@@ -357,7 +365,7 @@ export async function completeProject(project: Project) {
   })
 }
 
-// Проект возвращается в прежнюю категорию, если она ещё есть; дата начала сохраняется
+// Тег возвращается из архива в прежнюю категорию, если она ещё есть
 export async function reopenProject(project: Project, now = Date.now()) {
   await db.transaction('rw', db.projects, db.categories, db.marks, async () => {
     const category = project.categoryId ? await db.categories.get(project.categoryId) : undefined
@@ -377,7 +385,7 @@ export async function createCategory(name: string) {
   return category
 }
 
-// Проекты удалённой категории остаются без категории
+// Теги удалённой категории остаются без категории
 export async function deleteCategory(categoryId: string) {
   await db.transaction('rw', db.projects, db.categories, async () => {
     await db.projects.filter((p) => p.categoryId === categoryId).modify({ categoryId: null })

@@ -9,7 +9,7 @@ const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'lo
 type Props = {
   projectId: string
   onClose: () => void
-  // Закрывает всё поверх ленты, чтобы показать записи проекта
+  // Закрывает всё поверх ленты, чтобы показать записи тега
   onShowEntries: () => void
 }
 
@@ -51,7 +51,7 @@ function Form({ project, categories, count, onClose, onShowEntries }: FormProps)
         <button type="button" className="text-stone-500" onClick={onClose}>
           Отмена
         </button>
-        <h1 className="font-semibold">Проект</h1>
+        <h1 className="font-semibold">Тег</h1>
         <button
           type="button"
           className="font-medium text-orange-700 disabled:text-stone-300"
@@ -93,22 +93,18 @@ function Form({ project, categories, count, onClose, onShowEntries }: FormProps)
         <div className="rounded-2xl border border-stone-200 bg-white p-4 text-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${active ? 'bg-green-100 text-green-800' : 'bg-stone-200 text-stone-700'}`}>
-              {active ? 'Активный' : 'Завершён'}
+              {active || !project.completedAt ? 'Активный' : `В архиве с ${dateFormat.format(project.completedAt)}`}
             </span>
             <span className="text-stone-500">
               {count} {pluralRu(count, ['запись', 'записи', 'записей'])}
             </span>
           </div>
-          <p className="text-stone-600">
-            Начат {dateFormat.format(project.startedAt)}
-            {project.completedAt && `, завершён ${dateFormat.format(project.completedAt)}`}
-          </p>
           <button
             type="button"
             className="mt-4 w-full rounded-xl bg-stone-900 py-2.5 font-medium text-white"
             onClick={() => void (active ? completeProject(project) : reopenProject(project))}
           >
-            {active ? 'Завершить проект' : 'Вернуть в работу'}
+            {active ? 'Убрать в архив' : 'Вернуть из архива'}
           </button>
           <button
             type="button"

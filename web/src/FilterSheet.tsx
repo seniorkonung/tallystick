@@ -25,7 +25,7 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
   const typesById = new Map(types.map((t) => [t.id, t]))
   const count = entries.filter((e) => matchEntry(draft, e, typesById)).length
   const q = projectQuery.trim().toLowerCase()
-  // Завершённых проектов может быть много: они видны только через поиск или если уже выбраны
+  // Тегов в архиве может быть много: они видны только через поиск или если уже выбраны
   const shownProjects = projects
     .filter((p) => (q ? p.name.toLowerCase().includes(q) : p.status === 'active' || draft.projectIds.includes(p.id)))
     .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
@@ -119,10 +119,10 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
                 ))}
             </div>
 
-            <h3 className="mt-5 mb-2 text-xs text-stone-500">Проекты</h3>
+            <h3 className="mt-5 mb-2 text-xs text-stone-500">Теги</h3>
             <input
               value={projectQuery}
-              placeholder="Найти проект, в том числе завершённый"
+              placeholder="Найти тег, в том числе в архиве"
               onChange={(e) => setProjectQuery(e.target.value)}
               className="mb-2 w-full rounded-xl bg-stone-100 px-3 py-2 text-sm outline-none"
             />
@@ -140,7 +140,7 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
                   </button>
                 )
               })}
-              {shownProjects.length === 0 && <p className="text-sm text-stone-400">Проектов нет</p>}
+              {shownProjects.length === 0 && <p className="text-sm text-stone-400">Тегов нет</p>}
             </div>
 
             <h3 className="mt-5 mb-2 text-xs text-stone-500">Поля</h3>
