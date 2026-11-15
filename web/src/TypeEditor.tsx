@@ -38,9 +38,7 @@ export function TypeEditor({ type, types, onSaved, onDeleted, onClose }: Props) 
         const name = f.name.trim() || 'Поле'
         return f.kind === 'single' || f.kind === 'multi'
           ? { ...f, name, options: f.options.map((o) => ({ ...o, label: o.label.trim() })).filter((o) => o.label) }
-          : f.kind === 'number'
-            ? { ...f, name, unit: f.unit.trim() }
-            : { ...f, name }
+          : { ...f, name }
       }),
     }
     await saveType(saved)
@@ -151,14 +149,6 @@ function FieldCard({ field, onChange, onRemove, onUp, onDown }: FieldCardProps) 
         onChange={(e) => onChange({ ...field, name: e.target.value })}
         className="w-full rounded-xl bg-stone-100 px-3 py-2 outline-none"
       />
-      {field.kind === 'number' && (
-        <input
-          value={field.unit}
-          placeholder="Единица, например ккал"
-          onChange={(e) => onChange({ ...field, unit: e.target.value })}
-          className="mt-2 w-full rounded-xl bg-stone-100 px-3 py-2 text-sm outline-none"
-        />
-      )}
       {(field.kind === 'single' || field.kind === 'multi') && (
         <div className="mt-2 flex flex-col gap-2">
           {field.options.map((option, i) => (

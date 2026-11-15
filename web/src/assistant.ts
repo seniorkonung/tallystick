@@ -32,7 +32,7 @@ function instructions() {
 
 Domain:
 - Entry: a feed item with text, attachments, field values of its type, tags, an optional reply-to entry, and actuality (actual or no longer actual). Its creation time is fixed.
-- Type: a user-defined kind of entry with an ordered list of fields (single choice, multiple choice, number with optional unit, string).
+- Type: a user-defined kind of entry with an ordered list of fields (single choice, multiple choice, number, string).
 - Tag: a user-defined label that groups entries by any criterion, such as a topic, a direction, or a project. A tag is active or archived; an entry can have several tags.
 
 Use the tools to look at the user's data instead of guessing. Fetch types or tags first when you need their ids. Page through results when the total exceeds the page.

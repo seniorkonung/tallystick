@@ -6,7 +6,7 @@ export type FieldOption = { id: string; label: string }
 
 export type Field =
   | { id: string; name: string; kind: 'single' | 'multi'; options: FieldOption[] }
-  | { id: string; name: string; kind: 'number'; unit: string }
+  | { id: string; name: string; kind: 'number' }
   | { id: string; name: string; kind: 'string' }
 
 export type FieldKind = Field['kind']
@@ -279,6 +279,15 @@ db.version(14)
   })
 
 db.version(15).stores({ settings: 'id' })
+
+// У числовых полей больше нет единицы измерения
+db.version(16)
+  .stores({})
+  .upgrade(async (tx) => {
+    await tx.table('types').toCollection().modify((type) => {
+      for (const field of type.fields) delete field.unit
+    })
+  })
 
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {

@@ -51,7 +51,6 @@ export const readTools = {
         fields: t.fields.map((f) => ({
           name: f.name,
           kind: f.kind,
-          ...(f.kind === 'number' && f.unit ? { unit: f.unit } : {}),
           ...(f.kind === 'single' || f.kind === 'multi' ? { options: f.options.map((o) => o.label) } : {}),
         })),
       }))

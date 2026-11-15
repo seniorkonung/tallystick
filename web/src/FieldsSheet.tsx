@@ -82,7 +82,7 @@ function FieldEditor({ field, value, autoFocus, onChange, onClose }: EditorProps
       return <OptionsDropdown field={field} selected={selected} onChange={onChange} />
     }
     case 'number':
-      return <NumberEditor unit={field.unit} value={value} autoFocus={autoFocus} onChange={onChange} onClose={onClose} />
+      return <NumberEditor value={value} autoFocus={autoFocus} onChange={onChange} onClose={onClose} />
     case 'string':
       return (
         <input
@@ -96,26 +96,23 @@ function FieldEditor({ field, value, autoFocus, onChange, onClose }: EditorProps
   }
 }
 
-function NumberEditor({ unit, value, autoFocus, onChange, onClose }: { unit: string } & Omit<EditorProps, 'field'>) {
+function NumberEditor({ value, autoFocus, onChange, onClose }: Omit<EditorProps, 'field'>) {
   const [draft, setDraft] = useState(typeof value === 'number' ? String(value).replace('.', ',') : '')
   // «Очистить» сбрасывает значение снаружи — поле ввода следует за ним
   if (value === undefined && draft !== '' && !Number.isNaN(Number(draft.replace(',', '.').trim()))) setDraft('')
   return (
-    <div className="flex items-center gap-2">
-      <input
-        autoFocus={autoFocus}
-        inputMode="decimal"
-        value={draft}
-        onChange={(e) => {
-          setDraft(e.target.value)
-          const parsed = Number(e.target.value.replace(',', '.').trim())
-          onChange(e.target.value.trim() === '' || Number.isNaN(parsed) ? undefined : parsed)
-        }}
-        onKeyDown={(e) => e.key === 'Enter' && onClose()}
-        className="w-full rounded-2xl bg-stone-100 px-3 py-2 outline-none"
-      />
-      {unit && <span className="text-sm text-stone-500">{unit}</span>}
-    </div>
+    <input
+      autoFocus={autoFocus}
+      inputMode="decimal"
+      value={draft}
+      onChange={(e) => {
+        setDraft(e.target.value)
+        const parsed = Number(e.target.value.replace(',', '.').trim())
+        onChange(e.target.value.trim() === '' || Number.isNaN(parsed) ? undefined : parsed)
+      }}
+      onKeyDown={(e) => e.key === 'Enter' && onClose()}
+      className="w-full rounded-2xl bg-stone-100 px-3 py-2 outline-none"
+    />
   )
 }
 

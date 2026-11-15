@@ -14,7 +14,6 @@ export function newField(kind: FieldKind): Field {
     case 'multi':
       return { id, name: '', kind, options: [] }
     case 'number':
-      return { id, name: '', kind, unit: '' }
     case 'string':
       return { id, name: '', kind }
   }
@@ -31,7 +30,7 @@ export function formatValue(field: Field, value: FieldValue): string[] {
       return ids.map((id) => field.options.find((o) => o.id === id)?.label ?? '—')
     }
     case 'number':
-      return [`${numberFormat.format(Number(value))}${field.unit ? ` ${field.unit}` : ''}`]
+      return [numberFormat.format(Number(value))]
     case 'string':
       return [String(value)]
   }
