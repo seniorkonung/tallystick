@@ -41,7 +41,8 @@ export function useSwipeSelect(onSelect: () => void) {
     },
     handlers: {
       onPointerDown(e: PointerEvent) {
-        if (e.pointerType === 'mouse' && e.button !== 0) return
+        // Жест только пальцем: мышью и пером протяжка выделяет текст
+        if (e.pointerType !== 'touch') return
         start.current = { x: e.clientX, y: e.clientY }
         dragging.current = false
         swallow.current = false

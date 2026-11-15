@@ -26,7 +26,8 @@ export function useSidebarSwipe(enabled: boolean) {
 
   return {
     onPointerDown(e: PointerEvent) {
-      if (!enabled || (e.pointerType === 'mouse' && e.button !== 0)) return
+      // Жест только пальцем: мышью и пером протяжка выделяет текст
+      if (!enabled || e.pointerType !== 'touch') return
       start.current = { x: e.clientX, y: e.clientY }
       dragging.current = false
     },
