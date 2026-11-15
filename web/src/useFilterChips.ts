@@ -16,7 +16,7 @@ export type FilterChip = { key: string; label: string; remove: Partial<Filters> 
 export function useFilterChips({ withText }: { withText: boolean }) {
   const filters = useFilters((s) => s.filters)
   const types = useLiveQuery(() => db.types.toArray())
-  const projects = useLiveQuery(() => db.projects.toArray())
+  const tags = useLiveQuery(() => db.tags.toArray())
 
   const chips: { key: string; label: string; remove: Partial<Filters> }[] = []
   if (filters.actuality !== 'all') {
@@ -32,8 +32,8 @@ export function useFilterChips({ withText }: { withText: boolean }) {
   for (const id of filters.typeIds) {
     chips.push({ key: `t${id}`, label: types?.find((t) => t.id === id)?.name ?? 'Тип', remove: { typeIds: filters.typeIds.filter((x) => x !== id) } })
   }
-  for (const id of filters.projectIds) {
-    chips.push({ key: `p${id}`, label: projects?.find((p) => p.id === id)?.name ?? 'Тег', remove: { projectIds: filters.projectIds.filter((x) => x !== id) } })
+  for (const id of filters.tagIds) {
+    chips.push({ key: `p${id}`, label: tags?.find((p) => p.id === id)?.name ?? 'Тег', remove: { tagIds: filters.tagIds.filter((x) => x !== id) } })
   }
   if (filters.conditions.length > 1 && filters.conditionMode === 'any') {
     chips.push({ key: 'mode', label: 'Любое из условий', remove: { conditionMode: 'all' } })

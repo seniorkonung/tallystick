@@ -29,7 +29,7 @@ export type Entry = {
   text: string
   typeId: string
   values: FieldValues
-  projectIds: string[]
+  tagIds: string[]
   // Неактуальная запись больше не требует внимания, но остаётся в ленте
   actual: boolean
   // Исходная запись, на которую это ответ
@@ -38,20 +38,19 @@ export type Entry = {
   chatId: string | null
 }
 
-// Тег — пометка записей; в коде и хранилище он по-прежнему называется project. completed — в архиве
-export type ProjectStatus = 'active' | 'completed'
+export type TagStatus = 'active' | 'archived'
 
-export type Project = {
+export type Tag = {
   id: string
   name: string
-  // Индекс в палитре projectColors
+  // Индекс в палитре tagColors
   color: number
-  status: ProjectStatus
+  status: TagStatus
   categoryId: string | null
   // Название категории на момент ухода в архив: тег в архиве её замораживает
   frozenCategoryName: string | null
   // Дата ухода в архив; даты начала у тега нет
-  completedAt: number | null
+  archivedAt: number | null
 }
 
 export type Category = {
@@ -60,13 +59,13 @@ export type Category = {
   createdAt: number
 }
 
-export type MarkKind = 'completed' | 'reopened'
+export type MarkKind = 'archived' | 'restored'
 
 // Служебная отметка в ленте — её создаёт приложение, это не запись
 export type Mark = {
   id: string
   createdAt: number
-  projectId: string
+  tagId: string
   kind: MarkKind
   // Число записей тега на момент ухода в архив
   entryCount: number | null
@@ -148,7 +147,7 @@ export type ChatFile = PreparedFile & {
 export const db = new Dexie('tallystick') as Dexie & {
   types: EntityTable<EntryType, 'id'>
   entries: EntityTable<Entry, 'id'>
-  projects: EntityTable<Project, 'id'>
+  tags: EntityTable<Tag, 'id'>
   categories: EntityTable<Category, 'id'>
   marks: EntityTable<Mark, 'id'>
   attachments: EntityTable<Attachment, 'id'>
@@ -235,6 +234,37 @@ db.version(12)
     })
   })
 
+// Проекты переименованы в теги. Данные копируются под новые имена, а старые таблица и поля остаются нетронутыми:
+// это снимок для отката, их удалит отдельная версия, когда новое проверено. Вид отметки меняется на месте
+db.version(13)
+  .stores({ tags: 'id, status', entries: 'id, createdAt, typeId, *projectIds, *tagIds' })
+  .upgrade(async (tx) => {
+    const projects = await tx.table('projects').toArray()
+    await tx.table('tags').bulkPut(
+      projects.map(({ completedAt, status, ...project }) => ({
+        ...project,
+        status: status === 'completed' ? 'archived' : 'active',
+        archivedAt: completedAt ?? null,
+      })),
+    )
+    await tx.table('entries').toCollection().modify((entry) => {
+      entry.tagIds = entry.projectIds ?? []
+    })
+    await tx.table('marks').toCollection().modify((mark) => {
+      mark.tagId = mark.projectId
+      mark.kind = mark.kind === 'completed' ? 'archived' : 'restored'
+    })
+    await tx.table('presets').toCollection().modify((preset) => {
+      preset.filters.tagIds = preset.filters.projectIds ?? []
+    })
+  })
+
+// До удаления старых полей записи дублируют теги в projectIds: иначе откат к прошлой версии не откроет ленту
+db.entries.hook('creating', (_key, entry) => {
+  ;(entry as Entry & { projectIds?: string[] }).projectIds = entry.tagIds
+})
+db.entries.hook('updating', (mods) => ('tagIds' in mods ? { projectIds: (mods as Partial<Entry>).tagIds } : undefined))
+
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
   tx.table('types').add({ id: crypto.randomUUID(), name: 'Заметка', createdAt: Date.now(), fields: [] })
@@ -259,16 +289,16 @@ export async function addEntry(
   type: EntryType,
   text: string,
   values: FieldValues,
-  projectIds: string[],
+  tagIds: string[],
   replyTo: string | null,
   files: PreparedFile[],
   chatId: string | null = null,
 ) {
-  return db.transaction('rw', [db.entries, db.projects, db.categories, db.marks, db.attachments], async () => {
+  return db.transaction('rw', [db.entries, db.tags, db.categories, db.marks, db.attachments], async () => {
     const now = Date.now()
-    const projects = await db.projects.bulkGet(projectIds)
-    for (const project of projects) {
-      if (project?.status === 'completed') await reopenProject(project, now)
+    const tags = await db.tags.bulkGet(tagIds)
+    for (const tag of tags) {
+      if (tag?.status === 'archived') await restoreTag(tag, now)
     }
     const entryId = crypto.randomUUID()
     await addAttachments(entryId, files, now)
@@ -278,7 +308,7 @@ export async function addEntry(
       text,
       typeId: type.id,
       values: valuesForType(type, values),
-      projectIds,
+      tagIds,
       actual: true,
       replyTo,
       chatId,
@@ -293,17 +323,17 @@ export async function updateEntry(
   type: EntryType,
   text: string,
   values: FieldValues,
-  projectIds: string[],
+  tagIds: string[],
   // Оставленные вложения записи; остальные удаляются
   keptAttachmentIds: string[],
   files: PreparedFile[],
 ) {
-  await db.transaction('rw', [db.entries, db.projects, db.categories, db.marks, db.attachments], async () => {
+  await db.transaction('rw', [db.entries, db.tags, db.categories, db.marks, db.attachments], async () => {
     const entry = await db.entries.get(entryId)
     if (!entry) return
-    const added = projectIds.filter((id) => !entry.projectIds.includes(id))
-    for (const project of await db.projects.bulkGet(added)) {
-      if (project?.status === 'completed') await reopenProject(project)
+    const added = tagIds.filter((id) => !entry.tagIds.includes(id))
+    for (const tag of await db.tags.bulkGet(added)) {
+      if (tag?.status === 'archived') await restoreTag(tag)
     }
     await db.attachments
       .where('entryId')
@@ -311,7 +341,7 @@ export async function updateEntry(
       .filter((a) => !keptAttachmentIds.includes(a.id))
       .delete()
     await addAttachments(entryId, files, Date.now())
-    await db.entries.update(entryId, { text, typeId: type.id, values: valuesForType(type, values), projectIds })
+    await db.entries.update(entryId, { text, typeId: type.id, values: valuesForType(type, values), tagIds })
   })
 }
 
@@ -332,50 +362,50 @@ export async function setActual(entryId: string, actual: boolean) {
   await db.entries.update(entryId, { actual })
 }
 
-async function addMark(projectId: string, kind: MarkKind, createdAt: number, entryCount: number | null = null) {
-  await db.marks.add({ id: crypto.randomUUID(), createdAt, projectId, kind, entryCount })
+async function addMark(tagId: string, kind: MarkKind, createdAt: number, entryCount: number | null = null) {
+  await db.marks.add({ id: crypto.randomUUID(), createdAt, tagId, kind, entryCount })
 }
 
-export async function createProject(name: string, categoryId: string | null) {
-  const project: Project = {
+export async function createTag(name: string, categoryId: string | null) {
+  const tag: Tag = {
     id: crypto.randomUUID(),
     name,
-    color: (await db.projects.count()) % 7,
+    color: (await db.tags.count()) % 7,
     status: 'active',
     categoryId,
     frozenCategoryName: null,
-    completedAt: null,
+    archivedAt: null,
   }
   // Создание тега в ленте не отмечается
-  await db.projects.add(project)
-  return project
+  await db.tags.add(tag)
+  return tag
 }
 
-export async function completeProject(project: Project) {
-  await db.transaction('rw', db.entries, db.projects, db.categories, db.marks, async () => {
+export async function archiveTag(tag: Tag) {
+  await db.transaction('rw', db.entries, db.tags, db.categories, db.marks, async () => {
     const now = Date.now()
-    const category = project.categoryId ? await db.categories.get(project.categoryId) : undefined
-    const entryCount = await db.entries.where('projectIds').equals(project.id).count()
-    await db.projects.update(project.id, {
-      status: 'completed',
-      completedAt: now,
+    const category = tag.categoryId ? await db.categories.get(tag.categoryId) : undefined
+    const entryCount = await db.entries.where('tagIds').equals(tag.id).count()
+    await db.tags.update(tag.id, {
+      status: 'archived',
+      archivedAt: now,
       frozenCategoryName: category?.name ?? null,
     })
-    await addMark(project.id, 'completed', now, entryCount)
+    await addMark(tag.id, 'archived', now, entryCount)
   })
 }
 
 // Тег возвращается из архива в прежнюю категорию, если она ещё есть
-export async function reopenProject(project: Project, now = Date.now()) {
-  await db.transaction('rw', db.projects, db.categories, db.marks, async () => {
-    const category = project.categoryId ? await db.categories.get(project.categoryId) : undefined
-    await db.projects.update(project.id, {
+export async function restoreTag(tag: Tag, now = Date.now()) {
+  await db.transaction('rw', db.tags, db.categories, db.marks, async () => {
+    const category = tag.categoryId ? await db.categories.get(tag.categoryId) : undefined
+    await db.tags.update(tag.id, {
       status: 'active',
-      completedAt: null,
+      archivedAt: null,
       categoryId: category?.id ?? null,
       frozenCategoryName: null,
     })
-    await addMark(project.id, 'reopened', now)
+    await addMark(tag.id, 'restored', now)
   })
 }
 
@@ -387,8 +417,8 @@ export async function createCategory(name: string) {
 
 // Теги удалённой категории остаются без категории
 export async function deleteCategory(categoryId: string) {
-  await db.transaction('rw', db.projects, db.categories, async () => {
-    await db.projects.filter((p) => p.categoryId === categoryId).modify({ categoryId: null })
+  await db.transaction('rw', db.tags, db.categories, async () => {
+    await db.tags.filter((p) => p.categoryId === categoryId).modify({ categoryId: null })
     await db.categories.delete(categoryId)
   })
 }

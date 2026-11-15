@@ -6,8 +6,8 @@ import { RichText } from './RichText'
 import { plainText } from './format'
 import { useComposer } from './composerStore'
 import { isFiltered, matchEntry, matchMark, useFilters } from './filterStore'
-import { ProjectChip } from './ProjectChip'
-import { db, isEmptyValue, type Attachment, type Entry, type EntryType, type Mark, type Project } from './db'
+import { TagChip } from './TagChip'
+import { db, isEmptyValue, type Attachment, type Entry, type EntryType, type Mark, type Tag } from './db'
 import { formatValue } from './fields'
 import { pluralRu } from './plural'
 import { useDateJump } from './dateJumpStore'
@@ -40,7 +40,7 @@ function dayLabel(time: number) {
 export function Feed() {
   const entries = useLiveQuery(() => db.entries.orderBy('createdAt').toArray())
   const types = useLiveQuery(() => db.types.toArray())
-  const projects = useLiveQuery(() => db.projects.toArray())
+  const tags = useLiveQuery(() => db.tags.toArray())
   const marks = useLiveQuery(() => db.marks.toArray())
   // Записи вложений: сами файлы браузер читает с диска, только когда их показывают
   const attachments = useLiveQuery(() => db.attachments.orderBy('createdAt').toArray())
@@ -71,10 +71,10 @@ export function Feed() {
     scroller.current?.scrollTo({ top: 0 })
   }, [filters, threadId])
 
-  if (!entries || !types || !projects || !marks || !attachments) return <div className="flex-1" />
+  if (!entries || !types || !tags || !marks || !attachments) return <div className="flex-1" />
 
   const typesById = new Map(types.map((t) => [t.id, t]))
-  const projectsById = new Map(projects.map((p) => [p.id, p]))
+  const tagsById = new Map(tags.map((p) => [p.id, p]))
   const entriesById = new Map(entries.map((e) => [e.id, e]))
   const attachmentsByEntry = new Map<string, Attachment[]>()
   for (const a of attachments) attachmentsByEntry.set(a.entryId, [...(attachmentsByEntry.get(a.entryId) ?? []), a])
@@ -107,7 +107,7 @@ export function Feed() {
       key={entry.id}
       entry={entry}
       type={typesById.get(entry.typeId)}
-      projects={entry.projectIds.flatMap((id) => projectsById.get(id) ?? [])}
+      tags={entry.tagIds.flatMap((id) => tagsById.get(id) ?? [])}
       attachments={attachmentsByEntry.get(entry.id) ?? []}
       onAttachment={setViewing}
       // На экране ответов цитата исходной записи не нужна — она наверху
@@ -166,7 +166,7 @@ export function Feed() {
                 item.kind === 'entry' ? (
                   card(item.entry)
                 ) : (
-                  <MarkLine key={item.mark.id} mark={item.mark} project={projectsById.get(item.mark.projectId)} />
+                  <MarkLine key={item.mark.id} mark={item.mark} tag={tagsById.get(item.mark.tagId)} />
                 ),
               )}
             </section>
@@ -193,14 +193,14 @@ export function Feed() {
 
 type Item = { kind: 'entry'; entry: Entry; time: number } | { kind: 'mark'; mark: Mark; time: number }
 
-function MarkLine({ mark, project }: { mark: Mark; project: Project | undefined }) {
-  const name = `«${project?.name ?? 'Тег'}»`
+function MarkLine({ mark, tag }: { mark: Mark; tag: Tag | undefined }) {
+  const name = `«${tag?.name ?? 'Тег'}»`
   let text: string
   switch (mark.kind) {
-    case 'completed':
+    case 'archived':
       text = `${name} в архиве · ${mark.entryCount ?? 0} ${pluralRu(mark.entryCount ?? 0, ['запись', 'записи', 'записей'])}`
       break
-    case 'reopened':
+    case 'restored':
       text = `${name} возвращён из архива`
       break
   }
@@ -214,7 +214,7 @@ function MarkLine({ mark, project }: { mark: Mark; project: Project | undefined 
 type EntryCardProps = {
   entry: Entry
   type: EntryType | undefined
-  projects: Project[]
+  tags: Tag[]
   attachments: Attachment[]
   onAttachment: (attachment: Attachment) => void
   // Исходная запись, если это ответ; 'deleted' — исходную удалили
@@ -228,7 +228,7 @@ type EntryCardProps = {
 }
 
 function EntryCard(props: EntryCardProps) {
-  const { entry, type, projects, attachments, onAttachment, quote, replyCount, highlighted, onOpen, onQuote, onReplies } = props
+  const { entry, type, tags, attachments, onAttachment, quote, replyCount, highlighted, onOpen, onQuote, onReplies } = props
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   return (
     <article
@@ -277,10 +277,10 @@ function EntryCard(props: EntryCardProps) {
             </span>
           </button>
         )}
-        {projects.length > 0 && (
+        {tags.length > 0 && (
           <div className="mb-1.5 flex flex-wrap gap-1">
-            {projects.map((project) => (
-              <ProjectChip key={project.id} project={project} />
+            {tags.map((tag) => (
+              <TagChip key={tag.id} tag={tag} />
             ))}
           </div>
         )}

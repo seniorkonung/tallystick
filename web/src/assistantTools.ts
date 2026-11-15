@@ -1,6 +1,6 @@
 import { tool } from 'ai'
 import { z } from 'zod'
-import { addEntry, db, deleteEntry, setActual, updateEntry, type Entry, type EntryType, type FieldValues, type Permission, type Project, type ProviderKind } from './db'
+import { addEntry, db, deleteEntry, setActual, updateEntry, type Entry, type EntryType, type FieldValues, type Permission, type Tag, type ProviderKind } from './db'
 import { fileForModel } from './modelFiles'
 import { emptyFilters, matchEntry, type Filters } from './filterStore'
 
@@ -29,14 +29,13 @@ function fieldValues(entry: Entry, type: EntryType | undefined) {
   return result
 }
 
-// Ассистент видит теги под их названием в продукте; в хранилище они по-прежнему проекты
-function describeTag(p: Project, categoryName: string | null) {
+function describeTag(p: Tag, categoryName: string | null) {
   return {
     id: p.id,
     name: p.name,
-    status: p.status === 'completed' ? 'archived' : 'active',
+    status: p.status,
     category: categoryName,
-    archivedAt: p.completedAt ? localTime(p.completedAt) : null,
+    archivedAt: p.archivedAt ? localTime(p.archivedAt) : null,
   }
 }
 
@@ -63,9 +62,9 @@ export const readTools = {
     description: 'List all tags, active and archived, with their categories.',
     inputSchema: z.object({}),
     execute: async () => {
-      const [projects, categories] = await Promise.all([db.projects.toArray(), db.categories.toArray()])
-      return projects.map((p) =>
-        describeTag(p, p.status === 'completed' ? p.frozenCategoryName : (categories.find((c) => c.id === p.categoryId)?.name ?? null)),
+      const [tags, categories] = await Promise.all([db.tags.toArray(), db.categories.toArray()])
+      return tags.map((p) =>
+        describeTag(p, p.status === 'archived' ? p.frozenCategoryName : (categories.find((c) => c.id === p.categoryId)?.name ?? null)),
       )
     },
   }),
@@ -87,17 +86,17 @@ export const readTools = {
       offset: z.number().int().min(0).optional(),
     }),
     execute: async (input) => {
-      const [entries, types, projects, attachments] = await Promise.all([
+      const [entries, types, tags, attachments] = await Promise.all([
         db.entries.toArray(),
         db.types.toArray(),
-        db.projects.toArray(),
+        db.tags.toArray(),
         db.attachments.toArray(),
       ])
       const typesById = new Map(types.map((t) => [t.id, t]))
       const filters: Filters = {
         ...emptyFilters,
         typeIds: input.typeIds ?? [],
-        projectIds: input.tagIds ?? [],
+        tagIds: input.tagIds ?? [],
         from: input.from ?? '',
         to: input.to ?? '',
         text: input.text ?? '',
@@ -119,7 +118,7 @@ export const readTools = {
             type: type?.name ?? null,
             text: e.text,
             fields: fieldValues(e, type),
-            tags: e.projectIds.flatMap((id) => projects.find((p) => p.id === id)?.name ?? []),
+            tags: e.tagIds.flatMap((id) => tags.find((p) => p.id === id)?.name ?? []),
             actual: e.actual,
             replyTo: e.replyTo,
             attachments: attachments.filter((a) => a.entryId === e.id).map((a) => ({ id: a.id, name: a.name, mime: a.mime })),
@@ -201,7 +200,7 @@ async function getEntry(id: string) {
 }
 
 async function checkTags(ids: string[]) {
-  const found = await db.projects.bulkGet(ids)
+  const found = await db.tags.bulkGet(ids)
   const missing = ids.filter((_, i) => !found[i])
   if (missing.length) throw new Error(`No tags with ids ${missing.join(', ')}`)
 }
@@ -248,7 +247,7 @@ export function writeTools(chatId: string) {
         if (input.tagIds) await checkTags(input.tagIds)
         const kept = (await db.attachments.where('entryId').equals(entry.id).primaryKeys()) as string[]
         const values = toValues(type, input.fields ?? {}, entry.values)
-        await updateEntry(entry.id, type, input.text?.trim() ?? entry.text, values, input.tagIds ?? entry.projectIds, kept, [])
+        await updateEntry(entry.id, type, input.text?.trim() ?? entry.text, values, input.tagIds ?? entry.tagIds, kept, [])
         return { ok: true }
       },
     }),

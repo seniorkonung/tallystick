@@ -8,7 +8,7 @@ export type Draft = {
   typeId: string
   text: string
   values: FieldValues
-  projectIds: string[]
+  tagIds: string[]
   attachments: DraftAttachment[]
 }
 
@@ -39,7 +39,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
     typeId: localStorage.getItem(typeStorageKey) ?? '',
     text: '',
     values: {},
-    projectIds: [],
+    tagIds: [],
     attachments: [],
   },
   editingEntryId: null,
@@ -65,7 +65,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
         typeId: entry.typeId,
         text: entry.text,
         values: entry.values,
-        projectIds: entry.projectIds,
+        tagIds: entry.tagIds,
         attachments: attachments.map((a) => ({ key: a.id, existingId: a.id, file: a })),
       },
     })),
@@ -74,7 +74,7 @@ export const useComposer = create<ComposerState>((set, get) => ({
     set((s) => ({ editingEntryId: null, stash: null, draft: s.stash ?? s.draft })),
 
   // Теги выбираются для каждой записи заново
-  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {}, projectIds: [], attachments: [] }, replyToId: null, fromChatId: null })),
+  clearAfterSend: () => set((s) => ({ draft: { ...s.draft, text: '', values: {}, tagIds: [], attachments: [] }, replyToId: null, fromChatId: null })),
 
   // Ответ пишется в черновик новой записи: начатое редактирование отменяется
   startReply: (entryId) =>

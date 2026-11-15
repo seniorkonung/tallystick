@@ -2,9 +2,9 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { FieldsSheet } from './FieldsSheet'
-import { ProjectChip } from './ProjectChip'
-import { ProjectEditor } from './ProjectEditor'
-import { ProjectPicker } from './ProjectPicker'
+import { TagChip } from './TagChip'
+import { TagEditor } from './TagEditor'
+import { TagPicker } from './TagPicker'
 import { TypeEditor } from './TypeEditor'
 import { TypePicker } from './TypePicker'
 import { prepareFile } from './attachments'
@@ -20,7 +20,7 @@ type TypeEditing = { type: EntryType | null } | null
 
 export function Composer() {
   const types = useLiveQuery(() => db.types.toArray())
-  const projects = useLiveQuery(() => db.projects.toArray())
+  const tags = useLiveQuery(() => db.tags.toArray())
   const { draft, editingEntryId, update, stopEditing, clearAfterSend, replyToId, cancelReply, fromChatId, cancelFromChat } = useComposer()
   const threadId = useThread((s) => s.stack.at(-1))
   const editingEntry = useLiveQuery(
@@ -36,8 +36,8 @@ export function Composer() {
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
   const [typeEditing, setTypeEditing] = useState<TypeEditing>(null)
-  const [pickingProjects, setPickingProjects] = useState(false)
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
+  const [pickingTags, setPickingTags] = useState(false)
+  const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
   // Выделение в поле ввода — показываем панель форматирования
@@ -73,14 +73,14 @@ export function Composer() {
     if (editingEntryId || replyToId || fromChatId) textarea.current?.focus()
   }, [editingEntryId, replyToId, fromChatId])
 
-  if (!types || !projects) return null
+  if (!types || !tags) return null
   const sortedTypes = [...types].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
   // Тип сохраняется для следующей записи; если его удалили — берём первый
   const type = types.find((t) => t.id === draft.typeId) ?? sortedTypes[0]
   const formats = selection ? activeFormats(draft.text, selection.start, selection.end) : new Set<FormatKind>()
   const hasValues = Object.keys(valuesForType(type, draft.values)).length > 0
   const canSend = !preparing && (draft.text.trim() !== '' || hasValues || draft.attachments.length > 0)
-  const selectedProjects = draft.projectIds.flatMap((id) => projects.find((p) => p.id === id) ?? [])
+  const selectedTags = draft.tagIds.flatMap((id) => tags.find((p) => p.id === id) ?? [])
 
   function selectType(id: string) {
     update({ typeId: id })
@@ -116,7 +116,7 @@ export function Composer() {
 
   async function send() {
     if (!canSend) return
-    const projectIds = selectedProjects.map((p) => p.id)
+    const tagIds = selectedTags.map((p) => p.id)
     const newFiles = draft.attachments.filter((a) => !a.existingId).map((a) => a.file)
     try {
       if (editingEntry) {
@@ -124,10 +124,10 @@ export function Composer() {
         const lost = Object.keys(editingEntry.values).filter((id) => !type.fields.some((f) => f.id === id))
         if (lost.length && !window.confirm(`Значения полей, которых нет в типе «${type.name}», пропадут. Сохранить?`)) return
         const kept = draft.attachments.flatMap((a) => a.existingId ?? [])
-        await updateEntry(editingEntry.id, type, draft.text.trim(), draft.values, projectIds, kept, newFiles)
+        await updateEntry(editingEntry.id, type, draft.text.trim(), draft.values, tagIds, kept, newFiles)
         stopEditing()
       } else {
-        await addEntry(type, draft.text.trim(), draft.values, projectIds, replyTarget?.id ?? null, newFiles, fromChatId)
+        await addEntry(type, draft.text.trim(), draft.values, tagIds, replyTarget?.id ?? null, newFiles, fromChatId)
         clearAfterSend()
       }
     } catch (error) {
@@ -271,12 +271,12 @@ export function Composer() {
           )}
           {preparing && <p className="px-2 pt-1 text-xs text-stone-400">Готовлю вложения…</p>}
           {/* Выбранные теги своей строкой; тап открывает выбор, крестик убирает тег */}
-          {selectedProjects.length > 0 && (
+          {selectedTags.length > 0 && (
             <div className="flex gap-1.5 overflow-x-auto px-1 pt-1 pb-1">
-              {selectedProjects.map((project) => (
+              {selectedTags.map((tag) => (
                 // Не button: внутри плашки своя кнопка «Убрать»
-                <div key={project.id} role="button" tabIndex={0} className="shrink-0 cursor-pointer whitespace-nowrap" onClick={() => setPickingProjects(true)}>
-                  <ProjectChip project={project} onRemove={() => update({ projectIds: draft.projectIds.filter((id) => id !== project.id) })} />
+                <div key={tag.id} role="button" tabIndex={0} className="shrink-0 cursor-pointer whitespace-nowrap" onClick={() => setPickingTags(true)}>
+                  <TagChip tag={tag} onRemove={() => update({ tagIds: draft.tagIds.filter((id) => id !== tag.id) })} />
                 </div>
               ))}
             </div>
@@ -320,13 +320,13 @@ export function Composer() {
                 type="button"
                 aria-label="Теги"
                 className="flex items-center gap-1 rounded-full px-3 py-2 text-sm text-stone-600 hover:bg-stone-100"
-                onClick={() => setPickingProjects(true)}
+                onClick={() => setPickingTags(true)}
               >
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" />
                   <circle cx="7.5" cy="7.5" r="1" fill="currentColor" />
                 </svg>
-                {selectedProjects.length > 0 ? selectedProjects.length : 'Тег'}
+                {selectedTags.length > 0 ? selectedTags.length : 'Тег'}
               </button>
             </div>
             <button
@@ -358,18 +358,18 @@ export function Composer() {
         />
       )}
 
-      {pickingProjects && (
-        <ProjectPicker
-          selectedIds={draft.projectIds}
-          onToggle={(project) =>
+      {pickingTags && (
+        <TagPicker
+          selectedIds={draft.tagIds}
+          onToggle={(tag) =>
             update({
-              projectIds: draft.projectIds.includes(project.id)
-                ? draft.projectIds.filter((id) => id !== project.id)
-                : [...draft.projectIds, project.id],
+              tagIds: draft.tagIds.includes(tag.id)
+                ? draft.tagIds.filter((id) => id !== tag.id)
+                : [...draft.tagIds, tag.id],
             })
           }
-          onEdit={(project) => setEditingProjectId(project.id)}
-          onClose={() => setPickingProjects(false)}
+          onEdit={(tag) => setEditingTagId(tag.id)}
+          onClose={() => setPickingTags(false)}
         />
       )}
 
@@ -390,13 +390,13 @@ export function Composer() {
         />
       )}
 
-      {editingProjectId && (
-        <ProjectEditor
-          projectId={editingProjectId}
-          onClose={() => setEditingProjectId(null)}
+      {editingTagId && (
+        <TagEditor
+          tagId={editingTagId}
+          onClose={() => setEditingTagId(null)}
           onShowEntries={() => {
-            setEditingProjectId(null)
-            setPickingProjects(false)
+            setEditingTagId(null)
+            setPickingTags(false)
           }}
         />
       )}

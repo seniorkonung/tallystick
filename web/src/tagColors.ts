@@ -1,5 +1,5 @@
-// Цвет проекта: точка, текст и фон метки
-export const projectColors = [
+// Цвет тега: точка, текст и фон плашки
+export const tagColors = [
   { dot: '#4A9168', text: '#3D7A57', bg: '#E6EFE4' },
   { dot: '#D9773F', text: '#A64B1F', bg: '#F6E5DA' },
   { dot: '#4B6FC2', text: '#3557A6', bg: '#E3E9F5' },

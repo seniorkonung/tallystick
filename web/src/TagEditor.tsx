@@ -1,44 +1,44 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
-import { completeProject, db, reopenProject, type Project } from './db'
+import { archiveTag, db, restoreTag, type Tag } from './db'
 import { emptyFilters, useFilters } from './filterStore'
 import { pluralRu } from './plural'
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
 type Props = {
-  projectId: string
+  tagId: string
   onClose: () => void
   // Закрывает всё поверх ленты, чтобы показать записи тега
   onShowEntries: () => void
 }
 
-export function ProjectEditor({ projectId, onClose, onShowEntries }: Props) {
-  const project = useLiveQuery(() => db.projects.get(projectId), [projectId])
+export function TagEditor({ tagId, onClose, onShowEntries }: Props) {
+  const tag = useLiveQuery(() => db.tags.get(tagId), [tagId])
   const categories = useLiveQuery(() => db.categories.orderBy('createdAt').toArray())
-  const count = useLiveQuery(() => db.entries.where('projectIds').equals(projectId).count(), [projectId])
-  if (!project || !categories || count === undefined) return null
+  const count = useLiveQuery(() => db.entries.where('tagIds').equals(tagId).count(), [tagId])
+  if (!tag || !categories || count === undefined) return null
   return (
-    <Form key={project.id} project={project} categories={categories} count={count} onClose={onClose} onShowEntries={onShowEntries} />
+    <Form key={tag.id} tag={tag} categories={categories} count={count} onClose={onClose} onShowEntries={onShowEntries} />
   )
 }
 
 type FormProps = {
-  project: Project
+  tag: Tag
   categories: { id: string; name: string }[]
   count: number
   onClose: () => void
   onShowEntries: () => void
 }
 
-function Form({ project, categories, count, onClose, onShowEntries }: FormProps) {
+function Form({ tag, categories, count, onClose, onShowEntries }: FormProps) {
   const setFilters = useFilters((s) => s.set)
-  const [name, setName] = useState(project.name)
-  const [categoryId, setCategoryId] = useState(project.categoryId ?? '')
-  const active = project.status === 'active'
+  const [name, setName] = useState(tag.name)
+  const [categoryId, setCategoryId] = useState(tag.categoryId ?? '')
+  const active = tag.status === 'active'
 
   async function save() {
-    await db.projects.update(project.id, {
+    await db.tags.update(tag.id, {
       name: name.trim(),
       ...(active ? { categoryId: categoryId || null } : {}),
     })
@@ -86,14 +86,14 @@ function Form({ project, categories, count, onClose, onShowEntries }: FormProps)
           </select>
         ) : (
           <p className="mb-5 px-1 text-stone-700">
-            {project.frozenCategoryName ? `Была «${project.frozenCategoryName}»` : 'Без категории'}
+            {tag.frozenCategoryName ? `Была «${tag.frozenCategoryName}»` : 'Без категории'}
           </p>
         )}
 
         <div className="rounded-2xl border border-stone-200 bg-white p-4 text-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${active ? 'bg-green-100 text-green-800' : 'bg-stone-200 text-stone-700'}`}>
-              {active || !project.completedAt ? 'Активный' : `В архиве с ${dateFormat.format(project.completedAt)}`}
+              {active || !tag.archivedAt ? 'Активный' : `В архиве с ${dateFormat.format(tag.archivedAt)}`}
             </span>
             <span className="text-stone-500">
               {count} {pluralRu(count, ['запись', 'записи', 'записей'])}
@@ -102,7 +102,7 @@ function Form({ project, categories, count, onClose, onShowEntries }: FormProps)
           <button
             type="button"
             className="mt-4 w-full rounded-xl bg-stone-900 py-2.5 font-medium text-white"
-            onClick={() => void (active ? completeProject(project) : reopenProject(project))}
+            onClick={() => void (active ? archiveTag(tag) : restoreTag(tag))}
           >
             {active ? 'Убрать в архив' : 'Вернуть из архива'}
           </button>
@@ -110,7 +110,7 @@ function Form({ project, categories, count, onClose, onShowEntries }: FormProps)
             type="button"
             className="mt-2 w-full rounded-xl bg-stone-100 py-2.5 font-medium text-stone-900"
             onClick={() => {
-              setFilters({ ...emptyFilters, projectIds: [project.id] })
+              setFilters({ ...emptyFilters, tagIds: [tag.id] })
               onShowEntries()
             }}
           >

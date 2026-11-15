@@ -1,33 +1,33 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
-import { ProjectChip } from './ProjectChip'
-import { createCategory, createProject, db, deleteCategory, type Project } from './db'
+import { TagChip } from './TagChip'
+import { createCategory, createTag, db, deleteCategory, type Tag } from './db'
 
 // Вкладка: все активные, одна категория или архив
-type Tab = { kind: 'all' } | { kind: 'category'; id: string } | { kind: 'completed' }
+type Tab = { kind: 'all' } | { kind: 'category'; id: string } | { kind: 'archived' }
 
 type Props = {
   selectedIds: string[]
-  onToggle: (project: Project) => void
-  onEdit: (project: Project) => void
+  onToggle: (tag: Tag) => void
+  onEdit: (tag: Tag) => void
   onClose: () => void
 }
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
 
-export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props) {
-  const projects = useLiveQuery(() => db.projects.toArray())
+export function TagPicker({ selectedIds, onToggle, onEdit, onClose }: Props) {
+  const tags = useLiveQuery(() => db.tags.toArray())
   const categories = useLiveQuery(() => db.categories.orderBy('createdAt').toArray())
   const [tab, setTab] = useState<Tab>({ kind: 'all' })
   const [query, setQuery] = useState('')
-  if (!projects || !categories) return null
+  if (!tags || !categories) return null
   const q = query.trim().toLowerCase()
   const activeCategory = tab.kind === 'category' ? categories.find((c) => c.id === tab.id) : undefined
   // Поиск идёт по всем тегам, без поиска — по выбранной вкладке
-  const shown = projects
+  const shown = tags
     .filter((p) => {
       if (q) return p.name.toLowerCase().includes(q)
-      if (tab.kind === 'completed') return p.status === 'completed'
+      if (tab.kind === 'archived') return p.status === 'archived'
       if (p.status !== 'active') return false
       return tab.kind === 'all' || p.categoryId === tab.id
     })
@@ -36,16 +36,16 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
         ? a.status === 'active'
           ? -1
           : 1
-        : a.status === 'completed'
-          ? (b.completedAt ?? 0) - (a.completedAt ?? 0)
+        : a.status === 'archived'
+          ? (b.archivedAt ?? 0) - (a.archivedAt ?? 0)
           : a.name.localeCompare(b.name, 'ru'),
     )
-  const canCreate = q !== '' && !projects.some((p) => p.name.toLowerCase() === q)
+  const canCreate = q !== '' && !tags.some((p) => p.name.toLowerCase() === q)
 
   async function create() {
-    const project = await createProject(query.trim(), activeCategory?.id ?? null)
+    const tag = await createTag(query.trim(), activeCategory?.id ?? null)
     setQuery('')
-    onToggle(project)
+    onToggle(tag)
   }
 
   async function addCategory() {
@@ -115,8 +115,8 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
               ))}
               <button
                 type="button"
-                className={tabClass(tab.kind === 'completed')}
-                onClick={() => setTab({ kind: 'completed' })}
+                className={tabClass(tab.kind === 'archived')}
+                onClick={() => setTab({ kind: 'archived' })}
               >
                 Архив
               </button>
@@ -145,18 +145,18 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
               </button>
             </li>
           )}
-          {shown.map((project) => {
-            const selected = selectedIds.includes(project.id)
+          {shown.map((tag) => {
+            const selected = selectedIds.includes(tag.id)
             const categoryName =
-              project.status === 'completed'
-                ? project.frozenCategoryName
-                : categories.find((c) => c.id === project.categoryId)?.name
+              tag.status === 'archived'
+                ? tag.frozenCategoryName
+                : categories.find((c) => c.id === tag.categoryId)?.name
             return (
-              <li key={project.id} className="flex items-center">
+              <li key={tag.id} className="flex items-center">
                 <button
                   type="button"
                   className={`flex flex-1 items-center gap-3 rounded-2xl px-3 py-2.5 text-left ${selected ? 'bg-stone-100' : ''}`}
-                  onClick={() => onToggle(project)}
+                  onClick={() => onToggle(tag)}
                 >
                   <span
                     className={`flex size-5 shrink-0 items-center justify-center rounded-md border text-xs ${
@@ -166,19 +166,19 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
                     {selected && '✓'}
                   </span>
                   <span className="flex min-w-0 flex-col">
-                    <ProjectChip project={project} />
-                    {(categoryName || project.status === 'completed') && (
+                    <TagChip tag={tag} />
+                    {(categoryName || tag.status === 'archived') && (
                       <span className="mt-0.5 truncate text-xs text-stone-400">
-                        {project.status === 'completed' && project.completedAt
-                          ? `в архиве с ${dateFormat.format(project.completedAt)}`
+                        {tag.status === 'archived' && tag.archivedAt
+                          ? `в архиве с ${dateFormat.format(tag.archivedAt)}`
                           : ''}
-                        {project.status === 'completed' && categoryName ? ' · ' : ''}
+                        {tag.status === 'archived' && categoryName ? ' · ' : ''}
                         {categoryName}
                       </span>
                     )}
                   </span>
                 </button>
-                <button type="button" className="px-3 py-3 text-sm text-stone-500" onClick={() => onEdit(project)}>
+                <button type="button" className="px-3 py-3 text-sm text-stone-500" onClick={() => onEdit(tag)}>
                   Изменить
                 </button>
               </li>
@@ -186,7 +186,7 @@ export function ProjectPicker({ selectedIds, onToggle, onEdit, onClose }: Props)
           })}
           {shown.length === 0 && !canCreate && (
             <li className="px-3 py-4 text-sm text-stone-400">
-              {tab.kind === 'completed' ? 'В архиве тегов нет' : 'Тегов нет — введите название, чтобы создать'}
+              {tab.kind === 'archived' ? 'В архиве тегов нет' : 'Тегов нет — введите название, чтобы создать'}
             </li>
           )}
         </ul>

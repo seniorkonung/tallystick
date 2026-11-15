@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { ConditionEditor } from './ConditionEditor'
-import { ProjectChip } from './ProjectChip'
+import { TagChip } from './TagChip'
 import { formatCondition, type Condition } from './conditions'
 import { db } from './db'
 import { emptyFilters, matchEntry, useFilters, type Actuality, type Filters } from './filterStore'
@@ -14,20 +14,20 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
   const applied = useFilters((s) => s.filters)
   const apply = useFilters((s) => s.set)
   const [draft, setDraft] = useState<Filters>(applied)
-  const [projectQuery, setProjectQuery] = useState('')
+  const [tagQuery, setTagQuery] = useState('')
   // Условие в редакторе: null — новое, undefined — редактор закрыт
   const [editingCondition, setEditingCondition] = useState<Condition | null | undefined>(undefined)
   const entries = useLiveQuery(() => db.entries.toArray())
   const types = useLiveQuery(() => db.types.toArray())
-  const projects = useLiveQuery(() => db.projects.toArray())
-  if (!entries || !types || !projects) return null
+  const tags = useLiveQuery(() => db.tags.toArray())
+  if (!entries || !types || !tags) return null
 
   const typesById = new Map(types.map((t) => [t.id, t]))
   const count = entries.filter((e) => matchEntry(draft, e, typesById)).length
-  const q = projectQuery.trim().toLowerCase()
+  const q = tagQuery.trim().toLowerCase()
   // Тегов в архиве может быть много: они видны только через поиск или если уже выбраны
-  const shownProjects = projects
-    .filter((p) => (q ? p.name.toLowerCase().includes(q) : p.status === 'active' || draft.projectIds.includes(p.id)))
+  const shownTags = tags
+    .filter((p) => (q ? p.name.toLowerCase().includes(q) : p.status === 'active' || draft.tagIds.includes(p.id)))
     .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
 
   const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
@@ -121,26 +121,26 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
 
             <h3 className="mt-5 mb-2 text-xs text-stone-500">Теги</h3>
             <input
-              value={projectQuery}
+              value={tagQuery}
               placeholder="Найти тег, в том числе в архиве"
-              onChange={(e) => setProjectQuery(e.target.value)}
+              onChange={(e) => setTagQuery(e.target.value)}
               className="mb-2 w-full rounded-xl bg-stone-100 px-3 py-2 text-sm outline-none"
             />
             <div className="flex flex-wrap gap-2">
-              {shownProjects.map((p) => {
-                const active = draft.projectIds.includes(p.id)
+              {shownTags.map((p) => {
+                const active = draft.tagIds.includes(p.id)
                 return (
                   <button
                     key={p.id}
                     type="button"
                     className={`rounded-full ${active ? 'ring-2 ring-stone-900 ring-offset-1' : 'opacity-70'}`}
-                    onClick={() => setDraft({ ...draft, projectIds: toggle(draft.projectIds, p.id) })}
+                    onClick={() => setDraft({ ...draft, tagIds: toggle(draft.tagIds, p.id) })}
                   >
-                    <ProjectChip project={p} />
+                    <TagChip tag={p} />
                   </button>
                 )
               })}
-              {shownProjects.length === 0 && <p className="text-sm text-stone-400">Тегов нет</p>}
+              {shownTags.length === 0 && <p className="text-sm text-stone-400">Тегов нет</p>}
             </div>
 
             <h3 className="mt-5 mb-2 text-xs text-stone-500">Поля</h3>

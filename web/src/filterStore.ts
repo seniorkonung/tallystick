@@ -8,7 +8,7 @@ export type Actuality = 'all' | 'actual' | 'inactual'
 export type Filters = {
   actuality: Actuality
   typeIds: string[]
-  projectIds: string[]
+  tagIds: string[]
   // Границы периода включительно, в формате YYYY-MM-DD по местному времени
   from: string
   to: string
@@ -23,7 +23,7 @@ export type Filters = {
 export const emptyFilters: Filters = {
   actuality: 'all',
   typeIds: [],
-  projectIds: [],
+  tagIds: [],
   from: '',
   to: '',
   text: '',
@@ -45,9 +45,9 @@ export const useFilters = create<FilterState>((set) => ({
   reset: () => set({ filters: emptyFilters }),
 }))
 
-// Пресет из старой версии может не знать о новых фильтрах — они берутся по умолчанию
+// Пресет из старой версии может не знать о новых фильтрах — они берутся по умолчанию, а неизвестные поля отбрасываются
 export function normalizeFilters(f: Partial<Filters>): Filters {
-  return { ...emptyFilters, ...f }
+  return Object.fromEntries(Object.entries(emptyFilters).map(([key, value]) => [key, f[key as keyof Filters] ?? value])) as Filters
 }
 
 export function sameFilters(a: Filters, b: Filters) {
@@ -58,7 +58,7 @@ export function isFiltered(f: Filters) {
   return (
     f.actuality !== 'all' ||
     f.typeIds.length > 0 ||
-    f.projectIds.length > 0 ||
+    f.tagIds.length > 0 ||
     f.from !== '' ||
     f.to !== '' ||
     f.text.trim() !== '' ||
@@ -83,7 +83,7 @@ export function matchEntry(f: Filters, entry: Entry, typesById: Map<string, Entr
   if (f.actuality === 'inactual' && entry.actual) return false
   if (f.hideReplies && entry.replyTo) return false
   if (f.typeIds.length && !f.typeIds.includes(entry.typeId)) return false
-  if (f.projectIds.length && !entry.projectIds.some((id) => f.projectIds.includes(id))) return false
+  if (f.tagIds.length && !entry.tagIds.some((id) => f.tagIds.includes(id))) return false
   const text = f.text.trim().toLowerCase()
   // Поиск по тексту без маркеров форматирования
   if (text && !plainText(entry.text).toLowerCase().includes(text)) return false
@@ -97,13 +97,13 @@ export function matchEntry(f: Filters, entry: Entry, typesById: Map<string, Entr
 
 // Чат — не запись: при фильтрах по свойствам записей его вложения и ссылки скрыты, период действует по времени сообщения
 export function matchChatItem(f: Filters, time: number) {
-  if (f.actuality !== 'all' || f.typeIds.length || f.projectIds.length || f.text.trim() || f.conditions.length) return false
+  if (f.actuality !== 'all' || f.typeIds.length || f.tagIds.length || f.text.trim() || f.conditions.length) return false
   return inPeriod(f, time)
 }
 
 // У отметки нет типа, текста, полей и актуальности: при таких фильтрах отметки скрыты
 export function matchMark(f: Filters, mark: Mark) {
   if (f.actuality !== 'all' || f.typeIds.length || f.text.trim() || f.conditions.length) return false
-  if (f.projectIds.length && !f.projectIds.includes(mark.projectId)) return false
+  if (f.tagIds.length && !f.tagIds.includes(mark.tagId)) return false
   return inPeriod(f, mark.createdAt)
 }
