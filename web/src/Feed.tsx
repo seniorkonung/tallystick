@@ -248,6 +248,8 @@ function EntryCard(props: EntryCardProps) {
   const { entry, type, tags, attachments, onAttachment, quote, replyCount, highlighted, selecting, selected, onSelect, onOpen, onQuote, onReplies } = props
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   const swipe = useSwipeSelect(onSelect)
+  // Был ли выделен текст, когда палец или мышь коснулись записи
+  const hadTextSelection = useRef(false)
   return (
     <div className="flex items-center gap-2">
       {selecting && (
@@ -275,9 +277,15 @@ function EntryCard(props: EntryCardProps) {
         <article
           id={`entry-${entry.id}`}
           {...swipe.handlers}
+          onPointerDown={(e) => {
+            hadTextSelection.current = !(window.getSelection()?.isCollapsed ?? true)
+            swipe.handlers.onPointerDown(e)
+          }}
           onClickCapture={(e) => {
             // Клик после жеста ничего не делает; в режиме выделения тап в любом месте записи переключает её выделение
             if (swipe.swallowClick()) return e.stopPropagation()
+            // Тап, который снимает выделение текста, и клик, которым мышь закончила выделять, только про выделение
+            if (hadTextSelection.current || !(window.getSelection()?.isCollapsed ?? true)) return e.stopPropagation()
             if (!selecting) return
             e.stopPropagation()
             onSelect()
