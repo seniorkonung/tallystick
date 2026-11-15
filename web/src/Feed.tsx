@@ -16,6 +16,7 @@ import { useThread } from './threadStore'
 import { openChat } from './chatView'
 import { clearSelection, toggleSelected, useSelection } from './selectionStore'
 import { swipeThreshold, useSwipeSelect } from './useSwipeSelect'
+import { useSidebarSwipe } from './sidebarStore'
 
 const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' })
 const dayWithYearFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -57,6 +58,8 @@ export function Feed() {
   const openThread = useThread((s) => s.open)
   const highlightId = useHighlight((s) => s.id)
   const selectedIds = useSelection((s) => s.ids)
+  // На экране ответов боковой панели нет
+  const sidebarSwipe = useSidebarSwipe(!threadId)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
 
@@ -133,7 +136,9 @@ export function Feed() {
     <>
       <div
         ref={scroller}
-        className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain"
+        {...sidebarSwipe}
+        // Горизонтальные движения достаются жестам: вправо — боковая панель, влево по записи — выделение
+        className="flex flex-1 touch-pan-y flex-col-reverse overflow-y-auto overscroll-y-contain"
         // В column-reverse прокрутка вверх отрицательная, ноль — самый низ
         onScroll={(e) => setFarFromBottom(-e.currentTarget.scrollTop > e.currentTarget.clientHeight)}
       >

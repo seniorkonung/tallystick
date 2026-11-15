@@ -10,13 +10,15 @@ import { useFilterChips } from './useFilterChips'
 import { isFiltered, useFilters } from './filterStore'
 import { useThread } from './threadStore'
 import { useMeasuredHeight } from './useMeasuredHeight'
+import { useSidebar } from './sidebarStore'
 
 // Плавающая панель над лентой: поиск, фильтры и чипы активных фильтров
 export function TopBar() {
   const { filters, set } = useFilters()
   const [searching, setSearching] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Панель видна и пока её вытягивают жестом из ленты
+  const sidebarShown = useSidebar((s) => s.open || s.drag !== null)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [chatsOpen, setChatsOpen] = useState(false)
@@ -54,7 +56,7 @@ export function TopBar() {
       >
         <div className="flex items-center justify-end gap-2">
           {!searching && (
-            <button type="button" aria-label="Меню" className={`${iconButton} mr-auto`} onClick={() => setSidebarOpen(true)}>
+            <button type="button" aria-label="Меню" className={`${iconButton} mr-auto`} onClick={() => useSidebar.setState({ open: true })}>
               <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M4 7h16M4 12h16M4 17h16" />
               </svg>
@@ -107,12 +109,12 @@ export function TopBar() {
       </div>
 
       {sheetOpen && <FilterSheet onClose={() => setSheetOpen(false)} />}
-      {sidebarOpen && (
+      {sidebarShown && (
         <Sidebar
           onOpenGallery={() => setGalleryOpen(true)}
           onOpenChats={() => setChatsOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
-          onClose={() => setSidebarOpen(false)}
+          onClose={() => useSidebar.setState({ open: false })}
         />
       )}
       {galleryOpen && <Gallery onClose={() => setGalleryOpen(false)} />}

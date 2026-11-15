@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { openChat } from './chatView'
 import { db, type Preset } from './db'
 import { isFiltered, normalizeFilters, sameFilters, useFilters } from './filterStore'
+import { sidebarWidth, useSidebar } from './sidebarStore'
 
 type Props = {
   onOpenGallery: () => void
@@ -16,7 +17,10 @@ export function Sidebar({ onOpenGallery, onOpenChats, onOpenSettings, onClose }:
   const presets = useLiveQuery(() => db.presets.orderBy('order').toArray())
   const { filters, set, reset } = useFilters()
   const [editing, setEditing] = useState(false)
+  const drag = useSidebar((s) => s.drag)
   if (!presets) return null
+  // Пока панель тянут, она и затемнение идут за пальцем; отпущенная — доезжает анимацией
+  const progress = drag === null ? 1 : drag / sidebarWidth()
 
   async function savePreset() {
     const name = window.prompt('Название пресета')?.trim()
@@ -45,9 +49,14 @@ export function Sidebar({ onOpenGallery, onOpenChats, onOpenSettings, onClose }:
   const actionClass = 'rounded-lg px-2 py-1 text-xs text-stone-600 disabled:opacity-30'
 
   return (
-    <div className="fixed inset-0 z-20 bg-black/30" onClick={onClose}>
+    <div
+      className={`fixed inset-0 z-20 ${drag === null ? 'transition-colors' : ''}`}
+      style={{ backgroundColor: `rgb(0 0 0 / ${0.3 * progress})` }}
+      onClick={onClose}
+    >
       <nav
-        className="flex h-full w-72 max-w-[85vw] flex-col bg-white pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl"
+        className={`flex h-full w-72 max-w-[85vw] flex-col bg-white pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl ${drag === null ? 'transition-transform' : ''}`}
+        style={{ transform: `translateX(${drag === null ? 0 : drag - sidebarWidth()}px)` }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end px-3 pb-1">
