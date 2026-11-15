@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { EntryMenu } from './EntryMenu'
 import { RichText } from './RichText'
@@ -287,7 +287,7 @@ function EntryCard(props: EntryCardProps) {
             ))}
           </div>
         )}
-        {entry.text && <RichText text={entry.text} />}
+        {entry.text && <CollapsibleText text={entry.text} actual={entry.actual} />}
         {attachments.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-2">
             {attachments.map((a) => (
@@ -330,5 +330,47 @@ function EntryCard(props: EntryCardProps) {
         </button>
       )}
     </article>
+  )
+}
+
+// Длинный текст записи обрезается по высоте; поля, проекты и вложения показываются всегда
+function CollapsibleText({ text, actual }: { text: string; actual: boolean }) {
+  const box = useRef<HTMLDivElement>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [overflowing, setOverflowing] = useState(false)
+
+  // Высота текста зависит от ширины экрана и оформления, поэтому её меряют после вёрстки
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el || expanded) return
+    const measure = () => setOverflowing(el.scrollHeight > el.clientHeight + 1)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [text, expanded])
+
+  const collapsed = !expanded && overflowing
+  return (
+    <div>
+      <div ref={box} className={`relative ${expanded ? '' : 'max-h-96 overflow-hidden'}`}>
+        <RichText text={text} />
+        {collapsed && (
+          <div className={`pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t ${actual ? 'from-white' : 'from-[#F3F1EA]'}`} />
+        )}
+      </div>
+      {collapsed && (
+        <button
+          type="button"
+          className="mt-1 text-sm font-medium text-orange-700"
+          onClick={(e) => {
+            e.stopPropagation()
+            setExpanded(true)
+          }}
+        >
+          Показать ещё
+        </button>
+      )}
+    </div>
   )
 }
