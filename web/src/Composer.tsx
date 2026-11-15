@@ -260,13 +260,8 @@ export function Composer() {
                     }`}
                   >
                     {field.name}
-                    {/* Название приглушено и отделено чертой от значения */}
-                    {filled && value !== undefined && (
-                      <>
-                        <span className="mx-2 h-3.5 w-px bg-stone-300" />
-                        <span className="font-medium text-stone-900">{formatValue(field, value).join(', ')}</span>
-                      </>
-                    )}
+                    {/* Название приглушено, значение выделено цветом */}
+                    {filled && value !== undefined && <span className="ml-1.5 font-medium text-stone-900">{formatValue(field, value).join(', ')}</span>}
                   </button>
                 )
               })}
