@@ -255,12 +255,18 @@ export function Composer() {
                     key={field.id}
                     type="button"
                     onClick={() => setActiveFieldId(field.id)}
-                    className={`shrink-0 rounded-full px-3 py-1 text-sm whitespace-nowrap ${
-                      filled ? 'bg-stone-100 text-stone-900' : 'border border-dashed border-stone-300 text-stone-500'
+                    className={`flex shrink-0 items-center rounded-full px-3 py-1 text-sm whitespace-nowrap ${
+                      filled ? 'bg-stone-100 text-stone-500' : 'border border-dashed border-stone-300 text-stone-500'
                     }`}
                   >
                     {field.name}
-                    {filled && value !== undefined && <span className="ml-1 font-medium">{formatValue(field, value).join(', ')}</span>}
+                    {/* Название приглушено и отделено чертой от значения */}
+                    {filled && value !== undefined && (
+                      <>
+                        <span className="mx-2 h-3.5 w-px bg-stone-300" />
+                        <span className="font-medium text-stone-900">{formatValue(field, value).join(', ')}</span>
+                      </>
+                    )}
                   </button>
                 )
               })}
