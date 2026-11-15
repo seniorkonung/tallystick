@@ -111,6 +111,27 @@ export async function sendMessage(
   return id
 }
 
+// Отредактированное сообщение заменяет исходное: переписка начинается заново с его места
+export async function resendFrom(
+  chatId: string,
+  messageId: string,
+  text: string,
+  files: PreparedFile[],
+  providerId: string,
+  model: string,
+  permission: Permission,
+  reasoning: Reasoning,
+) {
+  await db.transaction('rw', db.chatMessages, db.chatFiles, async () => {
+    const from = await db.chatMessages.get(messageId)
+    if (!from) return
+    const dropped = await db.chatMessages.where('chatId').equals(chatId).filter((m) => m.createdAt >= from.createdAt).primaryKeys()
+    await db.chatFiles.where('chatId').equals(chatId).filter((f) => dropped.includes(f.messageId)).delete()
+    await db.chatMessages.bulkDelete(dropped)
+  })
+  return sendMessage(chatId, text, files, providerId, model, permission, reasoning)
+}
+
 export function stop(chatId: string) {
   controllers.get(chatId)?.abort()
 }

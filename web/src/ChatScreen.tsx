@@ -1,15 +1,16 @@
 import type { ModelMessage } from 'ai'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AttachSheet } from './AttachSheet'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { Markdown } from './Markdown'
 import { prepareFile } from './attachments'
-import { answerApproval, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
+import { answerApproval, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
 import { approvalLabels, permissionLabels, toolLabels } from './assistantTools'
 import { closeChat, useChatView } from './chatView'
+import { copyText } from './clipboard'
 import { useComposer } from './composerStore'
-import { db, type ChatFile, type Permission, type PreparedFile, type Reasoning } from './db'
+import { db, type ChatFile, type ChatMessage, type Permission, type PreparedFile, type Reasoning } from './db'
 import { plainText } from './format'
 
 export function ChatScreen() {
@@ -41,6 +42,8 @@ function ChatView({ chatId }: { chatId: string }) {
   const [preparing, setPreparing] = useState(false)
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
   const [viewing, setViewing] = useState<PreparedFile | null>(null)
+  // Сообщение пользователя, загруженное в поле ввода для правки
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   useEffect(() => {
     const el = textarea.current
@@ -59,7 +62,8 @@ function ChatView({ chatId }: { chatId: string }) {
   const permission = chat?.permission ?? newPermission
   const reasoning = chat?.reasoning ?? newReasoning
   const approvals = running ? [] : pendingApprovals(messages)
-  const canSend = !running && !preparing && approvals.length === 0 && !!selected && (text.trim() !== '' || files.length > 0)
+  // Правка начинает переписку заново, поэтому неотвеченные запросы разрешения ей не мешают
+  const canSend = !running && !preparing && (approvals.length === 0 || !!editingId) && !!selected && (text.trim() !== '' || files.length > 0)
   const filesByMessage = new Map<string, ChatFile[]>()
   for (const f of chatFiles) filesByMessage.set(f.messageId, [...(filesByMessage.get(f.messageId) ?? []), f])
 
@@ -86,13 +90,40 @@ function ChatView({ chatId }: { chatId: string }) {
     else setNewReasoning(next)
   }
 
+  function startEditing(m: ChatMessage) {
+    setEditingId(m.id)
+    setText(textOf(m.message))
+    setFiles((filesByMessage.get(m.id) ?? []).map((f) => ({ key: f.id, file: f })))
+    textarea.current?.focus()
+  }
+
+  function stopEditing() {
+    setEditingId(null)
+    setText('')
+    setFiles([])
+  }
+
+  // Итоговый ответ ассистента — его последнее сообщение перед следующим сообщением пользователя;
+  // реплики между вызовами инструментов промежуточные. Ход, который ещё идёт, итога не имеет
+  const finals = new Map<string, string>()
+  messages.forEach((m, i) => {
+    const next = messages[i + 1]
+    if (m.message.role !== 'assistant' || (next ? next.message.role !== 'user' : running)) return
+    const final = textOf(m.message)
+    if (final) finals.set(m.id, final)
+  })
+
   async function send() {
     if (!canSend) return
     const message = text.trim()
     const attached = files.map((f) => f.file)
+    const fromId = editingId
     setText('')
     setFiles([])
-    const id = await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission, reasoning)
+    setEditingId(null)
+    const id = fromId
+      ? await resendFrom(chatId, fromId, message, attached, selected.provider.id, selected.model, permission, reasoning)
+      : await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission, reasoning)
     // Новый чат получил id: экран остаётся тем же шагом истории
     if (isNew) useChatView.setState({ chatId: id })
   }
@@ -115,7 +146,31 @@ function ChatView({ chatId }: { chatId: string }) {
             <p className="py-10 text-center text-sm text-stone-400">Спросите о своих записях: ассистент видит всю ленту</p>
           )}
           {messages.map((m) => (
-            <MessageView key={m.id} chatId={chatId} message={m.message} files={filesByMessage.get(m.id) ?? []} onFile={setViewing} />
+            <MessageView
+              key={m.id}
+              message={m.message}
+              files={filesByMessage.get(m.id) ?? []}
+              onFile={setViewing}
+              actions={
+                m.message.role === 'user' ? (
+                  <div className="flex gap-1 text-stone-400">
+                    {textOf(m.message) && <CopyButton text={textOf(m.message)} />}
+                    <IconButton label="Изменить сообщение" disabled={running} onClick={() => startEditing(m)}>
+                      <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+                    </IconButton>
+                  </div>
+                ) : (
+                  finals.has(m.id) && (
+                    <div className="flex items-center gap-1 text-stone-400">
+                      <CopyButton text={finals.get(m.id)!} />
+                      <button type="button" className="px-1.5 py-1 text-xs hover:text-stone-700" onClick={() => saveToFeed(chatId, finals.get(m.id)!)}>
+                        В ленту
+                      </button>
+                    </div>
+                  )
+                )
+              }
+            />
           ))}
           {runState?.items.map((item, i) => <RunItemView key={i} item={item} />)}
           {running && runState.items.length === 0 && <p className="text-sm text-stone-400">Думаю…</p>}
@@ -154,6 +209,17 @@ function ChatView({ chatId }: { chatId: string }) {
 
       <div className="px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
+          {editingId && (
+            <div className="mb-1 flex items-center gap-2 rounded-2xl bg-orange-50 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-orange-700">Редактирование</p>
+                <p className="text-xs text-stone-500">Переписка начнётся заново с этого сообщения</p>
+              </div>
+              <button type="button" aria-label="Отменить редактирование" className="px-1 text-stone-400" onClick={stopEditing}>
+                ✕
+              </button>
+            </div>
+          )}
           {files.length > 0 && (
             <div className="flex gap-2 overflow-x-auto px-1 pt-2 pb-1">
               {files.map((f) => (
@@ -295,20 +361,43 @@ function saveToFeed(chatId: string, text: string) {
   closeChat()
 }
 
-function AssistantText({ chatId, text }: { chatId: string; text: string }) {
+function IconButton({ label, disabled, onClick, children }: { label: string; disabled?: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <div>
-      <Markdown text={text} />
-      <button type="button" className="mt-1 text-xs text-stone-400 hover:text-stone-700" onClick={() => saveToFeed(chatId, text)}>
-        В ленту
-      </button>
-    </div>
+    <button type="button" aria-label={label} disabled={disabled} className="rounded-full p-1.5 hover:text-stone-700 disabled:opacity-40" onClick={onClick}>
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+      </svg>
+    </button>
   )
 }
 
-type MessageProps = { chatId: string; message: ModelMessage; files: ChatFile[]; onFile: (file: ChatFile) => void }
+// После копирования значок ненадолго сменяется галочкой
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <IconButton
+      label="Копировать"
+      onClick={() =>
+        void copyText(text).then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        })
+      }
+    >
+      {copied ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : (
+        <>
+          <rect x="9" y="9" width="12" height="12" rx="2" />
+          <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+        </>
+      )}
+    </IconButton>
+  )
+}
 
-function MessageView({ chatId, message, files, onFile }: MessageProps) {
+// actions — значки под сообщением пользователя или под итоговым ответом ассистента
+type MessageProps = { message: ModelMessage; files: ChatFile[]; onFile: (file: ChatFile) => void; actions: ReactNode }
+
+function MessageView({ message, files, onFile, actions }: MessageProps) {
   switch (message.role) {
     case 'user':
       return (
@@ -321,19 +410,24 @@ function MessageView({ chatId, message, files, onFile }: MessageProps) {
             </div>
           )}
           {textOf(message) && <div className="rounded-2xl bg-white px-3.5 py-2 text-[15px] whitespace-pre-wrap shadow-sm">{textOf(message)}</div>}
+          {actions}
         </div>
       )
     case 'assistant':
-      if (typeof message.content === 'string') return <AssistantText chatId={chatId} text={message.content} />
       return (
         <>
-          {message.content.map((part, i) =>
-            part.type === 'text' ? (
-              <AssistantText key={i} chatId={chatId} text={part.text} />
-            ) : part.type === 'tool-call' ? (
-              <ToolLine key={i} name={part.toolName} failed={false} />
-            ) : null,
+          {typeof message.content === 'string' ? (
+            <Markdown text={message.content} />
+          ) : (
+            message.content.map((part, i) =>
+              part.type === 'text' ? (
+                <Markdown key={i} text={part.text} />
+              ) : part.type === 'tool-call' ? (
+                <ToolLine key={i} name={part.toolName} failed={false} />
+              ) : null,
+            )
           )}
+          {actions && <div className="-mt-2">{actions}</div>}
         </>
       )
     case 'tool':

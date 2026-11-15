@@ -8,7 +8,7 @@ function when(time: number) {
   return new Date(time).getFullYear() === new Date().getFullYear() ? dateFormat.format(time) : dateWithYearFormat.format(time)
 }
 
-async function copy(text: string) {
+export async function copyText(text: string) {
   try {
     await navigator.clipboard.writeText(text)
   } catch (error) {
@@ -18,7 +18,7 @@ async function copy(text: string) {
 
 // Копируется текст записи без маркеров; скрытый текст раскрыт
 export function copyEntryText(entry: Entry) {
-  return copy(plainText(entry.text))
+  return copyText(plainText(entry.text))
 }
 
 // Записи с текстом в порядке ленты, перед каждой — дата и время
@@ -28,5 +28,5 @@ export function copyEntriesText(entries: Entry[]) {
     .sort((a, b) => a.createdAt - b.createdAt)
     .map((e) => `${when(e.createdAt)}\n${plainText(e.text)}`)
     .join('\n\n')
-  return copy(text)
+  return copyText(text)
 }
