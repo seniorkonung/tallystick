@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
-import { FieldInput } from './FieldInput'
+import { FieldsSheet } from './FieldsSheet'
 import { ProjectEditor } from './ProjectEditor'
 import { ProjectPicker } from './ProjectPicker'
 import { TypeEditor } from './TypeEditor'
@@ -11,7 +11,7 @@ import { useComposer } from './composerStore'
 import { useThread } from './threadStore'
 import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType, type PreparedFile } from './db'
 import { formatValue } from './fields'
-import { applyFormat, plainText, type FormatKind } from './format'
+import { activeFormats, plainText, toggleFormat, type FormatKind } from './format'
 import { useMeasuredHeight } from './useMeasuredHeight'
 
 // Редактор типа: null — новый тип
@@ -39,8 +39,8 @@ export function Composer() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
-  // Есть выделение в поле ввода — показываем панель форматирования
-  const [hasSelection, setHasSelection] = useState(false)
+  // Выделение в поле ввода — показываем панель форматирования
+  const [selection, setSelection] = useState<{ start: number; end: number } | null>(null)
   const [preparing, setPreparing] = useState(false)
   const [viewing, setViewing] = useState<PreparedFile | null>(null)
   const galleryInput = useRef<HTMLInputElement>(null)
@@ -62,7 +62,7 @@ export function Composer() {
   useEffect(() => {
     const onChange = () => {
       const el = textarea.current
-      setHasSelection(!!el && document.activeElement === el && el.selectionStart !== el.selectionEnd)
+      setSelection(el && document.activeElement === el && el.selectionStart !== el.selectionEnd ? { start: el.selectionStart, end: el.selectionEnd } : null)
     }
     document.addEventListener('selectionchange', onChange)
     return () => document.removeEventListener('selectionchange', onChange)
@@ -76,7 +76,7 @@ export function Composer() {
   const sortedTypes = [...types].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
   // Тип сохраняется для следующей записи; если его удалили — берём первый
   const type = types.find((t) => t.id === draft.typeId) ?? sortedTypes[0]
-  const activeField = type.fields.find((f) => f.id === activeFieldId)
+  const formats = selection ? activeFormats(draft.text, selection.start, selection.end) : new Set<FormatKind>()
   const hasValues = Object.keys(valuesForType(type, draft.values)).length > 0
   const canSend = !preparing && (draft.text.trim() !== '' || hasValues || draft.attachments.length > 0)
   const selectedProjects = draft.projectIds.flatMap((id) => projects.find((p) => p.id === id) ?? [])
@@ -89,7 +89,7 @@ export function Composer() {
   function format(kind: FormatKind) {
     const el = textarea.current
     if (!el) return
-    const result = applyFormat(el.value, el.selectionStart, el.selectionEnd, kind)
+    const result = toggleFormat(el.value, el.selectionStart, el.selectionEnd, kind)
     update({ text: result.text })
     requestAnimationFrame(() => {
       el.focus()
@@ -149,7 +149,7 @@ export function Composer() {
         ref={measure}
         className="pointer-events-none absolute inset-x-0 bottom-0 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] *:pointer-events-auto"
       >
-        {hasSelection && (
+        {selection && (
           <div className="mb-2 flex gap-1 overflow-x-auto rounded-3xl border border-stone-200 bg-white p-1.5 shadow-sm">
             {(
               [
@@ -165,7 +165,8 @@ export function Composer() {
               <button
                 key={kind}
                 type="button"
-                className={`shrink-0 rounded-2xl px-3 py-2 text-sm text-stone-800 hover:bg-stone-100 ${style}`}
+                aria-pressed={formats.has(kind)}
+                className={`shrink-0 rounded-2xl px-3 py-2 text-sm ${formats.has(kind) ? 'bg-stone-900 text-white' : 'text-stone-800 hover:bg-stone-100'} ${style}`}
                 // Нажатие не должно снимать выделение и фокус с поля ввода
                 onPointerDown={(e) => e.preventDefault()}
                 onClick={() => format(kind)}
@@ -196,20 +197,6 @@ export function Composer() {
         <input ref={galleryInput} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
         <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
         <input ref={fileInput} type="file" multiple hidden onChange={(e) => void attach(e.target.files).then(() => (e.target.value = ''))} />
-
-        {activeField && (
-          <FieldInput
-            field={activeField}
-            value={draft.values[activeField.id]}
-            onChange={(value) => {
-              const next = { ...draft.values }
-              if (value === undefined) delete next[activeField.id]
-              else next[activeField.id] = value
-              update({ values: next })
-            }}
-            onClose={() => setActiveFieldId(null)}
-          />
-        )}
 
         <div className="rounded-3xl border border-stone-200 bg-white p-2 shadow-sm">
           {editingEntry && (
@@ -257,6 +244,28 @@ export function Composer() {
             </div>
           )}
           {preparing && <p className="px-2 pt-1 text-xs text-stone-400">Готовлю вложения…</p>}
+          {/* Поля типа одной строкой над текстом; тап открывает панель со всеми полями */}
+          {type.fields.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto px-1 pt-1 pb-1">
+              {type.fields.map((field) => {
+                const value = draft.values[field.id]
+                const filled = !isEmptyValue(value)
+                return (
+                  <button
+                    key={field.id}
+                    type="button"
+                    onClick={() => setActiveFieldId(field.id)}
+                    className={`shrink-0 rounded-full px-3 py-1 text-sm whitespace-nowrap ${
+                      filled ? 'bg-stone-100 text-stone-900' : 'border border-dashed border-stone-300 text-stone-500'
+                    }`}
+                  >
+                    {field.name}
+                    {filled && value !== undefined && <span className="ml-1 font-medium">{formatValue(field, value).join(', ')}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
           <textarea
             ref={textarea}
             value={draft.text}
@@ -271,28 +280,6 @@ export function Composer() {
               }
             }}
           />
-
-          {type.fields.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 px-1 pb-2">
-              {type.fields.map((field) => {
-                const value = draft.values[field.id]
-                const filled = !isEmptyValue(value)
-                return (
-                  <button
-                    key={field.id}
-                    type="button"
-                    onClick={() => setActiveFieldId(activeFieldId === field.id ? null : field.id)}
-                    className={`rounded-full px-3 py-1 text-sm ${
-                      filled ? 'bg-stone-100 text-stone-900' : 'border border-dashed border-stone-300 text-stone-500'
-                    } ${activeFieldId === field.id ? 'ring-2 ring-stone-900' : ''}`}
-                  >
-                    {field.name}
-                    {filled && value !== undefined && <span className="ml-1 font-medium">{formatValue(field, value).join(', ')}</span>}
-                  </button>
-                )
-              })}
-            </div>
-          )}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -371,6 +358,21 @@ export function Composer() {
       )}
 
       {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
+
+      {activeFieldId && type.fields.some((f) => f.id === activeFieldId) && (
+        <FieldsSheet
+          type={type}
+          values={draft.values}
+          focusId={activeFieldId}
+          onChange={(fieldId, value) => {
+            const next = { ...useComposer.getState().draft.values }
+            if (value === undefined) delete next[fieldId]
+            else next[fieldId] = value
+            update({ values: next })
+          }}
+          onClose={() => setActiveFieldId(null)}
+        />
+      )}
 
       {editingProjectId && (
         <ProjectEditor
