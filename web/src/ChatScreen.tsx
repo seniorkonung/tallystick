@@ -6,7 +6,8 @@ import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { Markdown } from './Markdown'
 import { prepareFile } from './attachments'
 import { answerApproval, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
-import { approvalLabels, permissionLabels, toolLabels } from './assistantTools'
+import { approvalLabels, toolLabels } from './assistantTools'
+import { ChatSettingsSheet } from './ChatSettingsSheet'
 import { closeChat, useChatView } from './chatView'
 import { copyText } from './clipboard'
 import { useComposer } from './composerStore'
@@ -44,6 +45,7 @@ function ChatView({ chatId }: { chatId: string }) {
   const [viewing, setViewing] = useState<PreparedFile | null>(null)
   // Сообщение пользователя, загруженное в поле ввода для правки
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     const el = textarea.current
@@ -280,57 +282,36 @@ function ChatView({ chatId }: { chatId: string }) {
               </button>
             )}
           </div>
-          {/* Каждый список шириной в выбранное значение; не помещаются — строка прокручивается */}
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {options.length > 0 ? (
-              <>
-                <select
-                  aria-label="Модель"
-                  value={selected.value}
-                  onChange={(e) => setChoice(e.target.value)}
-                  className="shrink-0 field-sizing-content rounded-full bg-transparent px-2 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
-                >
-                  {providers.map((p) => (
-                    <optgroup key={p.id} label={p.name}>
-                      {p.models.map((model) => (
-                        <option key={model} value={`${p.id}|${model}`}>
-                          {model}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-                <select
-                  aria-label="Глубина размышлений"
-                  value={reasoning}
-                  onChange={(e) => changeReasoning(e.target.value as Reasoning)}
-                  className="shrink-0 field-sizing-content rounded-full bg-transparent px-2 py-2 text-sm text-stone-600 hover:bg-stone-100"
-                >
-                  {(Object.keys(reasoningLabels) as Reasoning[]).map((r) => (
-                    <option key={r} value={r}>
-                      {reasoningLabels[r]}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <p className="px-2 text-xs text-stone-500">Добавьте провайдера в настройках — шестерёнка в боковой панели</p>
-            )}
-            <select
-              aria-label="Права ассистента"
-              value={permission}
-              onChange={(e) => changePermission(e.target.value as Permission)}
-              className="shrink-0 field-sizing-content rounded-full bg-transparent px-2 py-2 text-sm text-stone-600 hover:bg-stone-100"
+          {/* Сразу видны модель и глубина размышлений; провайдер и права — в панели настроек */}
+          {options.length > 0 ? (
+            <button
+              type="button"
+              className="flex max-w-full items-center gap-1 rounded-full px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100"
+              onClick={() => setSettingsOpen(true)}
             >
-              {(Object.keys(permissionLabels) as Permission[]).map((p) => (
-                <option key={p} value={p}>
-                  {permissionLabels[p]}
-                </option>
-              ))}
-            </select>
-          </div>
+              <span className="truncate font-medium text-stone-700">{selected.model}</span>
+              <span className="shrink-0">· {reasoningLabels[reasoning]}</span>
+              <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+          ) : (
+            <p className="px-2 py-1.5 text-xs text-stone-500">Добавьте провайдера в настройках — шестерёнка в боковой панели</p>
+          )}
         </div>
       </div>
+      {settingsOpen && selected && (
+        <ChatSettingsSheet
+          providers={providers}
+          model={selected.value}
+          reasoning={reasoning}
+          permission={permission}
+          onModel={setChoice}
+          onReasoning={changeReasoning}
+          onPermission={changePermission}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
       <AttachSheet open={attachMenuOpen} onClose={() => setAttachMenuOpen(false)} onFiles={(files) => void attach(files)} />
       {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
     </div>
