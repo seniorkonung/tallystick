@@ -234,8 +234,8 @@ db.version(12)
     })
   })
 
-// Проекты переименованы в теги. Данные копируются под новые имена, а старые таблица и поля остаются нетронутыми:
-// это снимок для отката, их удалит отдельная версия, когда новое проверено. Вид отметки меняется на месте
+// Проекты переименованы в теги. Данные копируются под новые имена, а старые таблица и поля остаются
+// снимком для отката до версии 14. Вид отметки меняется на месте
 db.version(13)
   .stores({ tags: 'id, status', entries: 'id, createdAt, typeId, *projectIds, *tagIds' })
   .upgrade(async (tx) => {
@@ -259,11 +259,20 @@ db.version(13)
     })
   })
 
-// До удаления старых полей записи дублируют теги в projectIds: иначе откат к прошлой версии не откроет ленту
-db.entries.hook('creating', (_key, entry) => {
-  ;(entry as Entry & { projectIds?: string[] }).projectIds = entry.tagIds
-})
-db.entries.hook('updating', (mods) => ('tagIds' in mods ? { projectIds: (mods as Partial<Entry>).tagIds } : undefined))
+// Переход на теги проверен: старые таблица и поля удаляются
+db.version(14)
+  .stores({ projects: null, entries: 'id, createdAt, typeId, *tagIds' })
+  .upgrade(async (tx) => {
+    await tx.table('entries').toCollection().modify((entry) => {
+      delete entry.projectIds
+    })
+    await tx.table('marks').toCollection().modify((mark) => {
+      delete mark.projectId
+    })
+    await tx.table('presets').toCollection().modify((preset) => {
+      delete preset.filters.projectIds
+    })
+  })
 
 // При первом запуске всегда есть хотя бы один тип
 db.on('populate', (tx) => {
