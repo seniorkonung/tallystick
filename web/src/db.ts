@@ -104,6 +104,8 @@ export type Setting =
   | { id: 'generalInstruction'; value: string }
   // Категории, теги которых показывает статистика; null — теги без категории, пустой список — все теги
   | { id: 'statsCategories'; value: (string | null)[] }
+  // Избранные типы: первая панель выбора типа показывает только их
+  | { id: 'favoriteTypes'; value: string[] }
 
 // Вложение, подготовленное к сохранению: превью уже построено
 export type PreparedFile = Omit<Attachment, 'id' | 'entryId' | 'createdAt'>
