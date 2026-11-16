@@ -264,6 +264,13 @@ export function Composer() {
             placeholder="Что произошло?"
             className="block max-h-[200px] w-full resize-none bg-transparent px-2 py-2 font-serif text-[15px] outline-none placeholder:text-stone-400"
             onChange={(e) => update({ text: e.target.value })}
+            // Вставленные картинки и файлы становятся вложениями, а не текстом
+            onPaste={(e) => {
+              const pasted = [...e.clipboardData.files]
+              if (!pasted.length) return
+              e.preventDefault()
+              void attach(pasted)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()

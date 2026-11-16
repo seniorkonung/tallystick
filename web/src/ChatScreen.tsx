@@ -287,6 +287,13 @@ function ChatView({ chatId }: { chatId: string }) {
               rows={1}
               placeholder="Спросите ассистента"
               className="block max-h-[200px] min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] outline-none placeholder:text-stone-400"
+              // Вставленные картинки и файлы становятся вложениями, а не текстом
+              onPaste={(e) => {
+                const pasted = [...e.clipboardData.files]
+                if (!pasted.length) return
+                e.preventDefault()
+                void attach(pasted)
+              }}
               // Скопированные в приложении записи прикрепляются к сообщению, а не вставляются текстом
               onChange={(e) => {
                 const pasted = takePastedEntries(text, e.target.value)
