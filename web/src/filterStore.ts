@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { matchCondition, type Condition } from './conditions'
 import type { Entry, EntryType, Mark } from './db'
-import { plainText } from './format'
+import { entryMentions, plainText } from './format'
 import { lastStart, type Last } from './periods'
 
 export type Actuality = 'all' | 'actual' | 'inactual'
@@ -22,6 +22,8 @@ export type Filters = {
   hideReplies: boolean
   // Только записи, сохранённые из чатов, в том числе из удалённых
   fromChats: boolean
+  // Только записи, в тексте которых есть ссылка на эту запись
+  mentionsOf: string | null
   conditions: Condition[]
   // Как сочетаются условия по полям между собой; с остальными фильтрами — всегда «и»
   conditionMode: 'all' | 'any'
@@ -38,6 +40,7 @@ export const emptyFilters: Filters = {
   text: '',
   hideReplies: false,
   fromChats: false,
+  mentionsOf: null,
   conditions: [],
   conditionMode: 'all',
 }
@@ -76,6 +79,7 @@ export function isFiltered(f: Filters) {
     f.text.trim() !== '' ||
     f.hideReplies ||
     f.fromChats ||
+    f.mentionsOf !== null ||
     f.conditions.length > 0
   )
 }
@@ -98,6 +102,7 @@ export function matchEntry(f: Filters, entry: Entry, typesById: Map<string, Entr
   if (f.actuality === 'inactual' && entry.actual) return false
   if (f.hideReplies && entry.replyTo) return false
   if (f.fromChats && !entry.chatId) return false
+  if (f.mentionsOf && !entryMentions(entry.text).includes(f.mentionsOf)) return false
   if (f.typeIds.length && !f.typeIds.includes(entry.typeId)) return false
   if ((f.tagIds.length || f.untagged) && !(entry.tagIds.some((id) => f.tagIds.includes(id)) || (f.untagged && entry.tagIds.length === 0))) {
     return false
@@ -115,13 +120,13 @@ export function matchEntry(f: Filters, entry: Entry, typesById: Map<string, Entr
 
 // Чат — не запись: при фильтрах по свойствам записей его вложения и ссылки скрыты, период действует по времени сообщения
 export function matchChatItem(f: Filters, time: number) {
-  if (f.actuality !== 'all' || f.typeIds.length || f.tagIds.length || f.untagged || f.fromChats || f.text.trim() || f.conditions.length) return false
+  if (f.actuality !== 'all' || f.typeIds.length || f.tagIds.length || f.untagged || f.fromChats || f.mentionsOf || f.text.trim() || f.conditions.length) return false
   return inPeriod(f, time)
 }
 
 // У отметки нет типа, текста, полей и актуальности: при таких фильтрах отметки скрыты
 export function matchMark(f: Filters, mark: Mark) {
-  if (f.actuality !== 'all' || f.typeIds.length || f.fromChats || f.text.trim() || f.conditions.length) return false
+  if (f.actuality !== 'all' || f.typeIds.length || f.fromChats || f.mentionsOf || f.text.trim() || f.conditions.length) return false
   if ((f.tagIds.length || f.untagged) && !f.tagIds.includes(mark.tagId)) return false
   return inPeriod(f, mark.createdAt)
 }

@@ -1,11 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { EntryMenu } from './EntryMenu'
 import { RichText } from './RichText'
-import { plainText } from './format'
+import { entryMentions, plainText } from './format'
 import { useComposer } from './composerStore'
-import { isFiltered, matchEntry, matchMark, useFilters } from './filterStore'
+import { emptyFilters, isFiltered, matchEntry, matchMark, useFilters } from './filterStore'
 import { TagChip } from './TagChip'
 import { db, isEmptyValue, type Attachment, type Entry, type EntryType, type Mark, type Tag } from './db'
 import { formatValue } from './fields'
@@ -48,6 +48,13 @@ export function Feed() {
   // Записи вложений: сами файлы браузер читает с диска, только когда их показывают
   const attachments = useLiveQuery(() => db.attachments.orderBy('createdAt').toArray())
   const chatIds = useLiveQuery(async () => new Set(await db.chats.toCollection().primaryKeys()))
+  // Упоминания вычисляются из текста записей и отдельно не хранятся. Пересчёт — только когда меняются записи,
+  // а не при каждой перерисовке ленты от выделения или подсветки
+  const mentionCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const e of entries ?? []) for (const id of entryMentions(e.text)) counts.set(id, (counts.get(id) ?? 0) + 1)
+    return counts
+  }, [entries])
   const [viewing, setViewing] = useState<Attachment | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   // Ушли вверх дальше чем на экран — показываем кнопку «вниз»
@@ -111,6 +118,17 @@ export function Feed() {
 
   const menuEntry = entries.find((e) => e.id === menuEntryId)
 
+  // Упоминания показываются фильтром по всей ленте: экран ответов закрывается, прочие фильтры сбрасываются,
+  // чтобы лента показала ровно то, что посчитано на карточке
+  function showMentions(entryId: string) {
+    const depth = useThread.getState().stack.length
+    if (depth) {
+      useThread.setState({ stack: [] })
+      history.go(-depth)
+    }
+    useFilters.getState().set({ ...emptyFilters, mentionsOf: entryId })
+  }
+
   const card = (entry: Entry) => (
     <EntryCard
       key={entry.id}
@@ -130,6 +148,8 @@ export function Feed() {
       onOpen={() => setMenuEntryId(entry.id)}
       onQuote={focusEntry}
       onReplies={() => openThread(entry.id)}
+      mentionCount={mentionCounts.get(entry.id) ?? 0}
+      onMentions={() => showMentions(entry.id)}
     />
   )
 
@@ -237,6 +257,9 @@ type EntryCardProps = {
   // Исходная запись, если это ответ; 'deleted' — исходную удалили
   quote: Entry | 'deleted' | undefined
   replyCount: number
+  // Сколько записей ссылаются на эту
+  mentionCount: number
+  onMentions: () => void
   // Запись в редактировании или найдена по цитате
   highlighted: boolean
   // Режим выделения: тап по записи переключает её выделение
@@ -249,7 +272,7 @@ type EntryCardProps = {
 }
 
 function EntryCard(props: EntryCardProps) {
-  const { entry, type, tags, attachments, onAttachment, chatDeleted, quote, replyCount, highlighted, selecting, selected, onSelect, onOpen, onQuote, onReplies } = props
+  const { entry, type, tags, attachments, onAttachment, chatDeleted, quote, replyCount, mentionCount, onMentions, highlighted, selecting, selected, onSelect, onOpen, onQuote, onReplies } = props
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   const swipe = useSwipeSelect(onSelect)
   // Был ли выделен текст, когда палец или мышь коснулись записи
@@ -378,17 +401,33 @@ function EntryCard(props: EntryCardProps) {
               </dl>
             )}
           </div>
-          {replyCount > 0 && (
-            <button
-              type="button"
-              className="mt-2 text-sm font-medium text-orange-700"
-              onClick={(e) => {
-                e.stopPropagation()
-                onReplies()
-              }}
-            >
-              {replyCount} {pluralRu(replyCount, ['ответ', 'ответа', 'ответов'])} →
-            </button>
+          {(replyCount > 0 || mentionCount > 0) && (
+            <div className="mt-2 flex gap-4">
+              {replyCount > 0 && (
+                <button
+                  type="button"
+                  className="text-sm font-medium text-orange-700"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onReplies()
+                  }}
+                >
+                  {replyCount} {pluralRu(replyCount, ['ответ', 'ответа', 'ответов'])} →
+                </button>
+              )}
+              {mentionCount > 0 && (
+                <button
+                  type="button"
+                  className="text-sm font-medium text-stone-500"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onMentions()
+                  }}
+                >
+                  {mentionCount} {pluralRu(mentionCount, ['упоминание', 'упоминания', 'упоминаний'])} →
+                </button>
+              )}
+            </div>
           )}
         </article>
       </div>

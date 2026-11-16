@@ -183,6 +183,20 @@ export function markupLinks(text: string) {
   return links
 }
 
+// Записи, на которые ссылается текст; ссылки внутри кода не считаются
+export function entryMentions(text: string) {
+  if (!text.includes('](entry:')) return []
+  const ids = new Set<string>()
+  const walk = (nodes: Inline[]) => {
+    for (const n of nodes) {
+      if (n.kind === 'entry') ids.add(n.id)
+      if ('children' in n) walk(n.children)
+    }
+  }
+  for (const b of parseBlocks(text)) if (b.kind !== 'codeblock') walk(b.children)
+  return [...ids]
+}
+
 export type FormatKind = keyof typeof inlineMarkers | 'code' | 'codeblock' | 'quote' | 'link'
 
 // Ссылка, текст которой ровно выделен

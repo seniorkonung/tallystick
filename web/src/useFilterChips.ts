@@ -3,6 +3,7 @@ import { formatCondition } from './conditions'
 import { db } from './db'
 import { useFilters, type Filters } from './filterStore'
 import { lastText } from './periods'
+import { plainText } from './format'
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
 
@@ -18,6 +19,7 @@ export function useFilterChips({ withText }: { withText: boolean }) {
   const filters = useFilters((s) => s.filters)
   const types = useLiveQuery(() => db.types.toArray())
   const tags = useLiveQuery(() => db.tags.toArray())
+  const mentioned = useLiveQuery(() => (filters.mentionsOf ? db.entries.get(filters.mentionsOf) : undefined), [filters.mentionsOf])
 
   const chips: { key: string; label: string; remove: Partial<Filters> }[] = []
   if (filters.actuality !== 'all') {
@@ -25,6 +27,11 @@ export function useFilterChips({ withText }: { withText: boolean }) {
   }
   if (filters.hideReplies) {
     chips.push({ key: 'replies', label: 'Без ответов', remove: { hideReplies: false } })
+  }
+  if (filters.mentionsOf) {
+    const line = mentioned ? plainText(mentioned.text, { hideSpoilers: true }).split('\n').find((l) => l.trim())?.trim() : undefined
+    const label = line ? `«${line.length > 30 ? `${line.slice(0, 30).trimEnd()}…` : line}»` : 'запись'
+    chips.push({ key: 'mentions', label: `Ссылаются на ${label}`, remove: { mentionsOf: null } })
   }
   if (filters.fromChats) {
     chips.push({ key: 'chats', label: 'Из чатов', remove: { fromChats: false } })
