@@ -13,7 +13,7 @@ import { useComposer } from './composerStore'
 import { useThread } from './threadStore'
 import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType, type PreparedFile } from './db'
 import { formatValue } from './fields'
-import { activeFormats, plainText, toggleFormat, type FormatKind } from './format'
+import { activeFormats, linkHref, plainText, toggleFormat, type FormatKind } from './format'
 import { useMeasuredHeight } from './useMeasuredHeight'
 
 // Редактор типа: null — новый тип
@@ -88,7 +88,17 @@ export function Composer() {
   function format(kind: FormatKind) {
     const el = textarea.current
     if (!el) return
-    const result = toggleFormat(el.value, el.selectionStart, el.selectionEnd, kind)
+    const { selectionStart, selectionEnd } = el
+    let href = ''
+    if (kind === 'link' && !formats.has('link')) {
+      href = window.prompt('Адрес ссылки')?.trim() ?? ''
+      if (!href) return el.focus()
+      if (!linkHref(href)) {
+        window.alert('Это не адрес сайта')
+        return el.focus()
+      }
+    }
+    const result = toggleFormat(el.value, selectionStart, selectionEnd, kind, href)
     update({ text: result.text })
     requestAnimationFrame(() => {
       el.focus()
@@ -159,6 +169,7 @@ export function Composer() {
                 ['codeblock', 'Код', 'font-mono'],
                 ['quote', 'Цитата', ''],
                 ['spoiler', 'Скрытый', ''],
+                ['link', 'Ссылка', ''],
               ] as [FormatKind, string, string][]
             ).map(([kind, label, style]) => (
               <button

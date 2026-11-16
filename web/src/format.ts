@@ -5,6 +5,7 @@ export type Inline =
   | { kind: 'text'; text: string }
   | { kind: 'code'; text: string }
   | { kind: 'bold' | 'italic' | 'strike' | 'spoiler'; children: Inline[] }
+  | { kind: 'link'; href: string; children: Inline[] }
 
 export type Block =
   | { kind: 'paragraph'; children: Inline[] }
@@ -14,6 +15,30 @@ export type Block =
 export const inlineMarkers = { bold: '**', italic: '__', strike: '~~', spoiler: '||' } as const
 
 const markerList = Object.entries(inlineMarkers) as [keyof typeof inlineMarkers, string][]
+
+// Адрес ссылки: без протокола — https, если похож на домен; другие протоколы ссылкой не становятся
+export function linkHref(url: string) {
+  if (/^https?:\/\/\S+$/i.test(url)) return url
+  if (/^[^\s/:]+\.[^\s/:]+/.test(url)) return `https://${url}`
+  return null
+}
+
+// Ссылка [текст](адрес) с позиции i; скобки внутри адреса должны быть парными
+function parseLink(s: string, i: number) {
+  const close = s.indexOf('](', i + 1)
+  if (close <= i + 1) return null
+  const text = s.slice(i + 1, close)
+  if (/[[\]\n]/.test(text)) return null
+  let depth = 0
+  let j = close + 2
+  for (; j < s.length; j++) {
+    if (s[j] === '(') depth++
+    else if (s[j] === ')' && depth-- === 0) break
+    else if (/\s/.test(s[j])) return null
+  }
+  const href = j < s.length ? linkHref(s.slice(close + 2, j)) : null
+  return href ? { text, href, end: j + 1 } : null
+}
 
 // Маркер без пары остаётся обычным текстом; внутри кода разметки нет
 export function parseInline(s: string): Inline[] {
@@ -31,6 +56,15 @@ export function parseInline(s: string): Inline[] {
         flush()
         out.push({ kind: 'code', text: s.slice(i + 1, end) })
         i = end + 1
+        continue
+      }
+    }
+    if (s[i] === '[') {
+      const link = parseLink(s, i)
+      if (link) {
+        flush()
+        out.push({ kind: 'link', href: link.href, children: parseInline(link.text) })
+        i = link.end
         continue
       }
     }
@@ -102,7 +136,7 @@ export function parseBlocks(text: string): Block[] {
   return blocks
 }
 
-type PlainOptions = { hideSpoilers?: boolean; skipCode?: boolean }
+type PlainOptions = { hideSpoilers?: boolean; skipCode?: boolean; skipLinks?: boolean }
 
 function inlineText(nodes: Inline[], o: PlainOptions): string {
   return nodes
@@ -114,6 +148,8 @@ function inlineText(nodes: Inline[], o: PlainOptions): string {
           return o.skipCode ? ' ' : n.text
         case 'spoiler':
           return o.hideSpoilers ? '•••' : inlineText(n.children, o)
+        case 'link':
+          return o.skipLinks ? ' ' : inlineText(n.children, o)
         default:
           return inlineText(n.children, o)
       }
@@ -128,7 +164,26 @@ export function plainText(text: string, o: PlainOptions = {}) {
     .join('\n')
 }
 
-export type FormatKind = keyof typeof inlineMarkers | 'code' | 'codeblock' | 'quote'
+// Ссылки, оформленные как [текст](адрес): их адрес в тексте не виден
+export function markupLinks(text: string) {
+  const links: string[] = []
+  const walk = (nodes: Inline[]) => {
+    for (const n of nodes) {
+      if (n.kind === 'link') links.push(n.href)
+      if ('children' in n) walk(n.children)
+    }
+  }
+  for (const b of parseBlocks(text)) if (b.kind !== 'codeblock') walk(b.children)
+  return links
+}
+
+export type FormatKind = keyof typeof inlineMarkers | 'code' | 'codeblock' | 'quote' | 'link'
+
+// Ссылка, текст которой ровно выделен
+function linkAround(value: string, start: number, end: number) {
+  const link = value[start - 1] === '[' ? parseLink(value, start - 1) : null
+  return link && start + link.text.length === end ? link : null
+}
 
 const codeMarker = '`'
 const allMarkers: [FormatKind, string][] = [...markerList, ['code', codeMarker]]
@@ -181,14 +236,24 @@ export function activeFormats(value: string, start: number, end: number): Set<Fo
   const { lineStart, lineEnd } = lineRange(value, start, end)
   if (value.slice(lineStart, lineEnd).split('\n').every((line) => line.startsWith('>'))) active.add('quote')
   if (value.slice(0, s.start).endsWith(`${fence}\n`) && value.slice(s.end).startsWith(`\n${fence}`)) active.add('codeblock')
+  if (linkAround(value, s.start, s.end)) active.add('link')
   return active
 }
 
-// Кнопка оформления работает как переключатель: добавляет оформление или снимает уже наложенное
-export function toggleFormat(value: string, start: number, end: number, kind: FormatKind) {
+// Кнопка оформления работает как переключатель: добавляет оформление или снимает уже наложенное.
+// href — адрес новой ссылки
+export function toggleFormat(value: string, start: number, end: number, kind: FormatKind, href = '') {
   const s = innerSelection(value, start, end)
-  if (!activeFormats(value, start, end).has(kind)) return applyFormat(value, s.start, s.end, kind)
+  if (!activeFormats(value, start, end).has(kind)) return applyFormat(value, s.start, s.end, kind, href)
   switch (kind) {
+    case 'link': {
+      const link = linkAround(value, s.start, s.end)!
+      return {
+        text: value.slice(0, s.start - 1) + value.slice(s.start, s.end) + value.slice(link.end),
+        selectionStart: s.start - 1,
+        selectionEnd: s.end - 1,
+      }
+    }
     case 'quote': {
       const { lineStart, lineEnd } = lineRange(value, start, end)
       const block = value
@@ -223,8 +288,7 @@ export function toggleFormat(value: string, start: number, end: number, kind: Fo
 }
 
 // Оборачивает выделение маркерами; возвращает новый текст и выделение без маркеров
-// Оборачивает выделение маркерами; возвращает новый текст и выделение без маркеров
-function applyFormat(value: string, start: number, end: number, kind: FormatKind) {
+function applyFormat(value: string, start: number, end: number, kind: FormatKind, href: string) {
   const selected = value.slice(start, end)
   const before = value.slice(0, start)
   const after = value.slice(end)
@@ -237,6 +301,10 @@ function applyFormat(value: string, start: number, end: number, kind: FormatKind
   switch (kind) {
     case 'code':
       open = close = '`'
+      break
+    case 'link':
+      open = '['
+      close = `](${href})`
       break
     case 'codeblock':
       open = `${lead}${fence}\n`

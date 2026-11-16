@@ -6,7 +6,7 @@ import { FilterChips } from './FilterChips'
 import { useFilterChips } from './useFilterChips'
 import { isImage, isVideo } from './attachments'
 import { openChat } from './chatView'
-import { plainText } from './format'
+import { markupLinks, plainText } from './format'
 import { extractLinks, linkHost, type TextPart } from './links'
 import { db, type PreparedFile } from './db'
 import { matchChatItem, matchEntry, useFilters } from './filterStore'
@@ -54,7 +54,10 @@ export function Gallery({ onClose }: { onClose: () => void }) {
   // Ссылки не хранятся отдельно — извлекаются из текста записей и сообщений
   const links: GalleryLink[] = [
     ...[...shownEntries.values()].flatMap((entry) =>
-      extractLinks(plainText(entry.text, { skipCode: true })).map((link, i) => ({ key: `${entry.id}-${i}`, createdAt: entry.createdAt, link, source: entrySource(entry.id) })),
+      [
+        ...extractLinks(plainText(entry.text, { skipCode: true, skipLinks: true })),
+        ...markupLinks(entry.text).map((href) => ({ kind: 'link' as const, text: href, href })),
+      ].map((link, i) => ({ key: `${entry.id}-${i}`, createdAt: entry.createdAt, link, source: entrySource(entry.id) })),
     ),
     ...chatMessages
       .filter((m) => matchChatItem(filters, m.createdAt))

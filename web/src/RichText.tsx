@@ -31,11 +31,25 @@ export function RichText({ text }: { text: string }) {
   )
 }
 
-function renderInline(nodes: Inline[]): ReactNode[] {
+// Внутри ссылки адреса в тексте ссылками не становятся: ссылка в ссылке невозможна
+function renderInline(nodes: Inline[], inLink = false): ReactNode[] {
   return nodes.map((node, i) => {
     switch (node.kind) {
       case 'text':
-        return <LinkedText key={i} text={node.text} />
+        return inLink ? node.text : <LinkedText key={i} text={node.text} />
+      case 'link':
+        return (
+          <a
+            key={i}
+            href={node.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-orange-700 underline decoration-orange-300 underline-offset-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderInline(node.children, true)}
+          </a>
+        )
       case 'code':
         return (
           <code key={i} className="rounded bg-stone-100 px-1 py-0.5 font-mono text-[0.85em] text-stone-800">
@@ -45,15 +59,15 @@ function renderInline(nodes: Inline[]): ReactNode[] {
       case 'bold':
         return (
           <strong key={i} className="font-semibold">
-            {renderInline(node.children)}
+            {renderInline(node.children, inLink)}
           </strong>
         )
       case 'italic':
-        return <em key={i}>{renderInline(node.children)}</em>
+        return <em key={i}>{renderInline(node.children, inLink)}</em>
       case 'strike':
-        return <s key={i}>{renderInline(node.children)}</s>
+        return <s key={i}>{renderInline(node.children, inLink)}</s>
       case 'spoiler':
-        return <Spoiler key={i}>{renderInline(node.children)}</Spoiler>
+        return <Spoiler key={i}>{renderInline(node.children, inLink)}</Spoiler>
     }
   })
 }
