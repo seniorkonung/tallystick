@@ -13,6 +13,26 @@ export function AttachSheet({ open, onClose, onFiles }: Props) {
     onClose()
   }
 
+  // Клавиатура телефона не всегда умеет вставить картинку в поле ввода — её можно взять из буфера здесь.
+  // Браузеры отдают из буфера только картинки, текст в нём пропускается
+  async function fromClipboard() {
+    onClose()
+    try {
+      const items = await navigator.clipboard.read()
+      const files = await Promise.all(
+        items.flatMap((item) =>
+          item.types
+            .filter((type) => !type.startsWith('text/'))
+            .map(async (type) => new File([await item.getType(type)], `Из буфера.${type.split('/')[1]}`, { type })),
+        ),
+      )
+      if (files.length) onFiles(files)
+      else window.alert('В буфере обмена нет изображения')
+    } catch (error) {
+      window.alert(`Не удалось прочитать буфер обмена: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
   function change(e: ChangeEvent<HTMLInputElement>) {
     onFiles([...(e.target.files ?? [])])
     e.target.value = ''
@@ -43,6 +63,13 @@ export function AttachSheet({ open, onClose, onFiles }: Props) {
                 {label}
               </button>
             ))}
+            <button
+              type="button"
+              className="mb-2 w-full rounded-2xl bg-stone-100 px-4 py-3 text-left font-medium text-stone-900"
+              onClick={() => void fromClipboard()}
+            >
+              Вставить изображение
+            </button>
             <button type="button" className="w-full py-3 text-stone-500" onClick={onClose}>
               Отмена
             </button>
