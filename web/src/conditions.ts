@@ -1,5 +1,6 @@
 import { isEmptyValue, type Entry, type EntryType, type Field, type FieldKind } from './db'
 import { formatDay } from './fields'
+import { relEnd, relStart, relText, type RelBound } from './periods'
 
 export type ConditionOp =
   | 'eq'
@@ -35,6 +36,9 @@ export type Condition = {
   // Дни YYYY-MM-DD для дат и дат со временем, HH:mm для времени; date2 — верхняя граница для «между»
   date: string
   date2: string
+  // Относительные границы для дат и дат со временем; заданная заменяет точную. В старых условиях их нет
+  rel?: RelBound | null
+  rel2?: RelBound | null
 }
 
 export const opsByKind: Record<FieldKind, ConditionOp[]> = {
@@ -70,7 +74,7 @@ export const opLabels: Record<ConditionOp, string> = {
 }
 
 // У дат сравнения читаются как дни: «с 1 нояб.», а не «≥ 1 нояб.»
-const dateOpLabels: Partial<Record<ConditionOp, string>> = { eq: 'в день', gte: 'с', lte: 'по' }
+const dateOpLabels: Partial<Record<ConditionOp, string>> = { eq: 'в', gte: 'с', lte: 'по' }
 
 export function opLabel(kind: FieldKind, op: ConditionOp) {
   return (isMoment(kind) && dateOpLabels[op]) || opLabels[op]
@@ -173,18 +177,18 @@ export function matchCondition(c: Condition, entry: Entry, type: EntryType | und
     }
     case 'date':
     case 'datetime': {
-      // Дни в формате YYYY-MM-DD сравниваются как строки
-      const day = String(value).slice(0, 10)
+      const t = momentOf(String(value))
+      const [start, end] = boundRange(c.rel, c.date)
       switch (c.op) {
         case 'eq':
-          return day === c.date
+          return t >= start && t < end
         case 'gte':
-          return day >= c.date
+          return t >= start
         case 'lte':
-          return day <= c.date
+          return t < end
         case 'between': {
-          const [from, to] = c.date <= c.date2 ? [c.date, c.date2] : [c.date2, c.date]
-          return day >= from && day <= to
+          const [start2, end2] = boundRange(c.rel2, c.date2)
+          return t >= Math.min(start, start2) && t < Math.max(end, end2)
         }
         default:
           return false
@@ -193,9 +197,28 @@ export function matchCondition(c: Condition, entry: Entry, type: EntryType | und
   }
 }
 
+// Момент значения поля: день YYYY-MM-DD — его полночь, дата со временем — её минута
+function momentOf(value: string) {
+  const [y, m, d] = value.slice(0, 10).split('-').map(Number)
+  const [h, min] = value.length > 10 ? value.slice(11, 16).split(':').map(Number) : [0, 0]
+  return new Date(y, m - 1, d, h, min).getTime()
+}
+
+// Начало и конец (не включая) границы: точный день или единица со сдвигом
+export function boundRange(rel: RelBound | null | undefined, day: string): [number, number] {
+  if (rel) return [relStart(rel), relEnd(rel)]
+  const [y, m, d] = day.split('-').map(Number)
+  return [new Date(y, m - 1, d).getTime(), new Date(y, m - 1, d + 1).getTime()]
+}
+
 const numberFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 6 })
 
 export function formatCondition(c: Condition) {
+  if ((c.kind === 'date' || c.kind === 'datetime') && c.op !== 'filled' && c.op !== 'empty') {
+    const a = c.rel ? relText(c.rel) : formatDay(c.date)
+    if (c.op === 'between') return `${c.name} с ${a} по ${c.rel2 ? relText(c.rel2) : formatDay(c.date2)}`
+    return c.op === 'eq' ? `${c.name}: ${a}` : `${c.name} ${opLabel(c.kind, c.op)} ${a}`
+  }
   if (isMoment(c.kind) && c.op !== 'filled' && c.op !== 'empty') {
     const show = c.kind === 'time' ? (time: string) => time : formatDay
     return c.op === 'between' ? `${c.name} ${show(c.date)}–${show(c.date2)}` : `${c.name} ${opLabel(c.kind, c.op)} ${show(c.date)}`
@@ -225,7 +248,10 @@ export function formatCondition(c: Condition) {
 
 // Условие готово к применению: у оператора заполнены нужные значения
 export function isComplete(c: Condition) {
-  if (isMoment(c.kind) && c.op !== 'filled' && c.op !== 'empty') return c.op === 'between' ? !!c.date && !!c.date2 : !!c.date
+  if (isMoment(c.kind) && c.op !== 'filled' && c.op !== 'empty') {
+    const first = !!c.rel || !!c.date
+    return c.op === 'between' ? first && (!!c.rel2 || !!c.date2) : first
+  }
   switch (c.op) {
     case 'filled':
     case 'empty':
