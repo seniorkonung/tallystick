@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent } from 'react'
+import { useRef, type MouseEvent, type PointerEvent } from 'react'
 import { create } from 'zustand'
 
 // Боковая панель открыта или её вытягивают жестом: drag — на сколько пикселей
@@ -9,16 +9,22 @@ export function sidebarWidth() {
   return Math.min(288, window.innerWidth * 0.85)
 }
 
-// Ведение пальцем вправо вытягивает панель вслед за ним; отпущенная дальше трети ширины — открывается.
-// Жест берётся, только если движение горизонтальное, поэтому прокрутке ленты он не мешает
-export function useSidebarSwipe(enabled: boolean) {
+// Панель идёт за пальцем: из ленты вправо — выдвигается, на открытой панели влево — задвигается.
+// Отпущенная, она доезжает туда, куда её сдвинули больше чем на треть ширины.
+// Жест берётся, только если движение горизонтальное, поэтому прокрутке он не мешает
+export function useSidebarSwipe(mode: 'open' | 'close', enabled = true) {
   const start = useRef<{ x: number; y: number } | null>(null)
   const dragging = useRef(false)
+  // После жеста браузер присылает клик — он не должен закрыть панель или нажать пункт в ней
+  const swallow = useRef(false)
 
   function finish(commit: boolean) {
     if (dragging.current) {
+      swallow.current = true
       const drag = useSidebar.getState().drag ?? 0
-      useSidebar.setState({ open: commit && drag > sidebarWidth() / 3, drag: null })
+      const third = sidebarWidth() / 3
+      const open = mode === 'open' ? commit && drag > third : !commit || drag > third * 2
+      useSidebar.setState({ open, drag: null })
     }
     start.current = null
     dragging.current = false
@@ -26,6 +32,7 @@ export function useSidebarSwipe(enabled: boolean) {
 
   return {
     onPointerDown(e: PointerEvent) {
+      swallow.current = false
       // Жест только пальцем: мышью и пером протяжка выделяет текст
       if (!enabled || e.pointerType !== 'touch') return
       start.current = { x: e.clientX, y: e.clientY }
@@ -37,17 +44,23 @@ export function useSidebarSwipe(enabled: boolean) {
       const dy = e.clientY - start.current.y
       if (!dragging.current) {
         if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
-        // Движение влево или по вертикали — не этот жест
-        if (dx < 0 || Math.abs(dy) > Math.abs(dx)) {
+        // Движение не в ту сторону или по вертикали — не этот жест
+        if ((mode === 'open' ? dx < 0 : dx > 0) || Math.abs(dy) > Math.abs(dx)) {
           start.current = null
           return
         }
         dragging.current = true
         e.currentTarget.setPointerCapture(e.pointerId)
       }
-      useSidebar.setState({ drag: Math.min(Math.max(dx, 0), sidebarWidth()) })
+      const width = sidebarWidth()
+      useSidebar.setState({ drag: Math.min(Math.max(mode === 'open' ? dx : width + dx, 0), width) })
     },
     onPointerUp: () => finish(true),
     onPointerCancel: () => finish(false),
+    onClickCapture(e: MouseEvent) {
+      if (!swallow.current) return
+      swallow.current = false
+      e.stopPropagation()
+    },
   }
 }

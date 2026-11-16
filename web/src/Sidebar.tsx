@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { openChat } from './chatView'
 import { db, type Preset } from './db'
 import { isFiltered, normalizeFilters, sameFilters, useFilters } from './filterStore'
-import { sidebarWidth, useSidebar } from './sidebarStore'
+import { sidebarWidth, useSidebar, useSidebarSwipe } from './sidebarStore'
 
 type Props = {
   onOpenGallery: () => void
@@ -18,6 +18,7 @@ export function Sidebar({ onOpenGallery, onOpenChats, onOpenSettings, onClose }:
   const { filters, set, reset } = useFilters()
   const [editing, setEditing] = useState(false)
   const drag = useSidebar((s) => s.drag)
+  const swipe = useSidebarSwipe('close')
   if (!presets) return null
   // Пока панель тянут, она и затемнение идут за пальцем; отпущенная — доезжает анимацией
   const progress = drag === null ? 1 : drag / sidebarWidth()
@@ -50,7 +51,9 @@ export function Sidebar({ onOpenGallery, onOpenChats, onOpenSettings, onClose }:
 
   return (
     <div
-      className={`fixed inset-0 z-20 ${drag === null ? 'transition-colors' : ''}`}
+      {...swipe}
+      // Горизонтальные движения достаются жесту закрытия, вертикальные — прокрутке пресетов
+      className={`fixed inset-0 z-20 touch-pan-y ${drag === null ? 'transition-colors' : ''}`}
       style={{ backgroundColor: `rgb(0 0 0 / ${0.3 * progress})` }}
       onClick={onClose}
     >
@@ -127,7 +130,7 @@ export function Sidebar({ onOpenGallery, onOpenChats, onOpenSettings, onClose }:
           )}
         </div>
 
-        <ul className="flex flex-1 flex-col gap-1 overflow-y-auto px-3">
+        <ul className="flex flex-1 touch-pan-y flex-col gap-1 overflow-y-auto px-3">
           {presets.map((preset, index) =>
             editing ? (
               <li key={preset.id} className="rounded-2xl bg-stone-50 px-3 py-2">

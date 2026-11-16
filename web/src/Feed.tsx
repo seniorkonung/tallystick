@@ -59,7 +59,7 @@ export function Feed() {
   const highlightId = useHighlight((s) => s.id)
   const selectedIds = useSelection((s) => s.ids)
   // На экране ответов боковой панели нет
-  const sidebarSwipe = useSidebarSwipe(!threadId)
+  const sidebarSwipe = useSidebarSwipe('open', !threadId)
   const lastId = entries?.at(-1)?.id
   const prevLastId = useRef(lastId)
 
