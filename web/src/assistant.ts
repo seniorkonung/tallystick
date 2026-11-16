@@ -65,8 +65,14 @@ Each user message starts with the local time it was sent, in brackets. Use the l
 Reply in the user's language, concisely, using Markdown.`
 }
 
+// Провайдеры сообщают о переполнении по-разному, общего кода ошибки нет — узнаём по тексту
+const overflowPattern = /prompt is too long|context.?length|context.?window|maximum context|too many tokens|tokens? limit/i
+
 function errorText(error: unknown): string {
   if (RetryError.isInstance(error)) return errorText(error.lastError)
+  if (APICallError.isInstance(error) && overflowPattern.test(`${error.responseBody ?? ''} ${error.message}`)) {
+    return 'Контекст переполнен — начните новый чат или исправьте одно из ранних сообщений'
+  }
   if (APICallError.isInstance(error)) return `${error.statusCode ?? ''} ${error.responseBody?.slice(0, 300) ?? error.message}`.trim()
   return error instanceof Error ? error.message : String(error)
 }
@@ -93,7 +99,7 @@ export async function sendMessage(
   localStorage.setItem(lastModelKey, JSON.stringify({ providerId, model }))
   let id = chatId
   if (id === 'new') {
-    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || 'Чат').slice(0, 60), providerId, model, permission, reasoning }
+    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || 'Чат').slice(0, 60), providerId, model, permission, reasoning, contextTokens: null }
     await db.chats.add(chat)
     id = chat.id
   } else {
@@ -122,12 +128,14 @@ export async function resendFrom(
   permission: Permission,
   reasoning: Reasoning,
 ) {
-  await db.transaction('rw', db.chatMessages, db.chatFiles, async () => {
+  await db.transaction('rw', db.chatMessages, db.chatFiles, db.chats, async () => {
     const from = await db.chatMessages.get(messageId)
     if (!from) return
     const dropped = await db.chatMessages.where('chatId').equals(chatId).filter((m) => m.createdAt >= from.createdAt).primaryKeys()
     await db.chatFiles.where('chatId').equals(chatId).filter((f) => dropped.includes(f.messageId)).delete()
     await db.chatMessages.bulkDelete(dropped)
+    // Занятый контекст станет известен со следующим ответом
+    await db.chats.update(chatId, { contextTokens: null })
   })
   return sendMessage(chatId, text, files, providerId, model, permission, reasoning)
 }
@@ -137,6 +145,8 @@ export function stop(chatId: string) {
 }
 
 export async function run(chatId: string) {
+  // Сразу, до чтения базы: иначе только что отправленное сообщение на миг выглядит оставшимся без ответа
+  setRun(chatId, { items: [], running: true, error: null })
   const chat = await db.chats.get(chatId)
   const provider = chat?.providerId ? await db.providers.get(chat.providerId) : undefined
   if (!chat || !provider || !chat.model) return setRun(chatId, { error: 'Провайдер чата не найден — выберите модель', running: false })
@@ -146,11 +156,12 @@ export async function run(chatId: string) {
   const history = withoutOldReasoning(await Promise.all(stored.map((m) => toModelMessage(m, files))))
   const controller = new AbortController()
   controllers.set(chatId, controller)
-  setRun(chatId, { items: [], running: true, error: null })
 
   const items: RunItem[] = []
   const show = () => setRun(chatId, { items: [...items] })
   let aborted = false
+  // Запрос шага и ответ на него — это и есть переписка, с которой начнётся следующий запрос
+  let contextTokens: number | null = null
   try {
     const result = streamText({
       model: languageModel(provider, chat.model),
@@ -184,6 +195,9 @@ export async function run(chatId: string) {
           show()
           break
         }
+        case 'finish-step':
+          if (part.usage.inputTokens !== undefined) contextTokens = part.usage.inputTokens + (part.usage.outputTokens ?? 0)
+          break
         case 'abort':
           aborted = true
           break
@@ -210,6 +224,7 @@ export async function run(chatId: string) {
     const text = items.flatMap((i) => (i.kind === 'text' ? [i.text] : [])).join('\n\n')
     if (text) await saveMessages(chatId, [{ role: 'assistant', content: text }])
   }
+  if (contextTokens !== null) await db.chats.update(chatId, { contextTokens })
   controllers.delete(chatId)
   setRun(chatId, { items: [], running: false, error: null })
 }

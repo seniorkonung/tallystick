@@ -1,6 +1,7 @@
 import type { ModelMessage } from 'ai'
 import Dexie, { type EntityTable } from 'dexie'
 import type { Filters } from './filterStore'
+import type { ModelCatalog } from './modelCatalog'
 
 export type FieldOption = { id: string; label: string }
 
@@ -94,8 +95,11 @@ export type Preset = {
   filters: Filters
 }
 
-// Настройки приложения по ключу. tagTabOrder — порядок вкладок выбора тегов: 'all', 'archived' и id категорий
-export type Setting = { id: 'tagTabOrder'; value: string[] }
+// Настройки приложения по ключу
+export type Setting =
+  // Порядок вкладок выбора тегов: 'all', 'archived' и id категорий
+  | { id: 'tagTabOrder'; value: string[] }
+  | { id: 'modelCatalog'; value: ModelCatalog }
 
 // Вложение, подготовленное к сохранению: превью уже построено
 export type PreparedFile = Omit<Attachment, 'id' | 'entryId' | 'createdAt'>
@@ -131,6 +135,8 @@ export type Chat = {
   model: string | null
   permission: Permission
   reasoning: Reasoning
+  // Сколько токенов занимает переписка по последнему ответу провайдера; null — ответа после правки ещё не было
+  contextTokens: number | null
 }
 
 // Сообщение в формате AI SDK: текст, вызовы инструментов и их результаты
@@ -298,6 +304,14 @@ db.version(17)
   .upgrade(async (tx) => {
     await tx.table('chats').toCollection().modify((chat) => {
       chat.reasoning ??= 'provider-default'
+    })
+  })
+
+db.version(18)
+  .stores({})
+  .upgrade(async (tx) => {
+    await tx.table('chats').toCollection().modify((chat) => {
+      chat.contextTokens ??= null
     })
   })
 

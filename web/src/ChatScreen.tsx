@@ -8,6 +8,7 @@ import { prepareFile } from './attachments'
 import { answerApproval, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
 import { approvalLabels, toolLabels } from './assistantTools'
 import { ChatSettingsSheet } from './ChatSettingsSheet'
+import { ensureModelInfo, modelInfo, useModelCatalog } from './modelCatalog'
 import { closeChat, useChatView } from './chatView'
 import { copyText } from './clipboard'
 import { useComposer } from './composerStore'
@@ -46,6 +47,13 @@ function ChatView({ chatId }: { chatId: string }) {
   // Сообщение пользователя, загруженное в поле ввода для правки
   const [editingId, setEditingId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const catalog = useModelCatalog()
+
+  // Модели провайдеров, о которых ещё ничего не известно
+  const modelIds = providers?.flatMap((p) => p.models).join('\n') ?? ''
+  useEffect(() => {
+    if (modelIds) void ensureModelInfo(modelIds.split('\n'))
+  }, [modelIds])
 
   useEffect(() => {
     const el = textarea.current
@@ -64,6 +72,10 @@ function ChatView({ chatId }: { chatId: string }) {
   const permission = chat?.permission ?? newPermission
   const reasoning = chat?.reasoning ?? newReasoning
   const approvals = running ? [] : pendingApprovals(messages)
+  // Переписка кончается без ответа ассистента: запрос упал, его остановили до первого слова или приложение закрыли посреди ответа.
+  // Ошибка живёт только в памяти, а неотвеченное сообщение — в базе, поэтому повторить можно и после перезапуска
+  const lastRole = messages.at(-1)?.message.role
+  const unanswered = !running && approvals.length === 0 && (lastRole === 'user' || lastRole === 'tool')
   // Правка начинает переписку заново, поэтому неотвеченные запросы разрешения ей не мешают
   const canSend = !running && !preparing && (approvals.length === 0 || !!editingId) && !!selected && (text.trim() !== '' || files.length > 0)
   const filesByMessage = new Map<string, ChatFile[]>()
@@ -198,13 +210,22 @@ function ChatView({ chatId }: { chatId: string }) {
               </div>
             </div>
           ))}
-          {runState?.error && (
+          {runState?.error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <p className="break-words">Ошибка: {runState.error}</p>
               <button type="button" className="mt-1 font-medium" onClick={() => void run(chatId)}>
                 Повторить
               </button>
             </div>
+          ) : (
+            unanswered && (
+              <div className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-600">
+                <p className="flex-1">Ответа нет</p>
+                <button type="button" className="font-medium text-orange-700" onClick={() => void run(chatId)}>
+                  Повторить
+                </button>
+              </div>
+            )
           )}
         </div>
       </div>
@@ -282,27 +303,33 @@ function ChatView({ chatId }: { chatId: string }) {
               </button>
             )}
           </div>
-          {/* Сразу видны модель и глубина размышлений; провайдер и права — в панели настроек */}
-          {options.length > 0 ? (
-            <button
-              type="button"
-              className="flex max-w-full items-center gap-1 rounded-full px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <span className="truncate font-medium text-stone-700">{selected.model}</span>
-              <span className="shrink-0">· {reasoningLabels[reasoning]}</span>
-              <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-          ) : (
-            <p className="px-2 py-1.5 text-xs text-stone-500">Добавьте провайдера в настройках — шестерёнка в боковой панели</p>
-          )}
+          <div className="flex items-center gap-1">
+            {/* Сразу видны модель и глубина размышлений; провайдер и права — в панели настроек */}
+            {options.length > 0 ? (
+              <button
+                type="button"
+                className="flex max-w-full items-center gap-1 rounded-full px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <span className="truncate font-medium text-stone-700">{modelInfo(catalog, selected.model)?.name ?? selected.model}</span>
+                <span className="shrink-0">· {reasoningLabels[reasoning]}</span>
+                <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+            ) : (
+              <p className="px-2 py-1.5 text-xs text-stone-500">Добавьте провайдера в настройках — шестерёнка в боковой панели</p>
+            )}
+            {chat?.contextTokens != null && (
+              <ContextRing tokens={chat.contextTokens} limit={chat.model ? (modelInfo(catalog, chat.model)?.context ?? null) : null} />
+            )}
+          </div>
         </div>
       </div>
       {settingsOpen && selected && (
         <ChatSettingsSheet
           providers={providers}
+          catalog={catalog}
           model={selected.value}
           reasoning={reasoning}
           permission={permission}
@@ -340,6 +367,40 @@ function saveToFeed(chatId: string, text: string) {
   if (composer.draft.text.trim() && !window.confirm('В панели ввода ленты есть черновик. Заменить его ответом ассистента?')) return
   composer.startFromChat(chatId, text)
   closeChat()
+}
+
+const tokensFormat = new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 })
+
+// Кольцо заполняется по мере роста переписки; подробности — во всплывающем окошке над ним.
+// Окно известно не для всех моделей: тогда кольцо пунктирное, а в окошке только занятые токены
+function ContextRing({ tokens, limit }: { tokens: number; limit: number | null }) {
+  const [open, setOpen] = useState(false)
+  const share = limit ? Math.min(tokens / limit, 1) : 0
+  const color = share > 0.95 ? 'text-red-600' : share > 0.8 ? 'text-orange-600' : 'text-stone-500'
+  const length = 2 * Math.PI * 8
+  return (
+    <div className="relative ml-auto shrink-0">
+      <button type="button" aria-label="Занятый контекст" className={`flex size-9 items-center justify-center rounded-full hover:bg-stone-100 ${color}`} onClick={() => setOpen(!open)}>
+        <svg viewBox="0 0 20 20" className="size-5 -rotate-90" fill="none" strokeWidth="2.5">
+          <circle cx="10" cy="10" r="8" stroke="currentColor" className="opacity-20" strokeDasharray={limit ? undefined : '2 3'} />
+          {limit && <circle cx="10" cy="10" r="8" stroke="currentColor" strokeLinecap="round" strokeDasharray={`${share * length} ${length}`} />}
+        </svg>
+      </button>
+      {open && (
+        <>
+          {/* Тап мимо окошка закрывает его */}
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 bottom-full z-10 mb-2 w-max max-w-64 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm shadow-lg">
+            <p className="font-medium text-stone-900">
+              {tokensFormat.format(tokens)}
+              {limit ? ` из ${tokensFormat.format(limit)} · ${Math.round(share * 100)}%` : ' токенов'}
+            </p>
+            <p className="text-xs text-stone-500">{limit ? 'Занято контекста по последнему ответу' : 'Занято контекста; окно модели неизвестно'}</p>
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 function IconButton({ label, disabled, onClick, children }: { label: string; disabled?: boolean; onClick: () => void; children: ReactNode }) {

@@ -12,7 +12,7 @@ export function tabKey(tab: TagTab) {
 export function useTagTabs() {
   return useLiveQuery(async () => {
     const [categories, order] = await Promise.all([db.categories.orderBy('createdAt').toArray(), db.settings.get('tagTabOrder')])
-    const keys = order?.value ?? []
+    const keys = order?.id === 'tagTabOrder' ? order.value : []
     const tabs: TagTab[] = [{ kind: 'all' }, ...categories.map((category) => ({ kind: 'category' as const, category })), { kind: 'archived' }]
     // Вкладки, которых нет в порядке, идут в конце
     const position = (tab: TagTab) => {

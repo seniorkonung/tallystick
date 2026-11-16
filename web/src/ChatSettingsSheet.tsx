@@ -2,9 +2,11 @@ import { useState, type ReactNode } from 'react'
 import { reasoningLabels } from './assistant'
 import { permissionLabels } from './assistantTools'
 import type { Permission, Provider, Reasoning } from './db'
+import { modelInfo, refreshModelInfo, type ModelCatalog } from './modelCatalog'
 
 type Props = {
   providers: Provider[]
+  catalog: ModelCatalog | undefined
   // Выбранная модель: `${providerId}|${model}`
   model: string
   reasoning: Reasoning
@@ -18,11 +20,15 @@ type Props = {
 type Section = 'model' | 'reasoning' | 'permission'
 
 // Настройки ассистента в нижней панели: строка раскрывает свои варианты
-export function ChatSettingsSheet({ providers, model, reasoning, permission, onModel, onReasoning, onPermission, onClose }: Props) {
+export function ChatSettingsSheet({ providers, catalog, model, reasoning, permission, onModel, onReasoning, onPermission, onClose }: Props) {
   const [open, setOpen] = useState<Section | null>(null)
+  const [refreshing, setRefreshing] = useState<'idle' | 'running' | 'failed'>('idle')
   const [providerId, modelId] = model.split('|')
   const provider = providers.find((p) => p.id === providerId)
   const toggle = (section: Section) => setOpen(open === section ? null : section)
+  const name = (id: string) => modelInfo(catalog, id)?.name ?? id
+  // Уровни, которые модель поддерживает по каталогу; неизвестная модель — все
+  const levels = modelInfo(catalog, modelId)?.reasoning ?? (Object.keys(reasoningLabels) as Reasoning[])
 
   return (
     <div className="fixed inset-0 z-10 mx-auto flex max-w-xl flex-col justify-end bg-black/30" onClick={onClose}>
@@ -37,22 +43,40 @@ export function ChatSettingsSheet({ providers, model, reasoning, permission, onM
           </button>
         </div>
 
-        <Row label="Модель" value={providers.length > 1 && provider ? `${modelId} · ${provider.name}` : modelId} open={open === 'model'} onToggle={() => toggle('model')}>
-          {providers.map((p) => (
-            <div key={p.id}>
-              {/* Провайдер выбирается вместе с моделью: модели сгруппированы по провайдерам */}
-              <p className="px-3 pt-2 pb-1 text-xs text-stone-500">{p.name}</p>
-              {p.models.map((m) => (
-                <Option key={m} selected={`${p.id}|${m}` === model} onClick={() => onModel(`${p.id}|${m}`)}>
-                  {m}
-                </Option>
-              ))}
-            </div>
-          ))}
+        <Row label="Модель" value={providers.length > 1 && provider ? `${name(modelId)} · ${provider.name}` : name(modelId)} open={open === 'model'} onToggle={() => toggle('model')}>
+          {/* Провайдер выбирается вместе с моделью; под названием из каталога видно, во что превратился идентификатор */}
+          {providers.flatMap((p) =>
+            p.models.map((m) => (
+              <Option key={`${p.id}|${m}`} selected={`${p.id}|${m}` === model} onClick={() => onModel(`${p.id}|${m}`)}>
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate">{name(m)}</span>
+                  <span className="truncate text-xs font-normal text-stone-400">
+                    {modelInfo(catalog, m) ? m : 'нет в каталоге'} · {p.name}
+                  </span>
+                </span>
+              </Option>
+            )),
+          )}
+          <button
+            type="button"
+            disabled={refreshing === 'running'}
+            className="w-full px-3 py-2.5 text-left text-sm text-orange-700 disabled:text-stone-400"
+            onClick={async () => {
+              setRefreshing('running')
+              try {
+                await refreshModelInfo(providers.flatMap((p) => p.models))
+                setRefreshing('idle')
+              } catch {
+                setRefreshing('failed')
+              }
+            }}
+          >
+            {refreshing === 'running' ? 'Обновляю сведения…' : refreshing === 'failed' ? 'Не удалось обновить — повторить' : 'Обновить сведения о моделях'}
+          </button>
         </Row>
 
         <Row label="Размышления" value={reasoningLabels[reasoning]} open={open === 'reasoning'} onToggle={() => toggle('reasoning')}>
-          {(Object.keys(reasoningLabels) as Reasoning[]).map((r) => (
+          {levels.map((r) => (
             <Option key={r} selected={r === reasoning} onClick={() => onReasoning(r)}>
               {reasoningLabels[r]}
             </Option>
