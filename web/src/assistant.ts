@@ -161,6 +161,20 @@ export async function resendFrom(
   return sendMessage(chatId, text, files, providerId, model, permission, reasoning, entryIds)
 }
 
+// Повтор ответа. Сообщение, на которое ещё нет ответа, получает время повтора: модель берёт текущее время из него.
+// После начатого ответа сообщение не трогаем — на прежнее начало запроса опираются размышления модели
+export async function retry(chatId: string) {
+  const last = (await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')).at(-1)
+  if (last?.message.role === 'user') {
+    const now = Date.now()
+    await db.transaction('rw', db.chatMessages, db.chats, async () => {
+      await db.chatMessages.update(last.id, { createdAt: now })
+      await db.chats.update(chatId, { updatedAt: now })
+    })
+  }
+  await run(chatId)
+}
+
 export function stop(chatId: string) {
   controllers.get(chatId)?.abort()
 }

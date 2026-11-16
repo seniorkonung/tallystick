@@ -5,7 +5,7 @@ import { AttachSheet } from './AttachSheet'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { Markdown } from './Markdown'
 import { prepareFile } from './attachments'
-import { answerApproval, deleteChat, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
+import { answerApproval, deleteChat, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, retry, sendMessage, stop, useRuns, type RunItem } from './assistant'
 import { approvalLabels, toolLabels } from './assistantTools'
 import { ChatSettingsSheet } from './ChatSettingsSheet'
 import { InstructionEditor } from './InstructionEditor'
@@ -313,7 +313,7 @@ function ChatView({ chatId }: { chatId: string }) {
           {runState?.error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <p className="break-words">Ошибка: {runState.error}</p>
-              <button type="button" className="mt-1 font-medium" onClick={() => void run(chatId)}>
+              <button type="button" className="mt-1 font-medium" onClick={() => void retry(chatId)}>
                 Повторить
               </button>
             </div>
@@ -321,7 +321,7 @@ function ChatView({ chatId }: { chatId: string }) {
             unanswered && (
               <div className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-600">
                 <p className="flex-1">Ответа нет</p>
-                <button type="button" className="font-medium text-orange-700" onClick={() => void run(chatId)}>
+                <button type="button" className="font-medium text-orange-700" onClick={() => void retry(chatId)}>
                   Повторить
                 </button>
               </div>
