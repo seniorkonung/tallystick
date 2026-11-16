@@ -143,7 +143,7 @@ function ChatView({ chatId }: { chatId: string }) {
 
   function startInstruction() {
     const chosen = instructions!.find((i) => i.id === instructionId)
-    return chosen ? { name: chosen.name, text: chosen.text } : null
+    return chosen ? { id: chosen.id, name: chosen.name, text: chosen.text } : null
   }
 
   async function send() {
@@ -287,7 +287,11 @@ function ChatView({ chatId }: { chatId: string }) {
           {approvals.map((a) => (
             <div key={a.approvalId} className="rounded-2xl border border-orange-200 bg-white px-3 py-2.5">
               <p className="text-sm font-medium">{approvalLabels[a.toolName] ?? a.toolName}</p>
-              <ApprovalDetails input={a.input as Record<string, unknown>} />
+              {a.toolName === 'update_instruction' ? (
+                <InstructionApproval input={a.input as Record<string, unknown>} />
+              ) : (
+                <ApprovalDetails input={a.input as Record<string, unknown>} />
+              )}
               <div className="mt-2 flex gap-2">
                 <button
                   type="button"
@@ -481,6 +485,21 @@ function ChatView({ chatId }: { chatId: string }) {
 }
 
 // Что именно ассистент хочет изменить: текст или исходная запись
+// Какую инструкцию и как ассистент хочет изменить; текст показывается целиком
+function InstructionApproval({ input }: { input: Record<string, unknown> }) {
+  const saved = useLiveQuery(() => (typeof input.instruction === 'string' && input.instruction !== 'general' ? db.instructions.get(input.instruction) : undefined), [input.instruction])
+  const target = input.instruction === 'general' ? 'Общая инструкция' : `Стартовая инструкция «${saved?.name ?? '…'}»`
+  return (
+    <div className="mt-1 text-sm text-stone-600">
+      <p className="text-xs text-stone-500">
+        {target} · {input.mode === 'append' ? 'дополнить' : 'заменить текст'}
+        {typeof input.name === 'string' && input.name.trim() ? ` · новое название «${input.name.trim()}»` : ''}
+      </p>
+      {typeof input.text === 'string' && <p className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap">{input.text}</p>}
+    </div>
+  )
+}
+
 function ApprovalDetails({ input }: { input: Record<string, unknown> }) {
   const entry = useLiveQuery(() => (typeof input.id === 'string' ? db.entries.get(input.id) : undefined), [input.id])
   const text = typeof input.text === 'string' ? input.text : entry ? plainText(entry.text, { hideSpoilers: true }) : ''

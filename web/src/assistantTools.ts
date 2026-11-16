@@ -130,6 +130,18 @@ export const readTools = {
     },
   }),
 
+  list_instructions: tool({
+    description: 'List the general instruction and all saved start instructions with their ids and full texts.',
+    inputSchema: z.object({}),
+    execute: async () => {
+      const [general, saved] = await Promise.all([db.settings.get('generalInstruction'), db.instructions.orderBy('createdAt').toArray()])
+      return {
+        general: general?.id === 'generalInstruction' ? general.value : '',
+        start: saved.map((i) => ({ id: i.id, name: i.name, text: i.text })),
+      }
+    },
+  }),
+
   view_attachments: tool({
     description: 'Look at attachments of entries: photos and PDFs are shown to you, text files come as text. Get attachment ids from search_entries.',
     inputSchema: z.object({ ids: z.array(z.string()).min(1).max(5) }),
@@ -293,6 +305,30 @@ export function writeTools(chatId: string) {
       },
     }),
 
+    update_instruction: tool({
+      description:
+        'Change the general instruction or a saved start instruction. append adds the text as a new paragraph at the end; replace sets the whole text. ' +
+        'A start instruction can also be renamed.',
+      inputSchema: z.object({
+        instruction: z.string().describe("'general' or the id of a start instruction"),
+        mode: z.enum(['append', 'replace']),
+        text: z.string().min(1),
+        name: z.string().optional().describe('New name; start instructions only'),
+      }),
+      execute: async ({ instruction, mode, text, name }) => {
+        const join = (current: string) => (mode === 'append' && current.trim() ? `${current.trim()}\n\n${text.trim()}` : text.trim())
+        if (instruction === 'general') {
+          const general = await db.settings.get('generalInstruction')
+          await db.settings.put({ id: 'generalInstruction', value: join(general?.id === 'generalInstruction' ? general.value : '') })
+          return { ok: true }
+        }
+        const saved = await db.instructions.get(instruction)
+        if (!saved) throw new Error(`No start instruction with id ${instruction}`)
+        await db.instructions.update(saved.id, { text: join(saved.text), ...(name?.trim() ? { name: name.trim() } : {}) })
+        return { ok: true }
+      },
+    }),
+
     delete_entry: tool({
       description: 'Delete an entry permanently with its attachments. Replies to it stay in the feed.',
       inputSchema: z.object({ id: z.string() }),
@@ -305,7 +341,7 @@ export function writeTools(chatId: string) {
   }
 }
 
-const writeToolNames = ['create_entry', 'update_entry', 'set_actuality', 'delete_entry'] as const
+const writeToolNames = ['create_entry', 'update_entry', 'set_actuality', 'update_instruction', 'delete_entry'] as const
 
 // Какие изменения ассистент делает только после разрешения пользователя
 export function approvalFor(permission: Permission) {
@@ -331,6 +367,8 @@ export const toolLabels: Record<string, string> = {
   list_tags: 'Смотрю теги',
   search_entries: 'Ищу записи',
   view_attachments: 'Смотрю вложения',
+  list_instructions: 'Смотрю инструкции',
+  update_instruction: 'Правлю инструкцию',
   create_entry: 'Создаю запись',
   update_entry: 'Правлю запись',
   set_actuality: 'Меняю актуальность',
@@ -342,5 +380,6 @@ export const approvalLabels: Record<string, string> = {
   create_entry: 'Создать запись',
   update_entry: 'Изменить запись',
   set_actuality: 'Изменить актуальность записи',
+  update_instruction: 'Изменить инструкцию',
   delete_entry: 'Удалить запись безвозвратно',
 }

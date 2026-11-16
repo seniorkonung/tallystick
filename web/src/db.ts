@@ -153,8 +153,11 @@ export type Chat = {
   reasoning: Reasoning
   // Сколько токенов занимает переписка по последнему ответу провайдера; null — ответа после правки ещё не было
   contextTokens: number | null
-  // Копия стартовой инструкции на момент первого сообщения: правка инструкции начатый чат не меняет
-  instruction: { name: string; text: string } | null
+  // Копия стартовой инструкции на момент первого сообщения: правка инструкции начатый чат не меняет.
+  // id — сохранённая инструкция, из которой копия взята; у чатов до его появления его нет
+  instruction: { id?: string; name: string; text: string } | null
+  // Копия общей инструкции на момент первого сообщения: инструкции чата не меняются, иначе меняется начало запроса
+  generalInstruction: string
 }
 
 // Сообщение в формате AI SDK: текст, вызовы инструментов и их результаты
@@ -341,6 +344,16 @@ db.version(19)
   .upgrade(async (tx) => {
     await tx.table('chats').toCollection().modify((chat) => {
       chat.instruction ??= null
+    })
+  })
+
+// Общая инструкция закрепляется за чатом, как стартовая; начатые чаты получают её нынешний текст
+db.version(20)
+  .stores({})
+  .upgrade(async (tx) => {
+    const general = await tx.table('settings').get('generalInstruction')
+    await tx.table('chats').toCollection().modify((chat) => {
+      chat.generalInstruction ??= general?.value?.trim() ?? ''
     })
   })
 

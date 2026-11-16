@@ -47,8 +47,9 @@ function setRun(chatId: string, patch: Partial<Run>) {
 }
 
 // Инструкции не меняются от запроса к запросу: Anthropic привязывает подписи размышлений модели к началу запроса.
-// Меняется только общая инструкция, когда её правит пользователь
-function instructions(general: string, chat: Chat) {
+// Поэтому чат хранит копии общей и стартовой инструкций с первого сообщения
+function instructions(chat: Chat) {
+  const general = chat.generalInstruction
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
   return `You are the assistant inside Tallystick, the user's personal feed app. The feed holds everything the user records: thoughts, meals, workouts, project notes.
 
@@ -67,12 +68,14 @@ When your reply mentions specific entries, especially ones you created or change
 
 Each user message starts with the local time it was sent, in brackets. Use the latest one as the current time. Time zone: ${zone}; entry times are in this zone.
 
+Instructions: the general instruction applies to every chat; start instructions are saved rules for typical situations, one of which the user may choose when a chat starts. A chat keeps copies of both as they were at its start, so editing any saved instruction affects only new chats. If you edit an instruction this chat uses, follow the edited version yourself from then on. In this chat, also follow new rules the user gives in the conversation. Change instructions only when the user asks, and prefer append when adding a rule.
+
 Reply in the user's language, concisely, using Markdown.${general ? `
 
 The user's general instruction for every chat:
 ${general}` : ''}${chat.instruction ? `
 
-The user's instruction for this chat, "${chat.instruction.name}":
+The user's start instruction for this chat, "${chat.instruction.name}"${chat.instruction.id ? ` (id ${chat.instruction.id})` : ''}:
 ${chat.instruction.text}` : ''}`
 }
 
@@ -115,7 +118,8 @@ export async function sendMessage(
   localStorage.setItem(lastModelKey, JSON.stringify({ providerId, model }))
   let id = chatId
   if (id === 'new') {
-    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || (entryIds.length ? 'Записи' : 'Чат')).slice(0, 60), providerId, model, permission, reasoning, contextTokens: null, instruction }
+    const general = await db.settings.get('generalInstruction')
+    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || (entryIds.length ? 'Записи' : 'Чат')).slice(0, 60), providerId, model, permission, reasoning, contextTokens: null, instruction, generalInstruction: general?.id === 'generalInstruction' ? general.value.trim() : '' }
     await db.chats.add(chat)
     id = chat.id
   } else {
@@ -179,8 +183,6 @@ export async function run(chatId: string) {
   if (!chat || !provider || !chat.model) return setRun(chatId, { error: 'Провайдер чата не найден — выберите модель', running: false })
 
   const stored = await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')
-  const generalSetting = await db.settings.get('generalInstruction')
-  const general = generalSetting?.id === 'generalInstruction' ? generalSetting.value.trim() : ''
   const files = new Map((await db.chatFiles.where('chatId').equals(chatId).toArray()).map((f) => [f.id, f]))
   const history = withoutOldReasoning(await Promise.all(stored.map((m) => toModelMessage(m, files))))
   const controller = new AbortController()
@@ -194,7 +196,7 @@ export async function run(chatId: string) {
   try {
     const result = streamText({
       model: languageModel(provider, chat.model),
-      instructions: instructions(general, chat),
+      instructions: instructions(chat),
       messages: history,
       tools: { ...readTools, ...writeTools(chatId) },
       activeTools: activeToolsFor(chat.permission, provider.kind),
