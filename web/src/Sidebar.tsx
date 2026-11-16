@@ -8,12 +8,13 @@ import { sidebarWidth, useSidebar, useSidebarSwipe } from './sidebarStore'
 type Props = {
   onOpenGallery: () => void
   onOpenChats: () => void
+  onOpenStats: () => void
   onOpenSettings: () => void
   onClose: () => void
 }
 
 // Пресеты — быстрое применение фильтров к единственной ленте, а не отдельные ленты
-export function Sidebar({ onOpenGallery, onOpenChats, onOpenSettings, onClose }: Props) {
+export function Sidebar({ onOpenGallery, onOpenChats, onOpenStats, onOpenSettings, onClose }: Props) {
   const presets = useLiveQuery(() => db.presets.orderBy('order').toArray())
   const { filters, set, reset } = useFilters()
   const [editing, setEditing] = useState(false)
@@ -98,6 +99,16 @@ export function Sidebar({ onOpenGallery, onOpenChats, onOpenSettings, onClose }:
             }}
           >
             Вложения
+          </button>
+          <button
+            type="button"
+            className={itemClass(false)}
+            onClick={() => {
+              onOpenStats()
+              onClose()
+            }}
+          >
+            Статистика
           </button>
           <button
             type="button"

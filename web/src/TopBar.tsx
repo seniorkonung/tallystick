@@ -4,6 +4,7 @@ import { useDateJump } from './dateJumpStore'
 import { Gallery } from './Gallery'
 import { Settings } from './Settings'
 import { Chats } from './Chats'
+import { Stats } from './Stats'
 import { Sidebar } from './Sidebar'
 import { FilterChips } from './FilterChips'
 import { useFilterChips } from './useFilterChips'
@@ -22,6 +23,7 @@ export function TopBar() {
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [chatsOpen, setChatsOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
   // Лента получает верхний отступ по высоте панели
   const measure = useMeasuredHeight('--topbar-height')
   const inThread = useThread((s) => s.stack.length > 0)
@@ -113,6 +115,7 @@ export function TopBar() {
         <Sidebar
           onOpenGallery={() => setGalleryOpen(true)}
           onOpenChats={() => setChatsOpen(true)}
+          onOpenStats={() => setStatsOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onClose={() => useSidebar.setState({ open: false })}
         />
@@ -120,6 +123,7 @@ export function TopBar() {
       {galleryOpen && <Gallery onClose={() => setGalleryOpen(false)} />}
       {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
       {chatsOpen && <Chats onClose={() => setChatsOpen(false)} />}
+      {statsOpen && <Stats onClose={() => setStatsOpen(false)} />}
     </>
   )
 }
