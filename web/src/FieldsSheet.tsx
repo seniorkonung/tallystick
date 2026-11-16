@@ -94,14 +94,19 @@ function FieldEditor({ field, value, autoFocus, onChange, onClose }: EditorProps
         />
       )
     case 'date':
-      return <DateEditor value={value} onChange={onChange} />
+      return <MomentEditor type="date" value={value} onChange={onChange} />
+    case 'datetime':
+      return <MomentEditor type="datetime-local" value={value} onChange={onChange} />
+    case 'time':
+      return <MomentEditor type="time" value={value} onChange={onChange} />
   }
 }
 
-function DateEditor({ value, onChange }: Pick<EditorProps, 'value' | 'onChange'>) {
+// Системный выбор даты, даты со временем или времени
+function MomentEditor({ type, value, onChange }: Pick<EditorProps, 'value' | 'onChange'> & { type: 'date' | 'datetime-local' | 'time' }) {
   return (
     <input
-      type="date"
+      type={type}
       value={typeof value === 'string' ? value : ''}
       onChange={(e) => onChange(e.target.value || undefined)}
       className="w-full rounded-2xl bg-stone-100 px-3 py-2 outline-none"

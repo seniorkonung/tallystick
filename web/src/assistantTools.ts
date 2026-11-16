@@ -23,7 +23,8 @@ function fieldValues(entry: Entry, type: EntryType | undefined) {
       const labels = ids.flatMap((id) => field.options.find((o) => o.id === id)?.label ?? [])
       result[field.name] = field.kind === 'single' ? (labels[0] ?? '') : labels
     } else {
-      result[field.name] = value as string | number
+      // Дата со временем — в том же виде, что и время записей
+      result[field.name] = field.kind === 'datetime' ? String(value).replace('T', ' ') : (value as string | number)
     }
   }
   return result
@@ -172,14 +173,24 @@ function toValues(type: EntryType, fields: Record<string, unknown>, base: FieldV
       case 'string':
         values[field.id] = String(raw)
         break
-      case 'date': {
-        const day = String(raw)
+      case 'date':
+      case 'datetime': {
+        const text = String(raw).trim().replace(' ', 'T')
+        const day = text.slice(0, 10)
         const [y, m, d] = day.split('-').map(Number)
         const date = new Date(y, m - 1, d)
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || date.getMonth() !== m - 1 || date.getDate() !== d) {
-          throw new Error(`Field "${field.name}" needs a date as YYYY-MM-DD`)
+        const valid = date.getMonth() === m - 1 && date.getDate() === d
+        if (field.kind === 'date' && !(valid && /^\d{4}-\d{2}-\d{2}$/.test(text))) throw new Error(`Field "${field.name}" needs a date as YYYY-MM-DD`)
+        if (field.kind === 'datetime' && !(valid && /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/.test(text))) {
+          throw new Error(`Field "${field.name}" needs a local date and time as YYYY-MM-DD HH:mm`)
         }
-        values[field.id] = day
+        values[field.id] = text
+        break
+      }
+      case 'time': {
+        const text = String(raw).trim()
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(text)) throw new Error(`Field "${field.name}" needs a time as HH:mm`)
+        values[field.id] = text
         break
       }
       case 'single':
@@ -227,7 +238,7 @@ const entryTextSchema = z
 
 const fieldsSchema = z
   .record(z.string(), z.union([z.number(), z.string(), z.array(z.string()), z.null()]))
-  .describe('Field values by field name: numbers for number fields, option labels for choice fields, YYYY-MM-DD for date fields, null clears a field')
+  .describe('Field values by field name: numbers for number fields, option labels for choice fields, YYYY-MM-DD for dates, YYYY-MM-DD HH:mm (local) for date-times, HH:mm for times, null clears a field')
 
 // Записи, созданные ассистентом, помнят свой чат
 export function writeTools(chatId: string) {

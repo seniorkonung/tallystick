@@ -6,6 +6,8 @@ export const fieldKindLabels: Record<FieldKind, string> = {
   number: 'Число',
   string: 'Строка',
   date: 'Дата',
+  datetime: 'Дата и время',
+  time: 'Время',
 }
 
 export function newField(kind: FieldKind): Field {
@@ -17,6 +19,8 @@ export function newField(kind: FieldKind): Field {
     case 'number':
     case 'string':
     case 'date':
+    case 'datetime':
+    case 'time':
       return { id, name: '', kind }
   }
 }
@@ -46,5 +50,9 @@ export function formatValue(field: Field, value: FieldValue): string[] {
       return [String(value)]
     case 'date':
       return [formatDay(String(value))]
+    case 'datetime':
+      return [`${formatDay(String(value).slice(0, 10))}, ${String(value).slice(11, 16)}`]
+    case 'time':
+      return [String(value)]
   }
 }

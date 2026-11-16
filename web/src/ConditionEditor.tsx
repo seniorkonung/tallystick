@@ -142,13 +142,13 @@ export function ConditionEditor({ types, entries, initial, onDone, onCancel }: P
         </div>
       )}
 
-      {withValue && condition.kind === 'date' && (
+      {withValue && (condition.kind === 'date' || condition.kind === 'datetime' || condition.kind === 'time') && (
         <div className="flex items-center gap-2">
-          <input type="date" value={condition.date ?? ''} onChange={(e) => set({ date: e.target.value })} className="flex-1 rounded-xl bg-stone-100 px-3 py-2 text-sm" />
+          <input type={condition.kind === 'time' ? 'time' : 'date'} value={condition.date ?? ''} onChange={(e) => set({ date: e.target.value })} className="flex-1 rounded-xl bg-stone-100 px-3 py-2 text-sm" />
           {condition.op === 'between' && (
             <>
               <span className="text-stone-400">—</span>
-              <input type="date" value={condition.date2 ?? ''} onChange={(e) => set({ date2: e.target.value })} className="flex-1 rounded-xl bg-stone-100 px-3 py-2 text-sm" />
+              <input type={condition.kind === 'time' ? 'time' : 'date'} value={condition.date2 ?? ''} onChange={(e) => set({ date2: e.target.value })} className="flex-1 rounded-xl bg-stone-100 px-3 py-2 text-sm" />
             </>
           )}
         </div>
