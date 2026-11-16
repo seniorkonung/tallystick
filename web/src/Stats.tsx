@@ -4,6 +4,7 @@ import { db, type Entry, type EntryType } from './db'
 import { emptyFilters, useFilters, type Filters } from './filterStore'
 import { pluralRu } from './plural'
 import { TagChip } from './TagChip'
+import { useTagTabs } from './tagTabs'
 
 type Unit = 'week' | 'month' | 'year'
 
@@ -72,8 +73,19 @@ export function Stats({ onClose }: { onClose: () => void }) {
   )
   const types = useLiveQuery(() => db.types.toArray())
   const tags = useLiveQuery(() => db.tags.toArray())
+  const tabs = useTagTabs()
+  const savedCategories = useLiveQuery(async () => {
+    const setting = await db.settings.get('statsCategories')
+    return setting?.id === 'statsCategories' ? setting.value : []
+  })
   const setFilters = useFilters((s) => s.set)
-  if (!entries || !types || !tags) return null
+  if (!entries || !types || !tags || !tabs || !savedCategories) return null
+
+  // Категории в порядке вкладок выбора тегов; выбранные, но уже удалённые, не считаются
+  const categories = tabs.flatMap((t) => (t.kind === 'category' ? [t.category] : []))
+  const chosen = savedCategories.filter((id) => id === null || categories.some((c) => c.id === id))
+  const toggleCategory = (id: string | null) =>
+    db.settings.put({ id: 'statsCategories', value: chosen.includes(id) ? chosen.filter((x) => x !== id) : [...chosen, id] })
 
   const typesById = new Map(types.map((t) => [t.id, t]))
   const total = entries.length
@@ -86,7 +98,9 @@ export function Stats({ onClose }: { onClose: () => void }) {
       else byTag.set(id, [e])
     }
   }
+  // Теги в архиве хранят категорию, поэтому отбираются так же, как активные
   const tagRows = tags
+    .filter((tag) => chosen.length === 0 || chosen.includes(tag.categoryId))
     .flatMap((tag) => {
       const tagged = byTag.get(tag.id)
       return tagged ? [{ tag, count: tagged.length, types: countTypes(tagged, typesById) }] : []
@@ -175,6 +189,22 @@ export function Stats({ onClose }: { onClose: () => void }) {
           </div>
         )}
 
+        {total > 0 && mode === 'tags' && categories.length > 0 && (
+          <div className="mb-3 flex gap-1.5 overflow-x-auto">
+            <button type="button" className={`shrink-0 ${tabClass(chosen.length === 0)}`} onClick={() => db.settings.put({ id: 'statsCategories', value: [] })}>
+              Все теги
+            </button>
+            {categories.map((c) => (
+              <button key={c.id} type="button" className={`shrink-0 ${tabClass(chosen.includes(c.id))}`} onClick={() => void toggleCategory(c.id)}>
+                {c.name}
+              </button>
+            ))}
+            <button type="button" className={`shrink-0 ${tabClass(chosen.includes(null))}`} onClick={() => void toggleCategory(null)}>
+              Без категории
+            </button>
+          </div>
+        )}
+
         {total > 0 && mode === 'tags' && (
           <ul className="flex flex-col gap-2">
             {tagRows.map(({ tag, count, types }) => (
@@ -193,6 +223,9 @@ export function Stats({ onClose }: { onClose: () => void }) {
                 <div className="mt-1">{types.map(({ type, count }) => typeLine(type, count, { tagIds: [tag.id] }))}</div>
               </li>
             ))}
+            {tagRows.length === 0 && chosen.length > 0 && (
+              <li className="py-4 text-center text-sm text-stone-400">У тегов выбранных категорий нет записей за период</li>
+            )}
             {untagged.length > 0 && (
               <li className="rounded-2xl bg-white px-2 py-2 shadow-sm">
                 <button type="button" className="w-full rounded-xl px-2 py-1 text-left hover:bg-stone-100" onClick={() => openFeed({ untagged: true })}>

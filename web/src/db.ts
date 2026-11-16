@@ -102,6 +102,8 @@ export type Setting =
   | { id: 'modelCatalog'; value: ModelCatalog }
   // Общая инструкция ассистенту: действует во всех чатах
   | { id: 'generalInstruction'; value: string }
+  // Категории, теги которых показывает статистика; null — теги без категории, пустой список — все теги
+  | { id: 'statsCategories'; value: (string | null)[] }
 
 // Вложение, подготовленное к сохранению: превью уже построено
 export type PreparedFile = Omit<Attachment, 'id' | 'entryId' | 'createdAt'>
