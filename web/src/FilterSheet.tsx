@@ -77,14 +77,19 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
               ))}
             </div>
 
-            <h3 className="mt-5 mb-2 text-xs text-stone-500">Ответы</h3>
-            <button
-              type="button"
-              className={chipClass(draft.hideReplies)}
-              onClick={() => setDraft({ ...draft, hideReplies: !draft.hideReplies })}
-            >
-              Скрыть ответы
-            </button>
+            <h3 className="mt-5 mb-2 text-xs text-stone-500">Ответы и чаты</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={chipClass(draft.hideReplies)}
+                onClick={() => setDraft({ ...draft, hideReplies: !draft.hideReplies })}
+              >
+                Скрыть ответы
+              </button>
+              <button type="button" className={chipClass(draft.fromChats)} onClick={() => setDraft({ ...draft, fromChats: !draft.fromChats })}>
+                Только из чатов
+              </button>
+            </div>
 
             <h3 className="mt-5 mb-2 text-xs text-stone-500">Период</h3>
             <div className="flex items-center gap-2">
