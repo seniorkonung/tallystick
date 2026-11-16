@@ -244,7 +244,8 @@ const entryTextSchema = z
   .string()
   .describe(
     'Entry text. It is not Markdown: the feed supports only this markup — **bold**, __italic__ (double underscores; single * or _ stay as typed), ' +
-      '~~strikethrough~~, ||spoiler||, `inline code`, a code block between lines of ```, quote lines starting with "> ", and links [text](https://url). ' +
+      '~~strikethrough~~, ||spoiler||, `inline code`, a code block between lines of ```, quote lines starting with "> ", links [text](https://url), ' +
+      'and links to other feed entries [short label](entry:ENTRY_ID), which open that entry. ' +
       'There are no headings, tables, images, or nested lists: write them as plain lines. Line breaks are kept as typed.',
   )
 

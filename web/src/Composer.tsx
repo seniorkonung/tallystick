@@ -9,6 +9,7 @@ import { TagPicker } from './TagPicker'
 import { TypeEditor } from './TypeEditor'
 import { TypePicker } from './TypePicker'
 import { prepareFile } from './attachments'
+import { entryLinks, takePastedEntries } from './clipboard'
 import { useComposer } from './composerStore'
 import { useThread } from './threadStore'
 import { addEntry, db, isEmptyValue, updateEntry, valuesForType, type EntryType, type PreparedFile } from './db'
@@ -43,6 +44,13 @@ export function Composer() {
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
   // Выделение в поле ввода — показываем панель форматирования
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null)
+  // Скопированные записи вставились ссылками; пока плашка видна, ссылки можно заменить их текстом
+  const [pastedLinks, setPastedLinks] = useState<{ at: number; links: string; text: string } | null>(null)
+  useEffect(() => {
+    if (!pastedLinks) return
+    const timer = setTimeout(() => setPastedLinks(null), 6000)
+    return () => clearTimeout(timer)
+  }, [pastedLinks])
   const [preparing, setPreparing] = useState(false)
   const [viewing, setViewing] = useState<PreparedFile | null>(null)
 
@@ -257,6 +265,24 @@ export function Composer() {
             </div>
           )}
           {preparing && <p className="px-2 pt-1 text-xs text-stone-400">Готовлю вложения…</p>}
+          {pastedLinks && (
+            <div className="flex items-center gap-2 px-2 pt-1 text-xs text-stone-500">
+              <span className="flex-1">Вставлены ссылки на записи</span>
+              <button
+                type="button"
+                className="font-medium text-orange-700"
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  const { at, links, text } = pastedLinks
+                  const current = useComposer.getState().draft.text
+                  if (current.slice(at, at + links.length) === links) update({ text: current.slice(0, at) + text + current.slice(at + links.length) })
+                  setPastedLinks(null)
+                }}
+              >
+                Вставить текстом
+              </button>
+            </div>
+          )}
           {/* Выбранные теги своей строкой; тап открывает выбор, крестик убирает тег */}
           {selectedTags.length > 0 && (
             <div className="flex gap-1.5 overflow-x-auto px-1 pt-1 pb-1">
@@ -274,7 +300,19 @@ export function Composer() {
             rows={1}
             placeholder="Что произошло?"
             className="block max-h-[200px] w-full resize-none bg-transparent px-2 py-2 font-serif text-[15px] outline-none placeholder:text-stone-400"
-            onChange={(e) => update({ text: e.target.value })}
+            onChange={(e) => {
+              setPastedLinks(null)
+              // Скопированные в приложении записи вставляются ссылками на них, а не текстом
+              const pasted = takePastedEntries(draft.text, e.target.value)
+              if (!pasted) return update({ text: e.target.value })
+              update({ text: pasted.text })
+              void entryLinks(pasted.entryIds).then((links) => {
+                const current = useComposer.getState().draft.text
+                update({ text: current.slice(0, pasted.at) + links + current.slice(pasted.at) })
+                setPastedLinks({ at: pasted.at, links, text: pasted.pastedText })
+                requestAnimationFrame(() => textarea.current?.setSelectionRange(pasted.at + links.length, pasted.at + links.length))
+              })
+            }}
             // Вставленные картинки и файлы становятся вложениями, а не текстом
             onPaste={(e) => {
               const pasted = [...e.clipboardData.files]

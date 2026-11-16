@@ -6,6 +6,8 @@ export type Inline =
   | { kind: 'code'; text: string }
   | { kind: 'bold' | 'italic' | 'strike' | 'spoiler'; children: Inline[] }
   | { kind: 'link'; href: string; children: Inline[] }
+  // Ссылка на запись ленты: [подпись](entry:id)
+  | { kind: 'entry'; id: string; children: Inline[] }
 
 export type Block =
   | { kind: 'paragraph'; children: Inline[] }
@@ -36,7 +38,8 @@ function parseLink(s: string, i: number) {
     else if (s[j] === ')' && depth-- === 0) break
     else if (/\s/.test(s[j])) return null
   }
-  const href = j < s.length ? linkHref(s.slice(close + 2, j)) : null
+  const url = j < s.length ? s.slice(close + 2, j) : ''
+  const href = /^entry:[\w-]+$/.test(url) ? url : linkHref(url)
   return href ? { text, href, end: j + 1 } : null
 }
 
@@ -63,7 +66,8 @@ export function parseInline(s: string): Inline[] {
       const link = parseLink(s, i)
       if (link) {
         flush()
-        out.push({ kind: 'link', href: link.href, children: parseInline(link.text) })
+        const children = parseInline(link.text)
+        out.push(link.href.startsWith('entry:') ? { kind: 'entry', id: link.href.slice(6), children } : { kind: 'link', href: link.href, children })
         i = link.end
         continue
       }
@@ -150,6 +154,8 @@ function inlineText(nodes: Inline[], o: PlainOptions): string {
           return o.hideSpoilers ? '•••' : inlineText(n.children, o)
         case 'link':
           return o.skipLinks ? ' ' : inlineText(n.children, o)
+        case 'entry':
+          return inlineText(n.children, o)
         default:
           return inlineText(n.children, o)
       }

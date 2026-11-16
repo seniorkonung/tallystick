@@ -1,4 +1,7 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, type ReactNode } from 'react'
+import { db } from './db'
+import { focusEntry } from './focusEntry'
 import { LinkedText } from './LinkedText'
 import { parseBlocks, type Inline } from './format'
 
@@ -37,6 +40,12 @@ function renderInline(nodes: Inline[], inLink = false): ReactNode[] {
     switch (node.kind) {
       case 'text':
         return inLink ? node.text : <LinkedText key={i} text={node.text} />
+      case 'entry':
+        return (
+          <EntryLink key={i} id={node.id}>
+            {renderInline(node.children, true)}
+          </EntryLink>
+        )
       case 'link':
         return (
           <a
@@ -70,6 +79,31 @@ function renderInline(nodes: Inline[], inLink = false): ReactNode[] {
         return <Spoiler key={i}>{renderInline(node.children, inLink)}</Spoiler>
     }
   })
+}
+
+// Ссылка на запись прокручивает к ней ленту; удалённая запись остаётся подписью без перехода
+function EntryLink({ id, children }: { id: string; children: ReactNode }) {
+  // undefined — ещё загружается, null — запись удалили
+  const exists = useLiveQuery(async () => !!(await db.entries.get(id)), [id])
+  if (exists === false) {
+    return (
+      <span className="rounded bg-stone-100 px-1 text-stone-400">
+        {children} <span className="text-xs">(удалена)</span>
+      </span>
+    )
+  }
+  return (
+    <button
+      type="button"
+      className="inline rounded bg-[#F7EFE8] px-1 text-left text-orange-700"
+      onClick={(e) => {
+        e.stopPropagation()
+        focusEntry(id)
+      }}
+    >
+      {children}
+    </button>
+  )
 }
 
 // Скрытый текст открывается по тапу; до этого тап не уходит ни в ссылки внутри, ни в меню записи
