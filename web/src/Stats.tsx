@@ -226,7 +226,8 @@ export function Stats({ onClose }: { onClose: () => void }) {
             {tagRows.length === 0 && chosen.length > 0 && (
               <li className="py-4 text-center text-sm text-stone-400">У тегов выбранных категорий нет записей за период</li>
             )}
-            {untagged.length > 0 && (
+            {/* Записи без тегов не относятся ни к одной категории: строка видна только среди всех тегов */}
+            {chosen.length === 0 && untagged.length > 0 && (
               <li className="rounded-2xl bg-white px-2 py-2 shadow-sm">
                 <button type="button" className="w-full rounded-xl px-2 py-1 text-left hover:bg-stone-100" onClick={() => openFeed({ untagged: true })}>
                   <span className="flex items-center gap-2">
