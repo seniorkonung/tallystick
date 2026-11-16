@@ -1,6 +1,6 @@
 import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage } from 'ai'
 import { create } from 'zustand'
-import { activeToolsFor, approvalFor, localTime, readTools, writeTools } from './assistantTools'
+import { activeToolsFor, approvalFor, describeEntries, localTime, readTools, writeTools } from './assistantTools'
 import { fileForModel } from './modelFiles'
 import { db, type Chat, type ChatFile, type ChatMessage, type Permission, type PreparedFile, type Reasoning } from './db'
 import { languageModel } from './llm'
@@ -60,6 +60,8 @@ Use the tools to look at the user's data instead of guessing. Fetch types or tag
 
 Some changes need the user's approval in the app; when a tool execution is not approved, do not retry it. If you have no tool to change data, the chat is read-only: tell the user to switch the chat's permission mode. Entries you create are marked as coming from this chat.
 
+The user can attach feed entries to a message; they follow the message text as JSON, in their current state.
+
 Each user message starts with the local time it was sent, in brackets. Use the latest one as the current time. Time zone: ${zone}; entry times are in this zone.
 
 Reply in the user's language, concisely, using Markdown.`
@@ -95,11 +97,12 @@ export async function sendMessage(
   model: string,
   permission: Permission,
   reasoning: Reasoning,
+  entryIds: string[],
 ) {
   localStorage.setItem(lastModelKey, JSON.stringify({ providerId, model }))
   let id = chatId
   if (id === 'new') {
-    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || 'Чат').slice(0, 60), providerId, model, permission, reasoning, contextTokens: null }
+    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || (entryIds.length ? 'Записи' : 'Чат')).slice(0, 60), providerId, model, permission, reasoning, contextTokens: null }
     await db.chats.add(chat)
     id = chat.id
   } else {
@@ -110,7 +113,7 @@ export async function sendMessage(
   const chatFiles: ChatFile[] = files.map((f, i) => ({ ...f, id: crypto.randomUUID(), chatId: id, messageId, createdAt: now + i }))
   await db.transaction('rw', db.chatMessages, db.chatFiles, db.chats, async () => {
     await db.chatFiles.bulkAdd(chatFiles)
-    await db.chatMessages.add({ id: messageId, chatId: id, createdAt: now, message: { role: 'user', content: text }, fileIds: chatFiles.map((f) => f.id) })
+    await db.chatMessages.add({ id: messageId, chatId: id, createdAt: now, message: { role: 'user', content: text }, fileIds: chatFiles.map((f) => f.id), entryIds })
     await db.chats.update(id, { updatedAt: now })
   })
   void run(id)
@@ -127,6 +130,7 @@ export async function resendFrom(
   model: string,
   permission: Permission,
   reasoning: Reasoning,
+  entryIds: string[],
 ) {
   await db.transaction('rw', db.chatMessages, db.chatFiles, db.chats, async () => {
     const from = await db.chatMessages.get(messageId)
@@ -137,7 +141,7 @@ export async function resendFrom(
     // Занятый контекст станет известен со следующим ответом
     await db.chats.update(chatId, { contextTokens: null })
   })
-  return sendMessage(chatId, text, files, providerId, model, permission, reasoning)
+  return sendMessage(chatId, text, files, providerId, model, permission, reasoning, entryIds)
 }
 
 export function stop(chatId: string) {
@@ -235,6 +239,12 @@ async function toModelMessage(m: ChatMessage, files: Map<string, ChatFile>): Pro
   const weekday = new Date(m.createdAt).toLocaleDateString('en-GB', { weekday: 'long' })
   const text = `[${localTime(m.createdAt)}, ${weekday}]\n${typeof m.message.content === 'string' ? m.message.content : ''}`
   const parts = await Promise.all((m.fileIds ?? []).flatMap((id) => files.get(id) ?? []).map(fileForModel))
+  if (m.entryIds?.length) {
+    const found = await db.entries.bulkGet(m.entryIds)
+    const described = await describeEntries(found.flatMap((e) => e ?? []))
+    const entries = m.entryIds.map((id) => described.find((e) => e.id === id) ?? { id, deleted: true })
+    parts.unshift({ type: 'text', text: `Attached entries:\n${JSON.stringify(entries)}` })
+  }
   return { role: 'user', content: [{ type: 'text', text }, ...parts] }
 }
 

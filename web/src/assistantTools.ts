@@ -39,6 +39,29 @@ function describeTag(p: Tag, categoryName: string | null) {
   }
 }
 
+// Записи в том виде, в каком их видит ассистент: так их отдаёт search_entries и так они прикрепляются к сообщениям
+export async function describeEntries(entries: Entry[]) {
+  const [types, tags, attachments] = await Promise.all([
+    db.types.toArray(),
+    db.tags.toArray(),
+    db.attachments.where('entryId').anyOf(entries.map((e) => e.id)).toArray(),
+  ])
+  return entries.map((e) => {
+    const type = types.find((t) => t.id === e.typeId)
+    return {
+      id: e.id,
+      createdAt: localTime(e.createdAt),
+      type: type?.name ?? null,
+      text: e.text,
+      fields: fieldValues(e, type),
+      tags: e.tagIds.flatMap((id) => tags.find((p) => p.id === id)?.name ?? []),
+      actual: e.actual,
+      replyTo: e.replyTo,
+      attachments: attachments.filter((a) => a.entryId === e.id).map((a) => ({ id: a.id, name: a.name, mime: a.mime })),
+    }
+  })
+}
+
 export const readTools = {
   list_types: tool({
     description: 'List all entry types with their fields. Field values of entries are keyed by field name.',
@@ -85,12 +108,7 @@ export const readTools = {
       offset: z.number().int().min(0).optional(),
     }),
     execute: async (input) => {
-      const [entries, types, tags, attachments] = await Promise.all([
-        db.entries.toArray(),
-        db.types.toArray(),
-        db.tags.toArray(),
-        db.attachments.toArray(),
-      ])
+      const [entries, types] = await Promise.all([db.entries.toArray(), db.types.toArray()])
       const typesById = new Map(types.map((t) => [t.id, t]))
       const filters: Filters = {
         ...emptyFilters,
@@ -107,23 +125,7 @@ export const readTools = {
         .sort((a, b) => b.createdAt - a.createdAt)
       const offset = input.offset ?? 0
       const page = found.slice(offset, offset + (input.limit ?? 50))
-      return {
-        total: found.length,
-        entries: page.map((e) => {
-          const type = typesById.get(e.typeId)
-          return {
-            id: e.id,
-            createdAt: localTime(e.createdAt),
-            type: type?.name ?? null,
-            text: e.text,
-            fields: fieldValues(e, type),
-            tags: e.tagIds.flatMap((id) => tags.find((p) => p.id === id)?.name ?? []),
-            actual: e.actual,
-            replyTo: e.replyTo,
-            attachments: attachments.filter((a) => a.entryId === e.id).map((a) => ({ id: a.id, name: a.name, mime: a.mime })),
-          }
-        }),
-      }
+      return { total: found.length, entries: await describeEntries(page) }
     },
   }),
 

@@ -10,7 +10,8 @@ import { approvalLabels, toolLabels } from './assistantTools'
 import { ChatSettingsSheet } from './ChatSettingsSheet'
 import { ensureModelInfo, modelInfo, useModelCatalog } from './modelCatalog'
 import { closeChat, useChatView } from './chatView'
-import { copyText } from './clipboard'
+import { copyText, takePastedEntries } from './clipboard'
+import { focusEntry } from './focusEntry'
 import { useComposer } from './composerStore'
 import { db, type ChatFile, type ChatMessage, type Permission, type PreparedFile, type Reasoning } from './db'
 import { plainText } from './format'
@@ -41,6 +42,8 @@ function ChatView({ chatId }: { chatId: string }) {
   const [newReasoning, setNewReasoning] = useState(lastReasoning)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const [files, setFiles] = useState<{ key: string; file: PreparedFile }[]>([])
+  // Записи ленты, прикреплённые к сообщению вставкой скопированных записей
+  const [entryIds, setEntryIds] = useState<string[]>([])
   const [preparing, setPreparing] = useState(false)
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
   const [viewing, setViewing] = useState<PreparedFile | null>(null)
@@ -77,7 +80,7 @@ function ChatView({ chatId }: { chatId: string }) {
   const lastRole = messages.at(-1)?.message.role
   const unanswered = !running && approvals.length === 0 && (lastRole === 'user' || lastRole === 'tool')
   // Правка начинает переписку заново, поэтому неотвеченные запросы разрешения ей не мешают
-  const canSend = !running && !preparing && (approvals.length === 0 || !!editingId) && !!selected && (text.trim() !== '' || files.length > 0)
+  const canSend = !running && !preparing && (approvals.length === 0 || !!editingId) && !!selected && (text.trim() !== '' || files.length > 0 || entryIds.length > 0)
   const filesByMessage = new Map<string, ChatFile[]>()
   for (const f of chatFiles) filesByMessage.set(f.messageId, [...(filesByMessage.get(f.messageId) ?? []), f])
 
@@ -108,6 +111,7 @@ function ChatView({ chatId }: { chatId: string }) {
     setEditingId(m.id)
     setText(textOf(m.message))
     setFiles((filesByMessage.get(m.id) ?? []).map((f) => ({ key: f.id, file: f })))
+    setEntryIds(m.entryIds ?? [])
     textarea.current?.focus()
   }
 
@@ -115,6 +119,7 @@ function ChatView({ chatId }: { chatId: string }) {
     setEditingId(null)
     setText('')
     setFiles([])
+    setEntryIds([])
   }
 
   // Итоговый ответ ассистента — его последнее сообщение перед следующим сообщением пользователя;
@@ -132,12 +137,14 @@ function ChatView({ chatId }: { chatId: string }) {
     const message = text.trim()
     const attached = files.map((f) => f.file)
     const fromId = editingId
+    const entries = entryIds
     setText('')
     setFiles([])
+    setEntryIds([])
     setEditingId(null)
     const id = fromId
-      ? await resendFrom(chatId, fromId, message, attached, selected.provider.id, selected.model, permission, reasoning)
-      : await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission, reasoning)
+      ? await resendFrom(chatId, fromId, message, attached, selected.provider.id, selected.model, permission, reasoning, entries)
+      : await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission, reasoning, entries)
     // Новый чат получил id: экран остаётся тем же шагом истории
     if (isNew) useChatView.setState({ chatId: id })
   }
@@ -164,6 +171,7 @@ function ChatView({ chatId }: { chatId: string }) {
               key={m.id}
               message={m.message}
               files={filesByMessage.get(m.id) ?? []}
+              entryIds={m.entryIds ?? []}
               onFile={setViewing}
               actions={
                 m.message.role === 'user' ? (
@@ -243,6 +251,13 @@ function ChatView({ chatId }: { chatId: string }) {
               </button>
             </div>
           )}
+          {entryIds.length > 0 && (
+            <div className="flex flex-col gap-1 px-1 pt-1 pb-2">
+              {entryIds.map((id) => (
+                <EntryChip key={id} entryId={id} onRemove={() => setEntryIds(entryIds.filter((x) => x !== id))} />
+              ))}
+            </div>
+          )}
           {files.length > 0 && (
             <div className="flex gap-2 overflow-x-auto px-1 pt-2 pb-1">
               {files.map((f) => (
@@ -272,7 +287,13 @@ function ChatView({ chatId }: { chatId: string }) {
               rows={1}
               placeholder="Спросите ассистента"
               className="block max-h-[200px] min-w-0 flex-1 resize-none bg-transparent px-2 py-2 text-[15px] outline-none placeholder:text-stone-400"
-              onChange={(e) => setText(e.target.value)}
+              // Скопированные в приложении записи прикрепляются к сообщению, а не вставляются текстом
+              onChange={(e) => {
+                const pasted = takePastedEntries(text, e.target.value)
+                if (!pasted) return setText(e.target.value)
+                setText(pasted.text)
+                setEntryIds((current) => [...current, ...pasted.entryIds.filter((id) => !current.includes(id))])
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault()
@@ -369,6 +390,32 @@ function saveToFeed(chatId: string, text: string) {
   closeChat()
 }
 
+// Прикреплённая запись: в сообщении открывает её в ленте, в поле ввода её можно убрать
+function EntryChip({ entryId, onRemove }: { entryId: string; onRemove?: () => void }) {
+  // undefined — ещё загружается, null — запись удалили
+  const entry = useLiveQuery(async () => (await db.entries.get(entryId)) ?? null, [entryId])
+  const label = entry === null ? 'Запись удалена' : entry ? plainText(entry.text, { hideSpoilers: true }) || 'Запись без текста' : ''
+
+  // Лента лежит под чатом: сначала закрываем чат, потом ищем запись
+  function open() {
+    window.addEventListener('popstate', () => focusEntry(entryId), { once: true })
+    closeChat()
+  }
+
+  return (
+    <div className="flex max-w-full items-center gap-2 rounded-xl border-l-[3px] border-orange-500 bg-[#F7EFE8] px-2.5 py-1.5 text-xs text-stone-600">
+      <button type="button" disabled={!entry || !!onRemove} className="min-w-0 flex-1 truncate text-left" onClick={open}>
+        {label}
+      </button>
+      {onRemove && (
+        <button type="button" aria-label="Открепить запись" className="shrink-0 text-stone-400" onClick={onRemove}>
+          ✕
+        </button>
+      )}
+    </div>
+  )
+}
+
 const tokensFormat = new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 })
 
 // Кольцо заполняется по мере роста переписки; подробности — во всплывающем окошке над ним.
@@ -437,13 +484,16 @@ function CopyButton({ text }: { text: string }) {
 }
 
 // actions — значки под сообщением пользователя или под итоговым ответом ассистента
-type MessageProps = { message: ModelMessage; files: ChatFile[]; onFile: (file: ChatFile) => void; actions: ReactNode }
+type MessageProps = { message: ModelMessage; files: ChatFile[]; entryIds: string[]; onFile: (file: ChatFile) => void; actions: ReactNode }
 
-function MessageView({ message, files, onFile, actions }: MessageProps) {
+function MessageView({ message, files, entryIds, onFile, actions }: MessageProps) {
   switch (message.role) {
     case 'user':
       return (
         <div className="flex max-w-[85%] flex-col items-end gap-1.5 self-end">
+          {entryIds.map((id) => (
+            <EntryChip key={id} entryId={id} />
+          ))}
           {files.length > 0 && (
             <div className="flex flex-wrap justify-end gap-2">
               {files.map((f) => (
