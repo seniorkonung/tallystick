@@ -127,6 +127,15 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
               className="mb-2 w-full rounded-xl bg-stone-100 px-3 py-2 text-sm outline-none"
             />
             <div className="flex flex-wrap gap-2">
+              {!q && (
+                <button
+                  type="button"
+                  className={`rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600 ${draft.untagged ? 'ring-2 ring-stone-900 ring-offset-1' : 'opacity-70'}`}
+                  onClick={() => setDraft({ ...draft, untagged: !draft.untagged })}
+                >
+                  Без тегов
+                </button>
+              )}
               {shownTags.map((p) => {
                 const active = draft.tagIds.includes(p.id)
                 return (
@@ -140,7 +149,7 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
                   </button>
                 )
               })}
-              {shownTags.length === 0 && <p className="text-sm text-stone-400">Тегов нет</p>}
+              {shownTags.length === 0 && q && <p className="text-sm text-stone-400">Тегов нет</p>}
             </div>
 
             <h3 className="mt-5 mb-2 text-xs text-stone-500">Поля</h3>

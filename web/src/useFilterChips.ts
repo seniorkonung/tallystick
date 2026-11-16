@@ -35,6 +35,9 @@ export function useFilterChips({ withText }: { withText: boolean }) {
   for (const id of filters.tagIds) {
     chips.push({ key: `p${id}`, label: tags?.find((p) => p.id === id)?.name ?? 'Тег', remove: { tagIds: filters.tagIds.filter((x) => x !== id) } })
   }
+  if (filters.untagged) {
+    chips.push({ key: 'untagged', label: 'Без тегов', remove: { untagged: false } })
+  }
   if (filters.conditions.length > 1 && filters.conditionMode === 'any') {
     chips.push({ key: 'mode', label: 'Любое из условий', remove: { conditionMode: 'all' } })
   }

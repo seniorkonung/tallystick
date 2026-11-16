@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { create } from 'zustand'
-import { db, type Entry, type EntryType, type Tag } from './db'
+import { db, type Entry, type EntryType } from './db'
 import { emptyFilters, useFilters, type Filters } from './filterStore'
 import { pluralRu } from './plural'
 import { TagChip } from './TagChip'
@@ -92,6 +92,7 @@ export function Stats({ onClose }: { onClose: () => void }) {
       return tagged ? [{ tag, count: tagged.length, types: countTypes(tagged, typesById) }] : []
     })
     .sort((a, b) => b.count - a.count || a.tag.name.localeCompare(b.tag.name))
+  const untagged = entries.filter((e) => e.tagIds.length === 0)
   const typeRows = countTypes(entries, typesById)
 
   // Остальные фильтры ленты сбрасываются: лента показывает ровно то, что посчитано
@@ -109,12 +110,13 @@ export function Stats({ onClose }: { onClose: () => void }) {
     </div>
   )
 
-  const typeLine = (type: EntryType, count: number, tag: Tag | null) => (
+  // Типы внутри тега или записей без тегов
+  const typeLine = (type: EntryType, count: number, tags: Partial<Filters>) => (
     <button
       key={type.id}
       type="button"
       className="flex w-full items-baseline gap-3 rounded-xl px-2 py-1.5 text-left text-sm hover:bg-stone-100"
-      onClick={() => openFeed({ typeIds: [type.id], tagIds: tag ? [tag.id] : [] })}
+      onClick={() => openFeed({ typeIds: [type.id], ...tags })}
     >
       <span className="min-w-0 flex-1 truncate text-stone-700">{type.name}</span>
       <span className="shrink-0 text-stone-500 tabular-nums">{count}</span>
@@ -188,10 +190,22 @@ export function Stats({ onClose }: { onClose: () => void }) {
                   </span>
                   {bar(count)}
                 </button>
-                <div className="mt-1">{types.map(({ type, count }) => typeLine(type, count, tag))}</div>
+                <div className="mt-1">{types.map(({ type, count }) => typeLine(type, count, { tagIds: [tag.id] }))}</div>
               </li>
             ))}
-            {tagRows.length === 0 && <li className="py-6 text-center text-sm text-stone-400">У записей за период нет тегов</li>}
+            {untagged.length > 0 && (
+              <li className="rounded-2xl bg-white px-2 py-2 shadow-sm">
+                <button type="button" className="w-full rounded-xl px-2 py-1 text-left hover:bg-stone-100" onClick={() => openFeed({ untagged: true })}>
+                  <span className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-stone-600">Без тегов</span>
+                    <span className="shrink-0 font-medium tabular-nums">{untagged.length}</span>
+                    <span className="w-10 shrink-0 text-right text-sm text-stone-500 tabular-nums">{percent(untagged.length, total)}</span>
+                  </span>
+                  {bar(untagged.length)}
+                </button>
+                <div className="mt-1">{countTypes(untagged, typesById).map(({ type, count }) => typeLine(type, count, { untagged: true }))}</div>
+              </li>
+            )}
           </ul>
         )}
 
