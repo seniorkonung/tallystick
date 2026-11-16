@@ -1,3 +1,4 @@
+import { openChatWithEntries } from './chatView'
 import { copyEntryText } from './clipboard'
 import { useComposer } from './composerStore'
 import { db, deleteEntry, setActual, type Entry } from './db'
@@ -77,6 +78,16 @@ export function EntryMenu({ entry, onClose }: { entry: Entry; onClose: () => voi
           }}
         >
           {entry.actual ? 'Больше не актуально' : 'Снова актуально'}
+        </button>
+        <button
+          type="button"
+          className="mt-2 w-full rounded-2xl bg-stone-100 px-4 py-3 text-left font-medium text-stone-900"
+          onClick={() => {
+            onClose()
+            void openChatWithEntries([entry.id])
+          }}
+        >
+          В новый чат
         </button>
         <button
           type="button"

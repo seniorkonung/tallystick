@@ -44,8 +44,8 @@ function ChatView({ chatId }: { chatId: string }) {
   const [newReasoning, setNewReasoning] = useState(lastReasoning)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const [files, setFiles] = useState<{ key: string; file: PreparedFile }[]>([])
-  // Записи ленты, прикреплённые к сообщению вставкой скопированных записей
-  const [entryIds, setEntryIds] = useState<string[]>([])
+  // Записи ленты, прикреплённые к сообщению вставкой скопированных записей или при открытии чата из ленты
+  const [entryIds, setEntryIds] = useState<string[]>(() => useChatView.getState().entryIds)
   const [preparing, setPreparing] = useState(false)
   const [attachMenuOpen, setAttachMenuOpen] = useState(false)
   const [viewing, setViewing] = useState<PreparedFile | null>(null)
@@ -375,6 +375,8 @@ function ChatView({ chatId }: { chatId: string }) {
             </button>
             <textarea
               ref={textarea}
+              // Чат открыли из ленты с записями — сразу пишем запрос о них
+              autoFocus={isNew && entryIds.length > 0}
               value={text}
               rows={1}
               placeholder="Спросите ассистента"

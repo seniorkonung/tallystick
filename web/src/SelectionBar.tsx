@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { TagEditor } from './TagEditor'
 import { TagPicker } from './TagPicker'
+import { openChatWithEntries } from './chatView'
 import { copyEntriesText } from './clipboard'
 import { useComposer } from './composerStore'
 import { db, deleteEntries, setEntriesActual, setEntriesTag } from './db'
@@ -55,10 +56,21 @@ export function SelectionBar() {
             <button type="button" aria-label="Снять выделение" className="flex size-9 items-center justify-center rounded-full text-stone-500 hover:bg-stone-100" onClick={clearSelection}>
               ✕
             </button>
-            <p className="text-sm font-medium">
+            <p className="flex-1 text-sm font-medium">
               {/* Счётчик по выделению, а не по загруженным записям: обновляется сразу после тапа */}
               Выбрано {ids.length} {pluralRu(ids.length, ['запись', 'записи', 'записей'])}
             </p>
+            <button
+              type="button"
+              className="rounded-2xl px-3 py-2 text-sm font-medium text-orange-700 disabled:text-stone-300"
+              disabled={!entries.length}
+              onClick={() => {
+                clearSelection()
+                void openChatWithEntries(selectedIds)
+              }}
+            >
+              В новый чат
+            </button>
           </div>
           <div className="flex gap-2">
             <button type="button" className={actionClass} disabled={!entries.length} onClick={() => setPickingTags(true)}>
