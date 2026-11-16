@@ -206,6 +206,15 @@ async function checkTags(ids: string[]) {
   if (missing.length) throw new Error(`No tags with ids ${missing.join(', ')}`)
 }
 
+// Текст записи — не Markdown, а маркеры как в Телеграме: модели по привычке пишут заголовки, списки и *курсив*
+const entryTextSchema = z
+  .string()
+  .describe(
+    'Entry text. It is not Markdown: the feed supports only this markup — **bold**, __italic__ (double underscores; single * or _ stay as typed), ' +
+      '~~strikethrough~~, ||spoiler||, `inline code`, a code block between lines of ```, quote lines starting with "> ", and links [text](https://url). ' +
+      'There are no headings, tables, images, or nested lists: write them as plain lines. Line breaks are kept as typed.',
+  )
+
 const fieldsSchema = z
   .record(z.string(), z.union([z.number(), z.string(), z.array(z.string()), z.null()]))
   .describe('Field values by field name: numbers for number fields, option labels for choice fields, null clears a field')
@@ -217,7 +226,7 @@ export function writeTools(chatId: string) {
       description: 'Create a new entry in the feed at the current time. Adding an archived tag brings it back from the archive.',
       inputSchema: z.object({
         typeId: z.string(),
-        text: z.string(),
+        text: entryTextSchema,
         fields: fieldsSchema.optional(),
         tagIds: z.array(z.string()).optional(),
         replyTo: z.string().optional().describe('Id of the entry this one replies to'),
@@ -237,7 +246,7 @@ export function writeTools(chatId: string) {
         'Changing the type drops values of fields the new type does not have. Creation time never changes.',
       inputSchema: z.object({
         id: z.string(),
-        text: z.string().optional(),
+        text: entryTextSchema.optional(),
         typeId: z.string().optional(),
         fields: fieldsSchema.optional(),
         tagIds: z.array(z.string()).optional().describe('Replaces the whole list of tags'),
