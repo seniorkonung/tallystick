@@ -5,7 +5,7 @@ import { AttachSheet } from './AttachSheet'
 import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { Markdown } from './Markdown'
 import { prepareFile } from './attachments'
-import { answerApproval, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
+import { answerApproval, deleteChat, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
 import { approvalLabels, toolLabels } from './assistantTools'
 import { ChatSettingsSheet } from './ChatSettingsSheet'
 import { InstructionEditor } from './InstructionEditor'
@@ -17,6 +17,7 @@ import { focusEntry } from './focusEntry'
 import { useComposer } from './composerStore'
 import { db, type ChatFile, type ChatMessage, type Permission, type PreparedFile, type Reasoning } from './db'
 import { plainText } from './format'
+import { pluralRu } from './plural'
 
 export function ChatScreen() {
   const chatId = useChatView((s) => s.chatId)
@@ -52,6 +53,7 @@ function ChatView({ chatId }: { chatId: string }) {
   // Сообщение пользователя, загруженное в поле ввода для правки
   const [editingId, setEditingId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const instructions = useLiveQuery(() => db.instructions.orderBy('createdAt').toArray())
   // Стартовая инструкция нового чата; с первым сообщением чат сохраняет её копию
   const [instructionId, setInstructionId] = useState<string | null>(null)
@@ -170,7 +172,7 @@ function ChatView({ chatId }: { chatId: string }) {
             <path d="m15 18-6-6 6-6" />
           </svg>
         </button>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate font-semibold">{chat?.title ?? 'Новый чат'}</h1>
           {chat?.instruction && (
             <button type="button" className="block max-w-full truncate text-xs text-stone-500" onClick={() => setInstructionShown(!instructionShown)}>
@@ -178,6 +180,51 @@ function ChatView({ chatId }: { chatId: string }) {
             </button>
           )}
         </div>
+        {chat && (
+          <div className="relative">
+            <button type="button" aria-label="Действия с чатом" className="flex size-9 items-center justify-center rounded-full hover:bg-stone-100" onClick={() => setMenuOpen(!menuOpen)}>
+              <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
+                <circle cx="12" cy="5" r="1.75" />
+                <circle cx="12" cy="12" r="1.75" />
+                <circle cx="12" cy="19" r="1.75" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute top-full right-0 z-10 mt-1 flex w-48 flex-col rounded-2xl border border-stone-200 bg-white py-1 shadow-lg">
+                  <button
+                    type="button"
+                    className="px-4 py-2.5 text-left hover:bg-stone-100"
+                    onClick={async () => {
+                      setMenuOpen(false)
+                      const title = window.prompt('Название чата', chat.title)?.trim()
+                      if (title) await db.chats.update(chat.id, { title })
+                    }}
+                  >
+                    Переименовать
+                  </button>
+                  <button
+                    type="button"
+                    className="px-4 py-2.5 text-left text-red-600 hover:bg-stone-100"
+                    onClick={async () => {
+                      setMenuOpen(false)
+                      const saved = await db.entries.filter((e) => e.chatId === chat.id).count()
+                      const note = saved
+                        ? `\n\n${saved} ${pluralRu(saved, ['запись', 'записи', 'записей'])} из этого чата ${pluralRu(saved, ['останется', 'останутся', 'останутся'])} в ленте, но ссылка на чат пропадёт: у записей будет пометка «из удалённого чата».`
+                        : ''
+                      if (!window.confirm(`Удалить чат «${chat.title}»? Переписка и её вложения удалятся безвозвратно.${note}`)) return
+                      closeChat()
+                      await deleteChat(chat.id)
+                    }}
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </header>
       {/* Текст, с которым чат начался, только для просмотра */}
       {chat?.instruction && instructionShown && (

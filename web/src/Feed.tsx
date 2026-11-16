@@ -47,6 +47,7 @@ export function Feed() {
   const marks = useLiveQuery(() => db.marks.toArray())
   // Записи вложений: сами файлы браузер читает с диска, только когда их показывают
   const attachments = useLiveQuery(() => db.attachments.orderBy('createdAt').toArray())
+  const chatIds = useLiveQuery(async () => new Set(await db.chats.toCollection().primaryKeys()))
   const [viewing, setViewing] = useState<Attachment | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   // Ушли вверх дальше чем на экран — показываем кнопку «вниз»
@@ -79,7 +80,7 @@ export function Feed() {
     clearSelection()
   }, [filters, threadId])
 
-  if (!entries || !types || !tags || !marks || !attachments) return <div className="flex-1" />
+  if (!entries || !types || !tags || !marks || !attachments || !chatIds) return <div className="flex-1" />
 
   const typesById = new Map(types.map((t) => [t.id, t]))
   const tagsById = new Map(tags.map((p) => [p.id, p]))
@@ -118,6 +119,7 @@ export function Feed() {
       tags={entry.tagIds.flatMap((id) => tagsById.get(id) ?? [])}
       attachments={attachmentsByEntry.get(entry.id) ?? []}
       onAttachment={setViewing}
+      chatDeleted={!!entry.chatId && !chatIds.has(entry.chatId)}
       // На экране ответов цитата исходной записи не нужна — она наверху
       quote={entry.replyTo && entry.replyTo !== root?.id ? (entriesById.get(entry.replyTo) ?? 'deleted') : undefined}
       replyCount={entry.id === root?.id ? 0 : (replyCounts.get(entry.id) ?? 0)}
@@ -230,6 +232,8 @@ type EntryCardProps = {
   tags: Tag[]
   attachments: Attachment[]
   onAttachment: (attachment: Attachment) => void
+  // Запись из чата, который потом удалили
+  chatDeleted: boolean
   // Исходная запись, если это ответ; 'deleted' — исходную удалили
   quote: Entry | 'deleted' | undefined
   replyCount: number
@@ -245,7 +249,7 @@ type EntryCardProps = {
 }
 
 function EntryCard(props: EntryCardProps) {
-  const { entry, type, tags, attachments, onAttachment, quote, replyCount, highlighted, selecting, selected, onSelect, onOpen, onQuote, onReplies } = props
+  const { entry, type, tags, attachments, onAttachment, chatDeleted, quote, replyCount, highlighted, selecting, selected, onSelect, onOpen, onQuote, onReplies } = props
   const fields = type?.fields.filter((f) => !isEmptyValue(entry.values[f.id])) ?? []
   const swipe = useSwipeSelect(onSelect)
   // Был ли выделен текст, когда палец или мышь коснулись записи
@@ -300,7 +304,8 @@ function EntryCard(props: EntryCardProps) {
           <div className="mb-1 flex items-center justify-between text-xs text-stone-500">
             <span>
               {type?.name}
-              {entry.chatId && (
+              {chatDeleted && <span className="ml-2">из удалённого чата</span>}
+              {entry.chatId && !chatDeleted && (
                 <button
                   type="button"
                   className="ml-2 text-orange-700"

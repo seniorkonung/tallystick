@@ -89,6 +89,8 @@ function errorText(error: unknown): string {
 async function saveMessages(chatId: string, messages: ModelMessage[]) {
   const now = Date.now()
   await db.transaction('rw', db.chatMessages, db.chats, async () => {
+    // Остановленный ответ удалённого чата сохраняется уже после удаления — его некуда сохранять
+    if (!(await db.chats.get(chatId))) return
     // Порядок сообщений — порядок добавления
     await db.chatMessages.bulkAdd(messages.map((message, i) => ({ id: crypto.randomUUID(), chatId, createdAt: now + i, message })))
     await db.chats.update(chatId, { updatedAt: now + messages.length })
@@ -155,6 +157,16 @@ export async function resendFrom(
 
 export function stop(chatId: string) {
   controllers.get(chatId)?.abort()
+}
+
+// Переписка удаляется безвозвратно с вложениями; записи из чата остаются в ленте
+export async function deleteChat(chatId: string) {
+  stop(chatId)
+  await db.transaction('rw', db.chats, db.chatMessages, db.chatFiles, async () => {
+    await db.chatFiles.where('chatId').equals(chatId).delete()
+    await db.chatMessages.where('chatId').equals(chatId).delete()
+    await db.chats.delete(chatId)
+  })
 }
 
 export async function run(chatId: string) {
