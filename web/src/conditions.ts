@@ -1,4 +1,5 @@
 import { isEmptyValue, type Entry, type EntryType, type Field, type FieldKind } from './db'
+import { formatDay } from './fields'
 
 export type ConditionOp =
   | 'eq'
@@ -31,6 +32,9 @@ export type Condition = {
   // Подписи вариантов для списков: у разных типов id вариантов разные
   labels: string[]
   text: string
+  // Дни YYYY-MM-DD для полей-дат; date2 — верхняя граница для «между»
+  date: string
+  date2: string
 }
 
 export const opsByKind: Record<FieldKind, ConditionOp[]> = {
@@ -38,6 +42,7 @@ export const opsByKind: Record<FieldKind, ConditionOp[]> = {
   single: ['oneOf', 'except', 'filled', 'empty'],
   multi: ['anyOf', 'allOf', 'noneOf', 'filled', 'empty'],
   string: ['contains', 'notContains', 'filled', 'empty'],
+  date: ['eq', 'gte', 'lte', 'between', 'filled', 'empty'],
 }
 
 export const opLabels: Record<ConditionOp, string> = {
@@ -57,6 +62,13 @@ export const opLabels: Record<ConditionOp, string> = {
   notContains: 'не содержит',
   filled: 'заполнено',
   empty: 'пусто',
+}
+
+// У дат сравнения читаются как дни: «с 1 нояб.», а не «≥ 1 нояб.»
+const dateOpLabels: Partial<Record<ConditionOp, string>> = { eq: 'в день', gte: 'с', lte: 'по' }
+
+export function opLabel(kind: FieldKind, op: ConditionOp) {
+  return (kind === 'date' && dateOpLabels[op]) || opLabels[op]
 }
 
 const norm = (s: string) => s.trim().toLowerCase()
@@ -140,12 +152,33 @@ export function matchCondition(c: Condition, entry: Entry, type: EntryType | und
       const has = String(value).toLowerCase().includes(c.text.trim().toLowerCase())
       return c.op === 'contains' ? has : c.op === 'notContains' ? !has : false
     }
+    case 'date': {
+      // Дни в формате YYYY-MM-DD сравниваются как строки
+      const day = String(value)
+      switch (c.op) {
+        case 'eq':
+          return day === c.date
+        case 'gte':
+          return day >= c.date
+        case 'lte':
+          return day <= c.date
+        case 'between': {
+          const [from, to] = c.date <= c.date2 ? [c.date, c.date2] : [c.date2, c.date]
+          return day >= from && day <= to
+        }
+        default:
+          return false
+      }
+    }
   }
 }
 
 const numberFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 6 })
 
 export function formatCondition(c: Condition) {
+  if (c.kind === 'date' && c.op !== 'filled' && c.op !== 'empty') {
+    return c.op === 'between' ? `${c.name} ${formatDay(c.date)}–${formatDay(c.date2)}` : `${c.name} ${opLabel(c.kind, c.op)} ${formatDay(c.date)}`
+  }
   switch (c.op) {
     case 'filled':
     case 'empty':
@@ -171,6 +204,7 @@ export function formatCondition(c: Condition) {
 
 // Условие готово к применению: у оператора заполнены нужные значения
 export function isComplete(c: Condition) {
+  if (c.kind === 'date' && c.op !== 'filled' && c.op !== 'empty') return c.op === 'between' ? !!c.date && !!c.date2 : !!c.date
   switch (c.op) {
     case 'filled':
     case 'empty':

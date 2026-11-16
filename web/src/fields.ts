@@ -5,6 +5,7 @@ export const fieldKindLabels: Record<FieldKind, string> = {
   multi: 'Несколько из списка',
   number: 'Число',
   string: 'Строка',
+  date: 'Дата',
 }
 
 export function newField(kind: FieldKind): Field {
@@ -15,8 +16,18 @@ export function newField(kind: FieldKind): Field {
       return { id, name: '', kind, options: [] }
     case 'number':
     case 'string':
+    case 'date':
       return { id, name: '', kind }
   }
+}
+
+const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
+const dayWithYearFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
+
+// День YYYY-MM-DD для показа; год виден, только если он не текущий
+export function formatDay(day: string) {
+  const [y, m, d] = day.split('-').map(Number)
+  return (y === new Date().getFullYear() ? dayFormat : dayWithYearFormat).format(new Date(y, m - 1, d))
 }
 
 const numberFormat = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 6 })
@@ -33,5 +44,7 @@ export function formatValue(field: Field, value: FieldValue): string[] {
       return [numberFormat.format(Number(value))]
     case 'string':
       return [String(value)]
+    case 'date':
+      return [formatDay(String(value))]
   }
 }

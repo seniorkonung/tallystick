@@ -9,10 +9,11 @@ export type Field =
   | { id: string; name: string; kind: 'single' | 'multi'; options: FieldOption[] }
   | { id: string; name: string; kind: 'number' }
   | { id: string; name: string; kind: 'string' }
+  | { id: string; name: string; kind: 'date' }
 
 export type FieldKind = Field['kind']
 
-// single — id варианта, multi — id вариантов, number — число, string — строка
+// single — id варианта, multi — id вариантов, number — число, string — строка, date — день YYYY-MM-DD
 export type FieldValue = string | string[] | number
 
 export type FieldValues = Record<string, FieldValue>

@@ -172,6 +172,16 @@ function toValues(type: EntryType, fields: Record<string, unknown>, base: FieldV
       case 'string':
         values[field.id] = String(raw)
         break
+      case 'date': {
+        const day = String(raw)
+        const [y, m, d] = day.split('-').map(Number)
+        const date = new Date(y, m - 1, d)
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || date.getMonth() !== m - 1 || date.getDate() !== d) {
+          throw new Error(`Field "${field.name}" needs a date as YYYY-MM-DD`)
+        }
+        values[field.id] = day
+        break
+      }
       case 'single':
       case 'multi': {
         const labels = Array.isArray(raw) ? raw.map(String) : [String(raw)]
@@ -217,7 +227,7 @@ const entryTextSchema = z
 
 const fieldsSchema = z
   .record(z.string(), z.union([z.number(), z.string(), z.array(z.string()), z.null()]))
-  .describe('Field values by field name: numbers for number fields, option labels for choice fields, null clears a field')
+  .describe('Field values by field name: numbers for number fields, option labels for choice fields, YYYY-MM-DD for date fields, null clears a field')
 
 // Записи, созданные ассистентом, помнят свой чат
 export function writeTools(chatId: string) {

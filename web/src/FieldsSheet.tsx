@@ -93,7 +93,20 @@ function FieldEditor({ field, value, autoFocus, onChange, onClose }: EditorProps
           className="w-full rounded-2xl bg-stone-100 px-3 py-2 outline-none"
         />
       )
+    case 'date':
+      return <DateEditor value={value} onChange={onChange} />
   }
+}
+
+function DateEditor({ value, onChange }: Pick<EditorProps, 'value' | 'onChange'>) {
+  return (
+    <input
+      type="date"
+      value={typeof value === 'string' ? value : ''}
+      onChange={(e) => onChange(e.target.value || undefined)}
+      className="w-full rounded-2xl bg-stone-100 px-3 py-2 outline-none"
+    />
+  )
 }
 
 function NumberEditor({ value, autoFocus, onChange, onClose }: Omit<EditorProps, 'field'>) {

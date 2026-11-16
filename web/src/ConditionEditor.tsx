@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fieldCatalog, isComplete, matchCondition, opLabels, opsByKind, type Condition } from './conditions'
+import { fieldCatalog, isComplete, matchCondition, opLabel, opsByKind, type Condition } from './conditions'
 import type { Entry, EntryType } from './db'
 import { fieldKindLabels } from './fields'
 import { pluralRu } from './plural'
@@ -53,6 +53,8 @@ export function ConditionEditor({ types, entries, initial, onDone, onCancel }: P
                     num2: null,
                     labels: [],
                     text: '',
+                    date: '',
+                    date2: '',
                   })
                 }
               >
@@ -89,7 +91,7 @@ export function ConditionEditor({ types, entries, initial, onDone, onCancel }: P
       <div className="mb-4 flex flex-wrap gap-2">
         {opsByKind[condition.kind].map((op) => (
           <button key={op} type="button" className={chipClass(condition.op === op)} onClick={() => set({ op })}>
-            {opLabels[op]}
+            {opLabel(condition.kind, op)}
           </button>
         ))}
       </div>
@@ -137,6 +139,18 @@ export function ConditionEditor({ types, entries, initial, onDone, onCancel }: P
               </button>
             )
           })}
+        </div>
+      )}
+
+      {withValue && condition.kind === 'date' && (
+        <div className="flex items-center gap-2">
+          <input type="date" value={condition.date ?? ''} onChange={(e) => set({ date: e.target.value })} className="flex-1 rounded-xl bg-stone-100 px-3 py-2 text-sm" />
+          {condition.op === 'between' && (
+            <>
+              <span className="text-stone-400">—</span>
+              <input type="date" value={condition.date2 ?? ''} onChange={(e) => set({ date2: e.target.value })} className="flex-1 rounded-xl bg-stone-100 px-3 py-2 text-sm" />
+            </>
+          )}
         </div>
       )}
 
