@@ -11,9 +11,8 @@ import { ChatSettingsSheet } from './ChatSettingsSheet'
 import { InstructionEditor } from './InstructionEditor'
 import { InstructionPicker } from './InstructionPicker'
 import { ensureModelInfo, modelInfo, useModelCatalog } from './modelCatalog'
-import { closeChat, useChatView } from './chatView'
+import { closeChat, goToEntry, useChatView } from './chatView'
 import { copyText, takePastedEntries } from './clipboard'
-import { focusEntry } from './focusEntry'
 import { useComposer } from './composerStore'
 import { db, type ChatFile, type ChatMessage, type Permission, type PreparedFile, type Reasoning } from './db'
 import { plainText } from './format'
@@ -511,15 +510,9 @@ function EntryChip({ entryId, onRemove }: { entryId: string; onRemove?: () => vo
   const entry = useLiveQuery(async () => (await db.entries.get(entryId)) ?? null, [entryId])
   const label = entry === null ? 'Запись удалена' : entry ? plainText(entry.text, { hideSpoilers: true }) || 'Запись без текста' : ''
 
-  // Лента лежит под чатом: сначала закрываем чат, потом ищем запись
-  function open() {
-    window.addEventListener('popstate', () => focusEntry(entryId), { once: true })
-    closeChat()
-  }
-
   return (
     <div className="flex max-w-full items-center gap-2 rounded-xl border-l-[3px] border-orange-500 bg-[#F7EFE8] px-2.5 py-1.5 text-xs text-stone-600">
-      <button type="button" disabled={!entry || !!onRemove} className="min-w-0 flex-1 truncate text-left" onClick={open}>
+      <button type="button" disabled={!entry || !!onRemove} className="min-w-0 flex-1 truncate text-left" onClick={() => goToEntry(entryId)}>
         {label}
       </button>
       {onRemove && (

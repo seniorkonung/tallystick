@@ -1,5 +1,15 @@
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { goToEntry } from './chatView'
+import { db } from './db'
+
+// Ассистент ссылается на записи ленты ссылками вида entry:<id>
+const entryPrefix = 'entry:'
+
+async function openEntry(id: string) {
+  if (await db.entries.get(id)) goToEntry(id)
+  else window.alert('Запись удалена')
+}
 
 // Ответ ассистента: модели пишут в Markdown, с таблицами и списками
 export function Markdown({ text }: { text: string }) {
@@ -7,12 +17,19 @@ export function Markdown({ text }: { text: string }) {
     <div className="markdown text-[15px] leading-relaxed text-stone-900">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        // Остальные нестандартные схемы по-прежнему вырезаются
+        urlTransform={(url) => (url.startsWith(entryPrefix) ? url : defaultUrlTransform(url))}
         components={{
-          a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer">
-              {children}
-            </a>
-          ),
+          a: ({ href, children }) =>
+            href?.startsWith(entryPrefix) ? (
+              <button type="button" className="entry-link" onClick={() => void openEntry(href.slice(entryPrefix.length))}>
+                {children}
+              </button>
+            ) : (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {children}
+              </a>
+            ),
         }}
       >
         {text}
