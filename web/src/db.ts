@@ -100,6 +100,8 @@ export type Setting =
   // Порядок вкладок выбора тегов: 'all', 'archived' и id категорий
   | { id: 'tagTabOrder'; value: string[] }
   | { id: 'modelCatalog'; value: ModelCatalog }
+  // Общая инструкция ассистенту: действует во всех чатах
+  | { id: 'generalInstruction'; value: string }
 
 // Вложение, подготовленное к сохранению: превью уже построено
 export type PreparedFile = Omit<Attachment, 'id' | 'entryId' | 'createdAt'>
@@ -121,6 +123,14 @@ export type Provider = {
 // Что ассистент может делать с лентой без запроса пользователю
 export type Permission = 'read' | 'ask' | 'ask-delete' | 'full'
 
+// Стартовая инструкция ассистенту для типовой ситуации, например учёта калорий
+export type Instruction = {
+  id: string
+  name: string
+  text: string
+  createdAt: number
+}
+
 // Насколько глубоко модель размышляет перед ответом; provider-default — как решит провайдер
 export type Reasoning = 'provider-default' | 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
@@ -137,6 +147,8 @@ export type Chat = {
   reasoning: Reasoning
   // Сколько токенов занимает переписка по последнему ответу провайдера; null — ответа после правки ещё не было
   contextTokens: number | null
+  // Копия стартовой инструкции на момент первого сообщения: правка инструкции начатый чат не меняет
+  instruction: { name: string; text: string } | null
 }
 
 // Сообщение в формате AI SDK: текст, вызовы инструментов и их результаты
@@ -172,6 +184,7 @@ export const db = new Dexie('tallystick') as Dexie & {
   chatMessages: EntityTable<ChatMessage, 'id'>
   chatFiles: EntityTable<ChatFile, 'id'>
   settings: EntityTable<Setting, 'id'>
+  instructions: EntityTable<Instruction, 'id'>
 }
 
 db.version(1).stores({
@@ -314,6 +327,14 @@ db.version(18)
   .upgrade(async (tx) => {
     await tx.table('chats').toCollection().modify((chat) => {
       chat.contextTokens ??= null
+    })
+  })
+
+db.version(19)
+  .stores({ instructions: 'id, createdAt' })
+  .upgrade(async (tx) => {
+    await tx.table('chats').toCollection().modify((chat) => {
+      chat.instruction ??= null
     })
   })
 

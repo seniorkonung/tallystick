@@ -1,14 +1,22 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { db, type Provider, type ProviderKind } from './db'
+import { InstructionEditor, type InstructionTarget } from './InstructionEditor'
 import { defaultModels, providerKindLabels } from './llm'
 
-// Страница настроек: пока это провайдеры моделей для чатов
+// Страница настроек: провайдеры моделей и инструкции ассистенту
 export function Settings({ onClose }: { onClose: () => void }) {
   const providers = useLiveQuery(() => db.providers.orderBy('createdAt').toArray())
   // Провайдер в редакторе: null — новый, undefined — редактор закрыт
   const [editing, setEditing] = useState<Provider | null | undefined>(undefined)
-  if (!providers) return null
+  const instructions = useLiveQuery(() => db.instructions.orderBy('createdAt').toArray())
+  const general = useLiveQuery(async () => {
+    const saved = await db.settings.get('generalInstruction')
+    return saved?.id === 'generalInstruction' ? saved.value : ''
+  })
+  const [instructionTarget, setInstructionTarget] = useState<InstructionTarget | null>(null)
+  if (!providers || !instructions || general === undefined) return null
+  const card = 'flex w-full flex-col rounded-2xl border border-stone-200 bg-white px-4 py-3 text-left'
 
   return (
     <div className="fixed inset-0 z-20 mx-auto flex max-w-xl flex-col bg-stone-50">
@@ -40,7 +48,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
                 <li key={p.id}>
                   <button
                     type="button"
-                    className="flex w-full flex-col rounded-2xl border border-stone-200 bg-white px-4 py-3 text-left"
+                    className={card}
                     onClick={() => setEditing(p)}
                   >
                     <span className="font-medium">{p.name}</span>
@@ -58,9 +66,38 @@ export function Settings({ onClose }: { onClose: () => void }) {
             >
               Добавить провайдера
             </button>
+
+            <h2 className="mt-8 mb-1 text-xs text-stone-500">Инструкции ассистенту</h2>
+            <p className="mb-3 text-xs text-stone-400">
+              Общая действует во всех чатах. Стартовую выбирают в новом чате, и чат сохраняет её текст: правка инструкции начатые чаты не меняет.
+            </p>
+            <ul className="flex flex-col gap-2">
+              <li>
+                <button type="button" className={card} onClick={() => setInstructionTarget({ kind: 'general' })}>
+                  <span className="font-medium">Общая инструкция</span>
+                  <span className="truncate text-xs text-stone-500">{general || 'Не задана'}</span>
+                </button>
+              </li>
+              {instructions.map((i) => (
+                <li key={i.id}>
+                  <button type="button" className={card} onClick={() => setInstructionTarget({ kind: 'start', instruction: i })}>
+                    <span className="font-medium">{i.name}</span>
+                    <span className="truncate text-xs text-stone-500">{i.text}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              className="mt-3 w-full rounded-2xl border border-dashed border-stone-300 py-3 text-sm text-stone-600"
+              onClick={() => setInstructionTarget({ kind: 'start', instruction: null })}
+            >
+              Добавить стартовую инструкцию
+            </button>
           </>
         )}
       </div>
+      {instructionTarget && <InstructionEditor target={instructionTarget} onClose={() => setInstructionTarget(null)} />}
     </div>
   )
 }

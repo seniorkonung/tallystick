@@ -8,6 +8,8 @@ import { prepareFile } from './attachments'
 import { answerApproval, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, run, sendMessage, stop, useRuns, type RunItem } from './assistant'
 import { approvalLabels, toolLabels } from './assistantTools'
 import { ChatSettingsSheet } from './ChatSettingsSheet'
+import { InstructionEditor } from './InstructionEditor'
+import { InstructionPicker } from './InstructionPicker'
 import { ensureModelInfo, modelInfo, useModelCatalog } from './modelCatalog'
 import { closeChat, useChatView } from './chatView'
 import { copyText, takePastedEntries } from './clipboard'
@@ -50,6 +52,12 @@ function ChatView({ chatId }: { chatId: string }) {
   // Сообщение пользователя, загруженное в поле ввода для правки
   const [editingId, setEditingId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const instructions = useLiveQuery(() => db.instructions.orderBy('createdAt').toArray())
+  // Стартовая инструкция нового чата; с первым сообщением чат сохраняет её копию
+  const [instructionId, setInstructionId] = useState<string | null>(null)
+  const [creatingInstruction, setCreatingInstruction] = useState(false)
+  const [pickingInstruction, setPickingInstruction] = useState(false)
+  const [instructionShown, setInstructionShown] = useState(false)
   const catalog = useModelCatalog()
 
   // Модели провайдеров, о которых ещё ничего не известно
@@ -65,7 +73,7 @@ function ChatView({ chatId }: { chatId: string }) {
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`
   }, [text])
 
-  if (!messages || !providers || !chatFiles) return null
+  if (!messages || !providers || !chatFiles || !instructions) return null
 
   const options = providers.flatMap((p) => p.models.map((model) => ({ value: `${p.id}|${model}`, provider: p, model })))
   // Модель чата, иначе последняя выбранная, иначе первая доступная
@@ -132,6 +140,11 @@ function ChatView({ chatId }: { chatId: string }) {
     if (final) finals.set(m.id, final)
   })
 
+  function startInstruction() {
+    const chosen = instructions!.find((i) => i.id === instructionId)
+    return chosen ? { name: chosen.name, text: chosen.text } : null
+  }
+
   async function send() {
     if (!canSend) return
     const message = text.trim()
@@ -144,7 +157,7 @@ function ChatView({ chatId }: { chatId: string }) {
     setEditingId(null)
     const id = fromId
       ? await resendFrom(chatId, fromId, message, attached, selected.provider.id, selected.model, permission, reasoning, entries)
-      : await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission, reasoning, entries)
+      : await sendMessage(chatId, message, attached, selected.provider.id, selected.model, permission, reasoning, entries, startInstruction())
     // Новый чат получил id: экран остаётся тем же шагом истории
     if (isNew) useChatView.setState({ chatId: id })
   }
@@ -157,14 +170,43 @@ function ChatView({ chatId }: { chatId: string }) {
             <path d="m15 18-6-6 6-6" />
           </svg>
         </button>
-        <h1 className="min-w-0 truncate font-semibold">{chat?.title ?? 'Новый чат'}</h1>
+        <div className="min-w-0">
+          <h1 className="truncate font-semibold">{chat?.title ?? 'Новый чат'}</h1>
+          {chat?.instruction && (
+            <button type="button" className="block max-w-full truncate text-xs text-stone-500" onClick={() => setInstructionShown(!instructionShown)}>
+              {chat.instruction.name} {instructionShown ? '⌃' : '⌄'}
+            </button>
+          )}
+        </div>
       </header>
+      {/* Текст, с которым чат начался, только для просмотра */}
+      {chat?.instruction && instructionShown && (
+        <p className="max-h-[40dvh] overflow-y-auto border-b border-stone-200 bg-white px-4 py-3 text-sm whitespace-pre-wrap text-stone-600">
+          {chat.instruction.text}
+        </p>
+      )}
 
       {/* column-reverse держит прокрутку у последнего сообщения */}
       <div className="flex flex-1 flex-col-reverse overflow-y-auto overscroll-y-contain">
         <div className="flex flex-col gap-3 px-4 py-4">
           {messages.length === 0 && !running && (
-            <p className="py-10 text-center text-sm text-stone-400">Спросите о своих записях: ассистент видит всю ленту</p>
+            <div className="py-10 text-center">
+              <p className="text-sm text-stone-400">Спросите о своих записях: ассистент видит всю ленту</p>
+              {/* Стартовая инструкция выбирается до первого сообщения и потом не меняется */}
+              {isNew && (
+                <button
+                  type="button"
+                  className="mx-auto mt-4 flex max-w-full items-center gap-1 rounded-full bg-white px-4 py-2 text-sm shadow-sm"
+                  onClick={() => setPickingInstruction(true)}
+                >
+                  <span className="shrink-0 text-stone-500">Инструкция:</span>
+                  <span className="truncate font-medium text-stone-800">{instructions.find((i) => i.id === instructionId)?.name ?? 'Без инструкции'}</span>
+                  <svg viewBox="0 0 24 24" className="size-4 shrink-0 text-stone-500" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+              )}
+            </div>
           )}
           {messages.map((m) => (
             <MessageView
@@ -354,6 +396,25 @@ function ChatView({ chatId }: { chatId: string }) {
           </div>
         </div>
       </div>
+      {pickingInstruction && (
+        <InstructionPicker
+          instructions={instructions}
+          selectedId={instructionId}
+          onSelect={setInstructionId}
+          onCreate={() => {
+            setPickingInstruction(false)
+            setCreatingInstruction(true)
+          }}
+          onClose={() => setPickingInstruction(false)}
+        />
+      )}
+      {creatingInstruction && (
+        <InstructionEditor
+          target={{ kind: 'start', instruction: null }}
+          onSaved={(saved) => setInstructionId(saved.id)}
+          onClose={() => setCreatingInstruction(false)}
+        />
+      )}
       {settingsOpen && selected && (
         <ChatSettingsSheet
           providers={providers}

@@ -46,8 +46,9 @@ function setRun(chatId: string, patch: Partial<Run>) {
   useRuns.setState((s) => ({ [chatId]: { ...(s[chatId] ?? { items: [], running: false, error: null }), ...patch } }))
 }
 
-// Инструкции не меняются от запроса к запросу: Anthropic привязывает подписи размышлений модели к началу запроса
-function instructions() {
+// Инструкции не меняются от запроса к запросу: Anthropic привязывает подписи размышлений модели к началу запроса.
+// Меняется только общая инструкция, когда её правит пользователь
+function instructions(general: string, chat: Chat) {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
   return `You are the assistant inside Tallystick, the user's personal feed app. The feed holds everything the user records: thoughts, meals, workouts, project notes.
 
@@ -64,7 +65,13 @@ The user can attach feed entries to a message; they follow the message text as J
 
 Each user message starts with the local time it was sent, in brackets. Use the latest one as the current time. Time zone: ${zone}; entry times are in this zone.
 
-Reply in the user's language, concisely, using Markdown.`
+Reply in the user's language, concisely, using Markdown.${general ? `
+
+The user's general instruction for every chat:
+${general}` : ''}${chat.instruction ? `
+
+The user's instruction for this chat, "${chat.instruction.name}":
+${chat.instruction.text}` : ''}`
 }
 
 // Провайдеры сообщают о переполнении по-разному, общего кода ошибки нет — узнаём по тексту
@@ -98,11 +105,13 @@ export async function sendMessage(
   permission: Permission,
   reasoning: Reasoning,
   entryIds: string[],
+  // Стартовая инструкция нового чата; у начатого чата она уже закреплена
+  instruction: Chat['instruction'] = null,
 ) {
   localStorage.setItem(lastModelKey, JSON.stringify({ providerId, model }))
   let id = chatId
   if (id === 'new') {
-    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || (entryIds.length ? 'Записи' : 'Чат')).slice(0, 60), providerId, model, permission, reasoning, contextTokens: null }
+    const chat: Chat = { id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), title: (text || files[0]?.name || (entryIds.length ? 'Записи' : 'Чат')).slice(0, 60), providerId, model, permission, reasoning, contextTokens: null, instruction }
     await db.chats.add(chat)
     id = chat.id
   } else {
@@ -156,6 +165,8 @@ export async function run(chatId: string) {
   if (!chat || !provider || !chat.model) return setRun(chatId, { error: 'Провайдер чата не найден — выберите модель', running: false })
 
   const stored = await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')
+  const generalSetting = await db.settings.get('generalInstruction')
+  const general = generalSetting?.id === 'generalInstruction' ? generalSetting.value.trim() : ''
   const files = new Map((await db.chatFiles.where('chatId').equals(chatId).toArray()).map((f) => [f.id, f]))
   const history = withoutOldReasoning(await Promise.all(stored.map((m) => toModelMessage(m, files))))
   const controller = new AbortController()
@@ -169,7 +180,7 @@ export async function run(chatId: string) {
   try {
     const result = streamText({
       model: languageModel(provider, chat.model),
-      instructions: instructions(),
+      instructions: instructions(general, chat),
       messages: history,
       tools: { ...readTools, ...writeTools(chatId) },
       activeTools: activeToolsFor(chat.permission, provider.kind),
