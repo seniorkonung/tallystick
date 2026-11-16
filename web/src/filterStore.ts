@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { matchCondition, type Condition } from './conditions'
 import type { Entry, EntryType, Mark } from './db'
 import { plainText } from './format'
+import { lastStart, type Last } from './periods'
 
 export type Actuality = 'all' | 'actual' | 'inactual'
 
@@ -14,6 +15,8 @@ export type Filters = {
   // Границы периода включительно, в формате YYYY-MM-DD по местному времени
   from: string
   to: string
+  // «Последние N единиц» от текущего момента; пока задано, точные границы пусты
+  last: Last | null
   text: string
   // В ленте остаются только записи, которые сами не ответы; ответы открываются по их счётчикам
   hideReplies: boolean
@@ -31,6 +34,7 @@ export const emptyFilters: Filters = {
   untagged: false,
   from: '',
   to: '',
+  last: null,
   text: '',
   hideReplies: false,
   fromChats: false,
@@ -68,6 +72,7 @@ export function isFiltered(f: Filters) {
     f.untagged ||
     f.from !== '' ||
     f.to !== '' ||
+    f.last !== null ||
     f.text.trim() !== '' ||
     f.hideReplies ||
     f.fromChats ||
@@ -81,6 +86,8 @@ function dayStart(date: string) {
 }
 
 function inPeriod(f: Filters, time: number) {
+  // Будущего у записей и сообщений нет, поэтому верхней границы у «последних N» нет
+  if (f.last) return time >= lastStart(f.last)
   if (f.from && time < dayStart(f.from)) return false
   if (f.to && time >= dayStart(f.to) + 24 * 60 * 60 * 1000) return false
   return true

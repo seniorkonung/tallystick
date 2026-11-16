@@ -6,6 +6,8 @@ import { formatCondition, type Condition } from './conditions'
 import { db } from './db'
 import { emptyFilters, matchEntry, useFilters, type Actuality, type Filters } from './filterStore'
 import { pluralRu } from './plural'
+import { AmountUnit } from './AmountUnit'
+import { lastStart, momentText } from './periods'
 
 const actualityLabels: Record<Actuality, string> = { all: 'Все', actual: 'Актуальные', inactual: 'Неактуальные' }
 
@@ -92,6 +94,32 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
             </div>
 
             <h3 className="mt-5 mb-2 text-xs text-stone-500">Период</h3>
+            <div className="mb-2 flex gap-2">
+              <button type="button" className={chipClass(!draft.last)} onClick={() => setDraft({ ...draft, last: null })}>
+                Точные даты
+              </button>
+              <button
+                type="button"
+                className={chipClass(!!draft.last)}
+                onClick={() => draft.last || setDraft({ ...draft, from: '', to: '', last: { amount: 7, unit: 'day' } })}
+              >
+                Последние
+              </button>
+            </div>
+            {draft.last ? (
+              <>
+                <AmountUnit
+                  amount={draft.last.amount}
+                  unit={draft.last.unit}
+                  signed={false}
+                  min={1}
+                  onChange={(amount, unit) => setDraft({ ...draft, last: { amount, unit } })}
+                />
+                <p className="mt-1.5 text-xs text-stone-400">
+                  Сейчас — с {momentText(lastStart(draft.last), draft.last.unit === 'hour')}. Дни, недели, месяцы и годы считаются целыми, включая текущий.
+                </p>
+              </>
+            ) : (
             <div className="flex items-center gap-2">
               <input
                 type="date"
@@ -107,6 +135,7 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
                 className="flex-1 rounded-xl bg-stone-100 px-3 py-2 text-sm"
               />
             </div>
+            )}
 
             <h3 className="mt-5 mb-2 text-xs text-stone-500">Типы</h3>
             <div className="flex flex-wrap gap-2">

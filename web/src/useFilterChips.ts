@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { formatCondition } from './conditions'
 import { db } from './db'
 import { useFilters, type Filters } from './filterStore'
+import { lastText } from './periods'
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
 
@@ -31,6 +32,9 @@ export function useFilterChips({ withText }: { withText: boolean }) {
   if (filters.from || filters.to) {
     const label = filters.from && filters.to ? `${formatDate(filters.from)} — ${formatDate(filters.to)}` : filters.from ? `с ${formatDate(filters.from)}` : `по ${formatDate(filters.to)}`
     chips.push({ key: 'period', label, remove: { from: '', to: '' } })
+  }
+  if (filters.last) {
+    chips.push({ key: 'period', label: lastText(filters.last), remove: { last: null } })
   }
   for (const id of filters.typeIds) {
     chips.push({ key: `t${id}`, label: types?.find((t) => t.id === id)?.name ?? 'Тип', remove: { typeIds: filters.typeIds.filter((x) => x !== id) } })
