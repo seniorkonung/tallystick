@@ -1,4 +1,4 @@
-import { APICallError, RetryError, generateText, isStepCount, streamText, type ModelMessage } from 'ai'
+import { APICallError, RetryError, generateText, isLoopFinished, streamText, type ModelMessage } from 'ai'
 import { create } from 'zustand'
 import { activeToolsFor, approvalFor, describeEntries, localTime, readTools, writeTools } from './assistantTools'
 import { fileForModel } from './modelFiles'
@@ -219,7 +219,8 @@ export async function run(chatId: string) {
       toolApproval: approvalFor(chat.permission),
       // AI SDK переводит глубину размышлений в настройку провайдера; неподдерживаемую моделью — в ближайшую
       reasoning: chat.reasoning,
-      stopWhen: isStepCount(20),
+      // Шагов сколько угодно: задача может требовать анализа всей ленты, а лишнее пользователь останавливает сам
+      stopWhen: isLoopFinished(),
       abortSignal: controller.signal,
     })
     let failure: unknown = null
