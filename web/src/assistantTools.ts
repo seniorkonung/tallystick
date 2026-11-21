@@ -336,6 +336,29 @@ export function writeTools(chatId: string) {
       },
     }),
 
+    create_instruction: tool({
+      description: 'Save a new start instruction: rules for a typical situation that the user can choose when starting a chat. Returns its id.',
+      inputSchema: z.object({
+        name: z.string().min(1).describe('Short name the user picks the instruction by'),
+        text: z.string().min(1),
+      }),
+      execute: async ({ name, text }) => {
+        const id = crypto.randomUUID()
+        await db.instructions.add({ id, name: name.trim(), text: text.trim(), createdAt: Date.now() })
+        return { id }
+      },
+    }),
+
+    delete_instruction: tool({
+      description: 'Delete a saved start instruction permanently. Chats started with it keep their copy. The general instruction cannot be deleted.',
+      inputSchema: z.object({ id: z.string() }),
+      execute: async ({ id }) => {
+        if (!(await db.instructions.get(id))) throw new Error(`No start instruction with id ${id}`)
+        await db.instructions.delete(id)
+        return { ok: true }
+      },
+    }),
+
     delete_entry: tool({
       description: 'Delete an entry permanently with its attachments. Replies to it stay in the feed.',
       inputSchema: z.object({ id: z.string() }),
@@ -348,11 +371,11 @@ export function writeTools(chatId: string) {
   }
 }
 
-const writeToolNames = ['create_entry', 'update_entry', 'set_actuality', 'update_instruction', 'delete_entry'] as const
+const writeToolNames = ['create_entry', 'update_entry', 'set_actuality', 'create_instruction', 'update_instruction', 'delete_instruction', 'delete_entry'] as const
 
 // Какие изменения ассистент делает только после разрешения пользователя
 export function approvalFor(permission: Permission) {
-  const ask = permission === 'ask' ? writeToolNames : permission === 'ask-delete' ? (['delete_entry'] as const) : []
+  const ask = permission === 'ask' ? writeToolNames : permission === 'ask-delete' ? (['delete_entry', 'delete_instruction'] as const) : []
   return Object.fromEntries(ask.map((name) => [name, 'user-approval' as const]))
 }
 
@@ -375,7 +398,9 @@ export const toolLabels: Record<string, string> = {
   search_entries: 'Ищу записи',
   view_attachments: 'Смотрю вложения',
   list_instructions: 'Смотрю инструкции',
+  create_instruction: 'Создаю инструкцию',
   update_instruction: 'Правлю инструкцию',
+  delete_instruction: 'Удаляю инструкцию',
   create_entry: 'Создаю запись',
   update_entry: 'Правлю запись',
   set_actuality: 'Меняю актуальность',
@@ -387,6 +412,8 @@ export const approvalLabels: Record<string, string> = {
   create_entry: 'Создать запись',
   update_entry: 'Изменить запись',
   set_actuality: 'Изменить актуальность записи',
+  create_instruction: 'Создать стартовую инструкцию',
   update_instruction: 'Изменить инструкцию',
+  delete_instruction: 'Удалить стартовую инструкцию',
   delete_entry: 'Удалить запись безвозвратно',
 }

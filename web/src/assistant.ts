@@ -70,7 +70,7 @@ When your reply refers to a set of entries the user may want to browse, link the
 
 Each user message starts with the local time it was sent, in brackets. Use the latest one as the current time. Time zone: ${zone}; entry times are in this zone.
 
-Instructions: the general instruction applies to every chat; start instructions are saved rules for typical situations, one of which the user may choose when a chat starts. A chat keeps copies of both as they were at its start, so editing any saved instruction affects only new chats. If you edit an instruction this chat uses, follow the edited version yourself from then on. In this chat, also follow new rules the user gives in the conversation. Change instructions only when the user asks, and prefer append when adding a rule.
+Instructions: the general instruction applies to every chat; start instructions are saved rules for typical situations, one of which the user may choose when a chat starts. A chat keeps copies of both as they were at its start, so editing any saved instruction affects only new chats. If you edit an instruction this chat uses, follow the edited version yourself from then on. In this chat, also follow new rules the user gives in the conversation. Create, change, or delete instructions only when the user asks; prefer append when adding a rule to an existing one.
 
 Reply in the user's language, concisely, using Markdown.${general ? `
 

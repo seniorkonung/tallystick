@@ -288,8 +288,8 @@ function ChatView({ chatId }: { chatId: string }) {
           {approvals.map((a) => (
             <div key={a.approvalId} className="rounded-2xl border border-orange-200 bg-white px-3 py-2.5">
               <p className="text-sm font-medium">{approvalLabels[a.toolName] ?? a.toolName}</p>
-              {a.toolName === 'update_instruction' ? (
-                <InstructionApproval input={a.input as Record<string, unknown>} />
+              {['create_instruction', 'update_instruction', 'delete_instruction'].includes(a.toolName) ? (
+                <InstructionApproval toolName={a.toolName} input={a.input as Record<string, unknown>} />
               ) : (
                 <ApprovalDetails input={a.input as Record<string, unknown>} />
               )}
@@ -488,17 +488,25 @@ function ChatView({ chatId }: { chatId: string }) {
 }
 
 // Что именно ассистент хочет изменить: текст или исходная запись
-// Какую инструкцию и как ассистент хочет изменить; текст показывается целиком
-function InstructionApproval({ input }: { input: Record<string, unknown> }) {
-  const saved = useLiveQuery(() => (typeof input.instruction === 'string' && input.instruction !== 'general' ? db.instructions.get(input.instruction) : undefined), [input.instruction])
-  const target = input.instruction === 'general' ? 'Общая инструкция' : `Стартовая инструкция «${saved?.name ?? '…'}»`
+// Какую инструкцию ассистент хочет создать, изменить или удалить; текст показывается целиком
+function InstructionApproval({ toolName, input }: { toolName: string; input: Record<string, unknown> }) {
+  // Правка указывает инструкцию полем instruction, удаление — полем id
+  const id = toolName === 'delete_instruction' ? input.id : input.instruction
+  const saved = useLiveQuery(() => (typeof id === 'string' && id !== 'general' ? db.instructions.get(id) : undefined), [id])
+  const target = id === 'general' ? 'Общая инструкция' : `Стартовая инструкция «${saved?.name ?? '…'}»`
+  const [summary, text] =
+    toolName === 'create_instruction'
+      ? [`«${String(input.name ?? '')}»`, input.text]
+      : toolName === 'delete_instruction'
+        ? [`«${saved?.name ?? '…'}» · начатые с ней чаты сохранят её текст`, saved?.text]
+        : [
+            `${target} · ${input.mode === 'append' ? 'дополнить' : 'заменить текст'}${typeof input.name === 'string' && input.name.trim() ? ` · новое название «${input.name.trim()}»` : ''}`,
+            input.text,
+          ]
   return (
     <div className="mt-1 text-sm text-stone-600">
-      <p className="text-xs text-stone-500">
-        {target} · {input.mode === 'append' ? 'дополнить' : 'заменить текст'}
-        {typeof input.name === 'string' && input.name.trim() ? ` · новое название «${input.name.trim()}»` : ''}
-      </p>
-      {typeof input.text === 'string' && <p className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap">{input.text}</p>}
+      <p className="text-xs text-stone-500">{summary}</p>
+      {typeof text === 'string' && <p className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap">{text}</p>}
     </div>
   )
 }
