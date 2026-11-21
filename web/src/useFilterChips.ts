@@ -14,9 +14,11 @@ function formatDate(date: string) {
 
 export type FilterChip = { key: string; label: string; remove: Partial<Filters> }
 
-// Чипы активных фильтров; текст поиска не показывается, пока открыта строка поиска
-export function useFilterChips({ withText }: { withText: boolean }) {
-  const filters = useFilters((s) => s.filters)
+// Чипы активных фильтров; текст поиска не показывается, пока открыта строка поиска.
+// Вместо фильтров ленты можно передать свои, например черновик в шторке фильтров
+export function useFilterChips({ withText, filters: own }: { withText: boolean; filters?: Filters }) {
+  const applied = useFilters((s) => s.filters)
+  const filters = own ?? applied
   const types = useLiveQuery(() => db.types.toArray())
   const tags = useLiveQuery(() => db.tags.toArray())
   const mentioned = useLiveQuery(() => (filters.mentionsOf ? db.entries.get(filters.mentionsOf) : undefined), [filters.mentionsOf])

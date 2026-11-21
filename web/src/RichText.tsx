@@ -1,9 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
+import { goToEntry, useChatView } from './chatView'
 import { db } from './db'
+import { openFilterLink } from './filterLinks'
 import { focusEntry } from './focusEntry'
 import { LinkedText } from './LinkedText'
-import { parseBlocks, type Inline } from './format'
+import { parseBlocks, parseInline, type Inline } from './format'
 
 // Текст записи с оформлением; ссылки работают везде, кроме кода
 export function RichText({ text }: { text: string }) {
@@ -46,6 +48,20 @@ function renderInline(nodes: Inline[], inLink = false): ReactNode[] {
             {renderInline(node.children, true)}
           </EntryLink>
         )
+      case 'filter':
+        return (
+          <button
+            key={i}
+            type="button"
+            className="inline rounded bg-[#F7EFE8] px-1 text-left text-orange-700"
+            onClick={(e) => {
+              e.stopPropagation()
+              openFilterLink(node.href)
+            }}
+          >
+            {renderInline(node.children, true)}
+          </button>
+        )
       case 'link':
         return (
           <a
@@ -81,7 +97,14 @@ function renderInline(nodes: Inline[], inLink = false): ReactNode[] {
   })
 }
 
-// Ссылка на запись прокручивает к ней ленту; удалённая запись остаётся подписью без перехода
+// Сообщение пользователя в чате: маркеры оформления остаются как есть, но ссылки на записи и фильтры показываются подписью
+const appLink = /(\[[^[\]\n]+\]\((?:entry|filter):[\w-]+\))/
+
+export function MessageText({ text }: { text: string }) {
+  return text.split(appLink).map((part, i) => (i % 2 ? <Fragment key={i}>{renderInline(parseInline(part))}</Fragment> : <LinkedText key={i} text={part} />))
+}
+
+// Ссылка на запись прокручивает к ней ленту, из чата — закрыв его; удалённая запись остаётся подписью без перехода
 function EntryLink({ id, children }: { id: string; children: ReactNode }) {
   // undefined — ещё загружается, null — запись удалили
   const exists = useLiveQuery(async () => !!(await db.entries.get(id)), [id])
@@ -98,7 +121,8 @@ function EntryLink({ id, children }: { id: string; children: ReactNode }) {
       className="inline rounded bg-[#F7EFE8] px-1 text-left text-orange-700"
       onClick={(e) => {
         e.stopPropagation()
-        focusEntry(id)
+        if (useChatView.getState().chatId) goToEntry(id)
+        else focusEntry(id)
       }}
     >
       {children}

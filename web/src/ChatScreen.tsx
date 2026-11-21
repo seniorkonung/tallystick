@@ -17,6 +17,7 @@ import { useComposer } from './composerStore'
 import { db, type ChatFile, type ChatMessage, type Permission, type PreparedFile, type Reasoning } from './db'
 import { plainText } from './format'
 import { pluralRu } from './plural'
+import { MessageText } from './RichText'
 
 export function ChatScreen() {
   const chatId = useChatView((s) => s.chatId)
@@ -630,7 +631,11 @@ function MessageView({ message, files, entryIds, onFile, actions }: MessageProps
               ))}
             </div>
           )}
-          {textOf(message) && <div className="rounded-2xl bg-white px-3.5 py-2 text-[15px] whitespace-pre-wrap shadow-sm">{textOf(message)}</div>}
+          {textOf(message) && (
+            <div className="rounded-2xl bg-white px-3.5 py-2 text-[15px] whitespace-pre-wrap shadow-sm">
+              <MessageText text={textOf(message)} />
+            </div>
+          )}
           {actions}
         </div>
       )

@@ -2,7 +2,9 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import { addEntry, db, deleteEntry, setActual, updateEntry, type Entry, type EntryType, type FieldValues, type Permission, type Tag, type ProviderKind } from './db'
 import { fileForModel } from './modelFiles'
-import { emptyFilters, matchEntry, type Filters } from './filterStore'
+import { fieldCatalog, isComplete } from './conditions'
+import { canonicalFilters, filterHref, filtersFromHref, filtersSchema, toFilters } from './filterLinks'
+import { matchEntry, type Filters } from './filterStore'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -94,39 +96,32 @@ export const readTools = {
 
   search_entries: tool({
     description:
-      'Search entries of the feed, newest first. All filters combine with AND; omit a filter to not restrict by it. ' +
-      'Returns the total number of matches and one page of entries.',
-    inputSchema: z.object({
-      typeIds: z.array(z.string()).optional().describe('Entry type ids; an entry matches any of them'),
-      tagIds: z.array(z.string()).optional().describe('Tag ids; an entry matches if it has any of them'),
-      from: z.string().optional().describe('First day of the period, inclusive, YYYY-MM-DD in local time'),
-      to: z.string().optional().describe('Last day of the period, inclusive, YYYY-MM-DD in local time'),
-      text: z.string().optional().describe('Case-insensitive substring of the entry text'),
-      actuality: z.enum(['all', 'actual', 'inactual']).optional(),
-      replyTo: z.string().optional().describe('Only direct replies to this entry id'),
-      hideReplies: z.boolean().optional().describe('Exclude entries that are replies'),
+      'Search entries of the feed, newest first, with the same filters as the feed. All filters combine with AND; omit a filter to not restrict by it. ' +
+      'Returns the total number of matches, one page of entries, and a link that opens the feed with these filters.',
+    inputSchema: filtersSchema.extend({
+      link: z
+        .string()
+        .optional()
+        .describe('A filter link filter:CODE from a message or an entry text: search by its filters and get them back. Other filters are then ignored'),
+      replyTo: z.string().optional().describe('Only direct replies to this entry id. The feed has no such filter, so no link is returned'),
       limit: z.number().int().min(1).max(200).optional().describe('Page size, 50 by default'),
       offset: z.number().int().min(0).optional(),
     }),
-    execute: async (input) => {
+    execute: async ({ link, replyTo, limit, offset, ...input }) => {
       const [entries, types] = await Promise.all([db.entries.toArray(), db.types.toArray()])
+      const filters = link ? filtersFromHref(link) : checkFields(toFilters(input), types)
+      if (!filters) throw new Error('The filter link is damaged')
       const typesById = new Map(types.map((t) => [t.id, t]))
-      const filters: Filters = {
-        ...emptyFilters,
-        typeIds: input.typeIds ?? [],
-        tagIds: input.tagIds ?? [],
-        from: input.from ?? '',
-        to: input.to ?? '',
-        text: input.text ?? '',
-        actuality: input.actuality ?? 'all',
-        hideReplies: input.hideReplies ?? false,
-      }
       const found = entries
-        .filter((e) => matchEntry(filters, e, typesById) && (!input.replyTo || e.replyTo === input.replyTo))
+        .filter((e) => matchEntry(filters, e, typesById) && (!replyTo || e.replyTo === replyTo))
         .sort((a, b) => b.createdAt - a.createdAt)
-      const offset = input.offset ?? 0
-      const page = found.slice(offset, offset + (input.limit ?? 50))
-      return { total: found.length, entries: await describeEntries(page) }
+      const page = found.slice(offset ?? 0, (offset ?? 0) + (limit ?? 50))
+      return {
+        total: found.length,
+        ...(replyTo ? {} : { link: filterHref(filters) }),
+        ...(link ? { filters: canonicalFilters(filters) } : {}),
+        entries: await describeEntries(page),
+      }
     },
   }),
 
@@ -166,6 +161,16 @@ export const readTools = {
 }
 
 const norm = (s: string) => s.trim().toLowerCase()
+
+// Условие с неизвестным полем или без значения молча ничего не нашло бы
+function checkFields(filters: Filters, types: EntryType[]) {
+  const catalog = fieldCatalog(types)
+  for (const c of filters.conditions) {
+    if (!catalog.some((f) => f.kind === c.kind && norm(f.name) === norm(c.name))) throw new Error(`No ${c.kind} field "${c.name}"; see list_types`)
+    if (!isComplete(c)) throw new Error(`The condition on "${c.name}" needs a value for ${c.op}`)
+  }
+  return filters
+}
 
 // Значения полей приходят по названиям и подписям вариантов, как их отдаёт search_entries
 function toValues(type: EntryType, fields: Record<string, unknown>, base: FieldValues): FieldValues {
@@ -245,7 +250,8 @@ const entryTextSchema = z
   .describe(
     'Entry text. It is not Markdown: the feed supports only this markup — **bold**, __italic__ (double underscores; single * or _ stay as typed), ' +
       '~~strikethrough~~, ||spoiler||, `inline code`, a code block between lines of ```, quote lines starting with "> ", links [text](https://url), ' +
-      'and links to other feed entries [short label](entry:ENTRY_ID), which open that entry. ' +
+      'links to other feed entries [short label](entry:ENTRY_ID), which open that entry, ' +
+      'and links to feed filters [short label](filter:CODE) with a link from search_entries, which open the feed filtered. ' +
       'There are no headings, tables, images, or nested lists: write them as plain lines. Line breaks are kept as typed.',
   )
 

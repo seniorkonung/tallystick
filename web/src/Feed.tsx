@@ -14,6 +14,7 @@ import { useDateJump } from './dateJumpStore'
 import { focusEntry, useHighlight } from './focusEntry'
 import { useThread } from './threadStore'
 import { openChat } from './chatView'
+import { openFilters } from './filterLinks'
 import { clearSelection, toggleSelected, useSelection } from './selectionStore'
 import { swipeThreshold, useSwipeSelect } from './useSwipeSelect'
 import { useSidebarSwipe } from './sidebarStore'
@@ -118,16 +119,9 @@ export function Feed() {
 
   const menuEntry = entries.find((e) => e.id === menuEntryId)
 
-  // Упоминания показываются фильтром по всей ленте: экран ответов закрывается, прочие фильтры сбрасываются,
+  // Упоминания показываются фильтром по всей ленте: прочие фильтры сбрасываются,
   // чтобы лента показала ровно то, что посчитано на карточке
-  function showMentions(entryId: string) {
-    const depth = useThread.getState().stack.length
-    if (depth) {
-      useThread.setState({ stack: [] })
-      history.go(-depth)
-    }
-    useFilters.getState().set({ ...emptyFilters, mentionsOf: entryId })
-  }
+  const showMentions = (entryId: string) => openFilters({ ...emptyFilters, mentionsOf: entryId })
 
   const card = (entry: Entry) => (
     <EntryCard

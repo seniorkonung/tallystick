@@ -4,7 +4,10 @@ import { ConditionEditor } from './ConditionEditor'
 import { TagChip } from './TagChip'
 import { formatCondition, type Condition } from './conditions'
 import { db } from './db'
-import { emptyFilters, matchEntry, useFilters, type Actuality, type Filters } from './filterStore'
+import { copyText } from './clipboard'
+import { filterHref } from './filterLinks'
+import { emptyFilters, isFiltered, matchEntry, useFilters, type Actuality, type Filters } from './filterStore'
+import { useFilterChips } from './useFilterChips'
 import { pluralRu } from './plural'
 import { AmountUnit } from './AmountUnit'
 import { lastStart, momentText } from './periods'
@@ -22,6 +25,8 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
   const entries = useLiveQuery(() => db.entries.toArray())
   const types = useLiveQuery(() => db.types.toArray())
   const tags = useLiveQuery(() => db.tags.toArray())
+  const chips = useFilterChips({ withText: true, filters: draft })
+  const [copied, setCopied] = useState(false)
   if (!entries || !types || !tags) return null
 
   const typesById = new Map(types.map((t) => [t.id, t]))
@@ -31,6 +36,18 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
   const shownTags = tags
     .filter((p) => (q ? p.name.toLowerCase().includes(q) : p.status === 'active' || draft.tagIds.includes(p.id)))
     .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+
+  // Ссылку вставляют в запись или в чат; подпись из чипов фильтров можно переписать
+  async function copyLink() {
+    const label = chips
+      .map((c) => c.label)
+      .join(' · ')
+      .replace(/[[\]\n]/g, '')
+    const short = label.length > 60 ? `${label.slice(0, 60).trimEnd()}…` : label
+    if (!(await copyText(`[${short}](${filterHref(draft)})`))) return
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   const toggle = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
   const chipClass = (active: boolean) =>
@@ -45,9 +62,14 @@ export function FilterSheet({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           <h2 className="font-semibold">Фильтры</h2>
           {editingCondition === undefined && (
-            <button type="button" className="text-sm text-stone-500" onClick={() => setDraft({ ...emptyFilters, text: draft.text })}>
-              Сбросить
-            </button>
+            <div className="flex gap-4">
+              <button type="button" className="text-sm text-stone-500 disabled:text-stone-300" disabled={!isFiltered(draft)} onClick={() => void copyLink()}>
+                {copied ? 'Скопировано' : 'Скопировать ссылку'}
+              </button>
+              <button type="button" className="text-sm text-stone-500" onClick={() => setDraft({ ...emptyFilters, text: draft.text })}>
+                Сбросить
+              </button>
+            </div>
           )}
         </div>
 

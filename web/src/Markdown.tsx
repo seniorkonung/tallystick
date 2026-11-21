@@ -2,9 +2,11 @@ import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { goToEntry } from './chatView'
 import { db } from './db'
+import { openFilterLink } from './filterLinks'
 
-// Ассистент ссылается на записи ленты ссылками вида entry:<id>
+// Ассистент ссылается на записи ленты ссылками вида entry:<id>, на фильтры ленты — filter:<код>
 const entryPrefix = 'entry:'
+const filterPrefix = 'filter:'
 
 async function openEntry(id: string) {
   if (await db.entries.get(id)) goToEntry(id)
@@ -18,11 +20,15 @@ export function Markdown({ text }: { text: string }) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         // Остальные нестандартные схемы по-прежнему вырезаются
-        urlTransform={(url) => (url.startsWith(entryPrefix) ? url : defaultUrlTransform(url))}
+        urlTransform={(url) => (url.startsWith(entryPrefix) || url.startsWith(filterPrefix) ? url : defaultUrlTransform(url))}
         components={{
           a: ({ href, children }) =>
             href?.startsWith(entryPrefix) ? (
               <button type="button" className="entry-link" onClick={() => void openEntry(href.slice(entryPrefix.length))}>
+                {children}
+              </button>
+            ) : href?.startsWith(filterPrefix) ? (
+              <button type="button" className="entry-link" onClick={() => openFilterLink(href)}>
                 {children}
               </button>
             ) : (

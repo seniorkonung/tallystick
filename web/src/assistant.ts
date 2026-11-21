@@ -55,7 +55,7 @@ function instructions(chat: Chat) {
 
 Domain:
 - Entry: a feed item with text, attachments, field values of its type, tags, an optional reply-to entry, and actuality (actual or no longer actual). Its creation time is fixed.
-- Type: a user-defined kind of entry with an ordered list of fields (single choice, multiple choice, number, string).
+- Type: a user-defined kind of entry with an ordered list of fields (single choice, multiple choice, number, string, date, date and time, time).
 - Tag: a user-defined label that groups entries by any criterion, such as a topic, a direction, or a project. A tag is active or archived; an entry can have several tags.
 
 Use the tools to look at the user's data instead of guessing. Fetch types or tags first when you need their ids. Page through results when the total exceeds the page.
@@ -65,6 +65,8 @@ Some changes need the user's approval in the app; when a tool execution is not a
 The user can attach feed entries to a message; they follow the message text as JSON, in their current state.
 
 When your reply mentions specific entries, especially ones you created or changed, link them so the user can open them in the feed: [short label](entry:ENTRY_ID).
+
+When your reply refers to a set of entries the user may want to browse, link the search: [short label](filter:CODE), copying the link search_entries returned exactly. It opens the feed with those filters. A filter link in a message or an entry text stands for feed filters: pass it to search_entries to see them.
 
 Each user message starts with the local time it was sent, in brackets. Use the latest one as the current time. Time zone: ${zone}; entry times are in this zone.
 

@@ -8,6 +8,8 @@ export type Inline =
   | { kind: 'link'; href: string; children: Inline[] }
   // Ссылка на запись ленты: [подпись](entry:id)
   | { kind: 'entry'; id: string; children: Inline[] }
+  // Ссылка на фильтры ленты: [подпись](filter:код)
+  | { kind: 'filter'; href: string; children: Inline[] }
 
 export type Block =
   | { kind: 'paragraph'; children: Inline[] }
@@ -39,7 +41,7 @@ function parseLink(s: string, i: number) {
     else if (/\s/.test(s[j])) return null
   }
   const url = j < s.length ? s.slice(close + 2, j) : ''
-  const href = /^entry:[\w-]+$/.test(url) ? url : linkHref(url)
+  const href = /^(entry|filter):[\w-]+$/.test(url) ? url : linkHref(url)
   return href ? { text, href, end: j + 1 } : null
 }
 
@@ -67,7 +69,9 @@ export function parseInline(s: string): Inline[] {
       if (link) {
         flush()
         const children = parseInline(link.text)
-        out.push(link.href.startsWith('entry:') ? { kind: 'entry', id: link.href.slice(6), children } : { kind: 'link', href: link.href, children })
+        if (link.href.startsWith('entry:')) out.push({ kind: 'entry', id: link.href.slice(6), children })
+        else if (link.href.startsWith('filter:')) out.push({ kind: 'filter', href: link.href, children })
+        else out.push({ kind: 'link', href: link.href, children })
         i = link.end
         continue
       }
@@ -155,6 +159,7 @@ function inlineText(nodes: Inline[], o: PlainOptions): string {
         case 'link':
           return o.skipLinks ? ' ' : inlineText(n.children, o)
         case 'entry':
+        case 'filter':
           return inlineText(n.children, o)
         default:
           return inlineText(n.children, o)
