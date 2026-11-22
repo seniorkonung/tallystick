@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
-import { archiveTag, db, restoreTag, type Tag } from './db'
+import { archiveTag, db, deleteTag, restoreTag, type Tag } from './db'
 import { emptyFilters, useFilters } from './filterStore'
 import { pluralRu } from './plural'
 import { useTagTabs } from './tagTabs'
@@ -40,6 +40,13 @@ function Form({ tag, categories, count, onClose, onShowEntries }: FormProps) {
   const [name, setName] = useState(tag.name)
   const [categoryId, setCategoryId] = useState(tag.categoryId ?? '')
   const active = tag.status === 'active'
+
+  async function remove() {
+    const note = count ? ` Он пропадёт с ${count} ${pluralRu(count, ['записи', 'записей', 'записей'])}, сами записи останутся.` : ''
+    if (!window.confirm(`Удалить тег «${tag.name}» безвозвратно?${note} Для тега, который больше не используется, есть архив.`)) return
+    await deleteTag(tag.id)
+    onClose()
+  }
 
   async function save() {
     await db.tags.update(tag.id, {
@@ -121,6 +128,10 @@ function Form({ tag, categories, count, onClose, onShowEntries }: FormProps) {
             Показать записи в ленте
           </button>
         </div>
+
+        <button type="button" className="mt-4 w-full rounded-2xl bg-red-50 py-2.5 font-medium text-red-700" onClick={() => void remove()}>
+          Удалить тег
+        </button>
       </div>
     </SwipePage>
   )

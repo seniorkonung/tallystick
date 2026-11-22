@@ -529,6 +529,23 @@ export async function restoreTag(tag: Tag, now = Date.now()) {
   })
 }
 
+// Тег удаляется безвозвратно: записи остаются без него, его служебные отметки пропадают из ленты.
+// Пресеты и ссылки на фильтры с этим тегом по нему больше ничего не находят
+export async function deleteTag(tagId: string) {
+  await db.transaction('rw', db.entries, db.tags, db.marks, async () => {
+    // Записи выбираются заранее: правка меняет тот самый индекс, по которому их нашли
+    const entryIds = await db.entries.where('tagIds').equals(tagId).primaryKeys()
+    await db.entries
+      .where('id')
+      .anyOf(entryIds)
+      .modify((entry) => {
+        entry.tagIds = entry.tagIds.filter((id) => id !== tagId)
+      })
+    await db.marks.filter((m) => m.tagId === tagId).delete()
+    await db.tags.delete(tagId)
+  })
+}
+
 // Теги удалённой категории остаются без категории
 export async function deleteCategory(categoryId: string) {
   await db.transaction('rw', db.tags, db.categories, async () => {
