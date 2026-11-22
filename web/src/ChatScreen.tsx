@@ -6,7 +6,7 @@ import { AttachmentTile, AttachmentViewer } from './AttachmentViews'
 import { Markdown } from './Markdown'
 import { prepareFile } from './attachments'
 import { answerApproval, deleteChat, lastModel, lastReasoning, pendingApprovals, reasoningLabels, rememberReasoning, resendFrom, retry, sendMessage, stop, useRuns, type RunItem } from './assistant'
-import { approvalLabels, toolLabels } from './assistantTools'
+import { approvalLabels, tagToolNames, toolLabels } from './assistantTools'
 import { ChatSettingsSheet } from './ChatSettingsSheet'
 import { InstructionEditor } from './InstructionEditor'
 import { InstructionPicker } from './InstructionPicker'
@@ -291,6 +291,8 @@ function ChatView({ chatId }: { chatId: string }) {
               <p className="text-sm font-medium">{approvalLabels[a.toolName] ?? a.toolName}</p>
               {['create_instruction', 'update_instruction', 'delete_instruction'].includes(a.toolName) ? (
                 <InstructionApproval toolName={a.toolName} input={a.input as Record<string, unknown>} />
+              ) : tagToolNames.includes(a.toolName) ? (
+                <TagApproval toolName={a.toolName} input={a.input as Record<string, unknown>} />
               ) : (
                 <ApprovalDetails input={a.input as Record<string, unknown>} />
               )}
@@ -510,6 +512,27 @@ function InstructionApproval({ toolName, input }: { toolName: string; input: Rec
       {typeof text === 'string' && <p className="mt-1 max-h-48 overflow-y-auto whitespace-pre-wrap">{text}</p>}
     </div>
   )
+}
+
+// Какой тег ассистент хочет создать, изменить, убрать в архив, вернуть или удалить
+function TagApproval({ toolName, input }: { toolName: string; input: Record<string, unknown> }) {
+  const id = typeof input.id === 'string' ? input.id : ''
+  const tag = useLiveQuery(() => (id ? db.tags.get(id) : undefined), [id])
+  const categoryId = typeof input.categoryId === 'string' ? input.categoryId : ''
+  const category = useLiveQuery(() => (categoryId ? db.categories.get(categoryId) : undefined), [categoryId])
+  const count = useLiveQuery(() => (toolName === 'delete_tag' && id ? db.entries.where('tagIds').equals(id).count() : 0), [toolName, id])
+  const name = typeof input.name === 'string' ? input.name.trim() : ''
+  const categoryText = categoryId ? `категория «${category?.name ?? '…'}»` : 'без категории'
+  const parts =
+    toolName === 'create_tag'
+      ? [`«${name}»`, categoryText]
+      : [
+          `«${tag?.name ?? '…'}»`,
+          ...(toolName === 'update_tag' && name ? [`новое название «${name}»`] : []),
+          ...(toolName === 'update_tag' && input.categoryId !== undefined ? [categoryText] : []),
+          ...(count ? [`пропадёт с ${count} ${pluralRu(count, ['записи', 'записей', 'записей'])}, сами записи останутся`] : []),
+        ]
+  return <p className="mt-1 text-xs text-stone-500">{parts.join(' · ')}</p>
 }
 
 function ApprovalDetails({ input }: { input: Record<string, unknown> }) {

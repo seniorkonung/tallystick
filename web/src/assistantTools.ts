@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
-import { addEntry, db, deleteEntry, setActual, updateEntry, type Entry, type EntryType, type FieldValues, type Permission, type Tag, type ProviderKind } from './db'
+import { addEntry, archiveTag, createTag, db, deleteEntry, deleteTag, restoreTag, setActual, updateEntry, type Entry, type EntryType, type FieldValues, type Permission, type Tag, type ProviderKind } from './db'
+import { loadTagTabs } from './tagTabs'
 import { fileForModel } from './modelFiles'
 import { fieldCatalog, isComplete } from './conditions'
 import { canonicalFilters, filterHref, filtersFromHref, filtersSchema, toFilters } from './filterLinks'
@@ -32,13 +33,16 @@ function fieldValues(entry: Entry, type: EntryType | undefined) {
   return result
 }
 
-function describeTag(p: Tag, categoryName: string | null) {
+// У тега в архиве категория — та, в которой он был при уходе в архив
+function describeTag(tag: Tag, categoryName: string | null, entries: number) {
   return {
-    id: p.id,
-    name: p.name,
-    status: p.status,
-    category: categoryName,
-    archivedAt: p.archivedAt ? localTime(p.archivedAt) : null,
+    id: tag.id,
+    name: tag.name,
+    status: tag.status,
+    categoryId: tag.categoryId,
+    category: tag.status === 'archived' ? tag.frozenCategoryName : categoryName,
+    archivedAt: tag.archivedAt ? localTime(tag.archivedAt) : null,
+    entries,
   }
 }
 
@@ -84,13 +88,37 @@ export const readTools = {
   }),
 
   list_tags: tool({
-    description: 'List all tags, active and archived, with their categories.',
-    inputSchema: z.object({}),
-    execute: async () => {
-      const [tags, categories] = await Promise.all([db.tags.toArray(), db.categories.toArray()])
-      return tags.map((p) =>
-        describeTag(p, p.status === 'archived' ? p.frozenCategoryName : (categories.find((c) => c.id === p.categoryId)?.name ?? null)),
-      )
+    description:
+      'List tags with their categories and entry counts: active tags by name, then archived ones, most recently archived first. ' +
+      'Also returns the tag categories in the order of the tabs the user picks tags from.',
+    inputSchema: z.object({
+      query: z.string().optional().describe('Case-insensitive substring of the tag name'),
+      status: z.enum(['active', 'archived']).optional().describe('Only active or only archived tags; both by default'),
+      categoryId: z
+        .string()
+        .nullable()
+        .optional()
+        .describe('Only tags of this category, null for tags without a category; an archived tag counts in the category it had'),
+      limit: z.number().int().min(1).max(500).optional().describe('Page size, 100 by default'),
+      offset: z.number().int().min(0).optional(),
+    }),
+    execute: async ({ query, status, categoryId, limit, offset }) => {
+      const [tags, tabs] = await Promise.all([db.tags.toArray(), loadTagTabs()])
+      const categories = tabs.flatMap((t) => (t.kind === 'category' ? [{ id: t.category.id, name: t.category.name }] : []))
+      const q = query?.trim().toLowerCase()
+      const found = tags
+        .filter((t) => (!q || t.name.toLowerCase().includes(q)) && (!status || t.status === status) && (categoryId === undefined || t.categoryId === categoryId))
+        // Как во вкладках выбора тегов
+        .sort((a, b) =>
+          a.status !== b.status ? (a.status === 'active' ? -1 : 1) : a.status === 'archived' ? (b.archivedAt ?? 0) - (a.archivedAt ?? 0) : a.name.localeCompare(b.name, 'ru'),
+        )
+      const page = found.slice(offset ?? 0, (offset ?? 0) + (limit ?? 100))
+      const counts = await Promise.all(page.map((t) => db.entries.where('tagIds').equals(t.id).count()))
+      return {
+        total: found.length,
+        categories,
+        tags: page.map((t, i) => describeTag(t, categories.find((c) => c.id === t.categoryId)?.name ?? null, counts[i])),
+      }
     },
   }),
 
@@ -238,6 +266,22 @@ async function getEntry(id: string) {
   return entry
 }
 
+async function getTag(id: string) {
+  const tag = await db.tags.get(id)
+  if (!tag) throw new Error(`No tag with id ${id}`)
+  return tag
+}
+
+// Одноимённые теги неразличимы при выборе, поэтому имя тега уникально
+async function checkTagName(name: string, exceptId?: string) {
+  const same = (await db.tags.toArray()).find((t) => t.id !== exceptId && norm(t.name) === norm(name))
+  if (same) throw new Error(`Tag "${same.name}" already exists with id ${same.id}${same.status === 'archived' ? ', archived' : ''}`)
+}
+
+async function checkCategory(id: string) {
+  if (!(await db.categories.get(id))) throw new Error(`No category with id ${id}; see list_tags`)
+}
+
 async function checkTags(ids: string[]) {
   const found = await db.tags.bulkGet(ids)
   const missing = ids.filter((_, i) => !found[i])
@@ -359,6 +403,72 @@ export function writeTools(chatId: string) {
       },
     }),
 
+    create_tag: tool({
+      description: 'Create an active tag.',
+      inputSchema: z.object({
+        name: z.string().min(1),
+        categoryId: z.string().optional().describe('Category id from list_tags; without it the tag has no category'),
+      }),
+      execute: async ({ name, categoryId }) => {
+        await checkTagName(name)
+        if (categoryId) await checkCategory(categoryId)
+        const tag = await createTag(name.trim(), categoryId ?? null)
+        return { id: tag.id }
+      },
+    }),
+
+    update_tag: tool({
+      description: 'Rename a tag or move an active tag to another category. Omitted properties stay as they are.',
+      inputSchema: z.object({
+        id: z.string(),
+        name: z.string().min(1).optional(),
+        categoryId: z.string().nullable().optional().describe('Category id, null for no category; active tags only'),
+      }),
+      execute: async ({ id, name, categoryId }) => {
+        const tag = await getTag(id)
+        if (name) await checkTagName(name, id)
+        if (categoryId !== undefined) {
+          if (tag.status === 'archived') throw new Error('An archived tag keeps the category it had; restore it first')
+          if (categoryId) await checkCategory(categoryId)
+        }
+        await db.tags.update(id, { ...(name ? { name: name.trim() } : {}), ...(categoryId !== undefined ? { categoryId } : {}) })
+        return { ok: true }
+      },
+    }),
+
+    archive_tag: tool({
+      description: 'Archive a tag that is no longer used. Its entries keep it; the feed marks the moment. Adding it to an entry later brings it back.',
+      inputSchema: z.object({ id: z.string() }),
+      execute: async ({ id }) => {
+        const tag = await getTag(id)
+        if (tag.status === 'active') await archiveTag(tag)
+        return { ok: true }
+      },
+    }),
+
+    restore_tag: tool({
+      description: 'Bring an archived tag back to its category, if the category still exists.',
+      inputSchema: z.object({ id: z.string() }),
+      execute: async ({ id }) => {
+        const tag = await getTag(id)
+        if (tag.status === 'archived') await restoreTag(tag)
+        return { ok: true }
+      },
+    }),
+
+    delete_tag: tool({
+      description:
+        'Delete a tag permanently. It is removed from all its entries, which stay in the feed; saved filters with it no longer match anything by it. ' +
+        'Prefer archive_tag for a tag that is just no longer used.',
+      inputSchema: z.object({ id: z.string() }),
+      execute: async ({ id }) => {
+        await getTag(id)
+        const untagged = await db.entries.where('tagIds').equals(id).count()
+        await deleteTag(id)
+        return { ok: true, untaggedEntries: untagged }
+      },
+    }),
+
     delete_entry: tool({
       description: 'Delete an entry permanently with its attachments. Replies to it stay in the feed.',
       inputSchema: z.object({ id: z.string() }),
@@ -371,11 +481,27 @@ export function writeTools(chatId: string) {
   }
 }
 
-const writeToolNames = ['create_entry', 'update_entry', 'set_actuality', 'create_instruction', 'update_instruction', 'delete_instruction', 'delete_entry'] as const
+const writeToolNames = [
+  'create_entry',
+  'update_entry',
+  'set_actuality',
+  'create_instruction',
+  'update_instruction',
+  'delete_instruction',
+  'create_tag',
+  'update_tag',
+  'archive_tag',
+  'restore_tag',
+  'delete_tag',
+  'delete_entry',
+] as const
+
+// Действия с тегами: запрос разрешения показывает тег, а не запись
+export const tagToolNames = ['create_tag', 'update_tag', 'archive_tag', 'restore_tag', 'delete_tag']
 
 // Какие изменения ассистент делает только после разрешения пользователя
 export function approvalFor(permission: Permission) {
-  const ask = permission === 'ask' ? writeToolNames : permission === 'ask-delete' ? (['delete_entry', 'delete_instruction'] as const) : []
+  const ask = permission === 'ask' ? writeToolNames : permission === 'ask-delete' ? (['delete_entry', 'delete_instruction', 'delete_tag'] as const) : []
   return Object.fromEntries(ask.map((name) => [name, 'user-approval' as const]))
 }
 
@@ -401,6 +527,11 @@ export const toolLabels: Record<string, string> = {
   create_instruction: 'Создаю инструкцию',
   update_instruction: 'Правлю инструкцию',
   delete_instruction: 'Удаляю инструкцию',
+  create_tag: 'Создаю тег',
+  update_tag: 'Правлю тег',
+  archive_tag: 'Убираю тег в архив',
+  restore_tag: 'Возвращаю тег из архива',
+  delete_tag: 'Удаляю тег',
   create_entry: 'Создаю запись',
   update_entry: 'Правлю запись',
   set_actuality: 'Меняю актуальность',
@@ -415,5 +546,10 @@ export const approvalLabels: Record<string, string> = {
   create_instruction: 'Создать стартовую инструкцию',
   update_instruction: 'Изменить инструкцию',
   delete_instruction: 'Удалить стартовую инструкцию',
+  create_tag: 'Создать тег',
+  update_tag: 'Изменить тег',
+  archive_tag: 'Убрать тег в архив',
+  restore_tag: 'Вернуть тег из архива',
+  delete_tag: 'Удалить тег безвозвратно',
   delete_entry: 'Удалить запись безвозвратно',
 }
