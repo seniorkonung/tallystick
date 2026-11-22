@@ -11,7 +11,7 @@ import { ChatSettingsSheet } from './ChatSettingsSheet'
 import { InstructionEditor } from './InstructionEditor'
 import { InstructionPicker } from './InstructionPicker'
 import { ensureModelInfo, modelInfo, useModelCatalog } from './modelCatalog'
-import { closeChat, goToEntry, useChatView } from './chatView'
+import { closeChat, closeChatToFeed, goToEntry, useChatView } from './chatView'
 import { copyText, takePastedEntries } from './clipboard'
 import { useComposer } from './composerStore'
 import { db, type ChatFile, type ChatMessage, type Permission, type PreparedFile, type Reasoning } from './db'
@@ -166,7 +166,7 @@ function ChatView({ chatId }: { chatId: string }) {
   }
 
   return (
-    <SwipePage onClose={closeChat} className="z-10">
+    <SwipePage onClose={closeChat} className="z-30">
       <header className="flex items-center gap-3 border-b border-stone-200 bg-white px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button type="button" aria-label="Назад в ленту" className="flex size-9 items-center justify-center rounded-full hover:bg-stone-100" onClick={closeChat}>
           <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -532,7 +532,7 @@ function saveToFeed(chatId: string, text: string) {
   const composer = useComposer.getState()
   if (composer.draft.text.trim() && !window.confirm('В панели ввода ленты есть черновик. Заменить его ответом ассистента?')) return
   composer.startFromChat(chatId, text)
-  closeChat()
+  closeChatToFeed()
 }
 
 // Прикреплённая запись: в сообщении открывает её в ленте, в поле ввода её можно убрать

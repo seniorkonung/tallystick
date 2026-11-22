@@ -113,10 +113,10 @@ export function filtersFromHref(href: string): Filters | null {
   }
 }
 
-// Фильтры заменяют текущие в ленте; чат и экраны ответов поверх неё закрываются
+// Фильтры заменяют текущие в ленте; чат, список чатов и экраны ответов поверх неё закрываются
 export function openFilters(filters: Filters) {
   const depth = useThread.getState().stack.length + (useChatView.getState().chatId ? 1 : 0)
-  useChatView.setState({ chatId: null })
+  useChatView.setState({ chatId: null, listOpen: false })
   useThread.setState({ stack: [] })
   if (depth) history.go(-depth)
   useFilters.getState().set(filters)

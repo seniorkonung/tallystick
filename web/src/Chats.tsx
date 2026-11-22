@@ -36,10 +36,8 @@ export function Chats({ onClose }: { onClose: () => void }) {
 
   const shown = q ? chats.filter((c) => c.title.toLowerCase().includes(q) || matchedIds?.has(c.id)) : chats
 
-  function open(chatId: string) {
-    onClose()
-    openChat(chatId)
-  }
+  // Чат открывается поверх списка: закрытый чат возвращает к нему
+  const open = (chatId: string) => openChat(chatId)
 
   return (
     <SwipePage onClose={onClose} className="z-20">

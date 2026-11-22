@@ -4,6 +4,7 @@ import { useDateJump } from './dateJumpStore'
 import { Gallery } from './Gallery'
 import { Settings } from './Settings'
 import { Chats } from './Chats'
+import { useChatView } from './chatView'
 import { Stats } from './Stats'
 import { Sidebar } from './Sidebar'
 import { FilterChips } from './FilterChips'
@@ -22,7 +23,7 @@ export function TopBar() {
   const sidebarShown = useSidebar((s) => s.open || s.drag !== null)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [chatsOpen, setChatsOpen] = useState(false)
+  const chatsOpen = useChatView((s) => s.listOpen)
   const [statsOpen, setStatsOpen] = useState(false)
   // Лента получает верхний отступ по высоте панели
   const measure = useMeasuredHeight('--topbar-height')
@@ -114,7 +115,7 @@ export function TopBar() {
       {sidebarShown && (
         <Sidebar
           onOpenGallery={() => setGalleryOpen(true)}
-          onOpenChats={() => setChatsOpen(true)}
+          onOpenChats={() => useChatView.setState({ listOpen: true })}
           onOpenStats={() => setStatsOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onClose={() => useSidebar.setState({ open: false })}
@@ -122,7 +123,7 @@ export function TopBar() {
       )}
       {galleryOpen && <Gallery onClose={() => setGalleryOpen(false)} />}
       {settingsOpen && <Settings onClose={() => setSettingsOpen(false)} />}
-      {chatsOpen && <Chats onClose={() => setChatsOpen(false)} />}
+      {chatsOpen && <Chats onClose={() => useChatView.setState({ listOpen: false })} />}
       {statsOpen && <Stats onClose={() => setStatsOpen(false)} />}
     </>
   )
