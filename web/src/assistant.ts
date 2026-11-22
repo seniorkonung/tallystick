@@ -200,7 +200,7 @@ export async function run(chatId: string) {
 
   const stored = await db.chatMessages.where('chatId').equals(chatId).sortBy('createdAt')
   const files = new Map((await db.chatFiles.where('chatId').equals(chatId).toArray()).map((f) => [f.id, f]))
-  const history = withoutOldReasoning(await Promise.all(stored.map((m) => toModelMessage(m, files))))
+  const history = mergeTrailingToolMessages(withoutOldReasoning(await Promise.all(stored.map((m) => toModelMessage(m, files)))))
   const controller = new AbortController()
   controllers.set(chatId, controller)
 
@@ -300,6 +300,15 @@ function withoutOldReasoning(history: ModelMessage[]) {
     const content = m.content.filter((p) => p.type !== 'reasoning' && p.type !== 'reasoning-file')
     return content.length ? [{ ...m, content }] : []
   })
+}
+
+// Ответ на каждый запрос разрешения сохраняется своим сообщением, а AI SDK ищет ответы только в последнем:
+// остальные одобренные вызовы остались бы без результата, и провайдер отклонил бы запрос. Поэтому сообщения
+// инструментов в конце переписки сливаются в одно
+function mergeTrailingToolMessages(history: ModelMessage[]): ModelMessage[] {
+  const start = history.findLastIndex((m) => m.role !== 'tool') + 1
+  if (history.length - start < 2) return history
+  return [...history.slice(0, start), { role: 'tool', content: history.slice(start).flatMap((m) => (m.role === 'tool' ? m.content : [])) }]
 }
 
 // Запросы разрешения, на которые пользователь ещё не ответил
