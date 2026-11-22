@@ -360,8 +360,18 @@ function EntryCard(props: EntryCardProps) {
             )}
             {tags.length > 0 && (
               <div className="mb-1.5 flex flex-wrap gap-1">
+                {/* Тег открывает ленту только с его записями, как «Показать записи в ленте» в редакторе тега */}
                 {tags.map((tag) => (
-                  <TagChip key={tag.id} tag={tag} />
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openFilters({ ...emptyFilters, tagIds: [tag.id] })
+                    }}
+                  >
+                    <TagChip tag={tag} />
+                  </button>
                 ))}
               </div>
             )}
