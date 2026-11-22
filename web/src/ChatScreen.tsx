@@ -18,6 +18,7 @@ import { db, type ChatFile, type ChatMessage, type Permission, type PreparedFile
 import { plainText } from './format'
 import { pluralRu } from './plural'
 import { MessageText } from './RichText'
+import { SwipePage } from './SwipePage'
 
 export function ChatScreen() {
   const chatId = useChatView((s) => s.chatId)
@@ -165,7 +166,7 @@ function ChatView({ chatId }: { chatId: string }) {
   }
 
   return (
-    <div className="fixed inset-0 z-10 mx-auto flex max-w-xl flex-col bg-stone-50">
+    <SwipePage onClose={closeChat} className="z-10">
       <header className="flex items-center gap-3 border-b border-stone-200 bg-white px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button type="button" aria-label="Назад в ленту" className="flex size-9 items-center justify-center rounded-full hover:bg-stone-100" onClick={closeChat}>
           <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -483,7 +484,7 @@ function ChatView({ chatId }: { chatId: string }) {
       )}
       <AttachSheet open={attachMenuOpen} onClose={() => setAttachMenuOpen(false)} onFiles={(files) => void attach(files)} />
       {viewing && <AttachmentViewer file={viewing} onClose={() => setViewing(null)} />}
-    </div>
+    </SwipePage>
   )
 }
 

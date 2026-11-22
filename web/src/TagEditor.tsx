@@ -4,6 +4,7 @@ import { archiveTag, db, restoreTag, type Tag } from './db'
 import { emptyFilters, useFilters } from './filterStore'
 import { pluralRu } from './plural'
 import { useTagTabs } from './tagTabs'
+import { SwipePage } from './SwipePage'
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 
@@ -49,7 +50,7 @@ function Form({ tag, categories, count, onClose, onShowEntries }: FormProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-20 mx-auto flex max-w-xl flex-col bg-stone-50">
+    <SwipePage onClose={onClose} className="z-20">
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button type="button" className="text-stone-500" onClick={onClose}>
           Отмена
@@ -121,6 +122,6 @@ function Form({ tag, categories, count, onClose, onShowEntries }: FormProps) {
           </button>
         </div>
       </div>
-    </div>
+    </SwipePage>
   )
 }

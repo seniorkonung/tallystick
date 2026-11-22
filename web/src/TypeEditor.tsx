@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { db, deleteType, saveType, type EntryType, type Field, type FieldKind } from './db'
 import { fieldKindLabels, newField } from './fields'
 import { pluralRu } from './plural'
+import { SwipePage } from './SwipePage'
 
 type Props = {
   // null — создание нового типа
@@ -46,7 +47,7 @@ export function TypeEditor({ type, types, onSaved, onDeleted, onClose }: Props) 
   }
 
   return (
-    <div className="fixed inset-0 z-20 mx-auto flex max-w-xl flex-col bg-stone-50">
+    <SwipePage onClose={onClose} className="z-20">
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button type="button" className="text-stone-500" onClick={onClose}>
           Отмена
@@ -114,7 +115,7 @@ export function TypeEditor({ type, types, onSaved, onDeleted, onClose }: Props) 
 
         {type && <DeleteSection type={type} types={types} onDeleted={onDeleted} />}
       </div>
-    </div>
+    </SwipePage>
   )
 }
 

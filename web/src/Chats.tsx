@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { openChat } from './chatView'
 import { db } from './db'
+import { SwipePage } from './SwipePage'
 
 const dayFormat = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' })
 const timeFormat = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' })
@@ -41,7 +42,7 @@ export function Chats({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-20 mx-auto flex max-w-xl flex-col bg-stone-50">
+    <SwipePage onClose={onClose} className="z-20">
       <header className="flex items-center gap-3 border-b border-stone-200 bg-white px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button type="button" aria-label="Закрыть чаты" className="flex size-9 items-center justify-center rounded-full hover:bg-stone-100" onClick={onClose}>
           <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -72,6 +73,6 @@ export function Chats({ onClose }: { onClose: () => void }) {
         ))}
         {shown.length === 0 && <li className="px-3 py-10 text-center text-sm text-stone-400">{q ? 'Ничего не найдено' : 'Чатов пока нет'}</li>}
       </ul>
-    </div>
+    </SwipePage>
   )
 }

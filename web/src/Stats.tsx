@@ -5,6 +5,7 @@ import { emptyFilters, useFilters, type Filters } from './filterStore'
 import { pluralRu } from './plural'
 import { TagChip } from './TagChip'
 import { useTagTabs } from './tagTabs'
+import { SwipePage } from './SwipePage'
 
 type Unit = 'week' | 'month' | 'year'
 
@@ -138,7 +139,7 @@ export function Stats({ onClose }: { onClose: () => void }) {
   )
 
   return (
-    <div className="fixed inset-0 z-20 mx-auto flex max-w-xl flex-col bg-stone-50">
+    <SwipePage onClose={onClose} className="z-20">
       <header className="flex items-center gap-3 border-b border-stone-200 bg-white px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button type="button" aria-label="Закрыть статистику" className="flex size-9 items-center justify-center rounded-full hover:bg-stone-100" onClick={onClose}>
           <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -260,6 +261,6 @@ export function Stats({ onClose }: { onClose: () => void }) {
           </ul>
         )}
       </div>
-    </div>
+    </SwipePage>
   )
 }

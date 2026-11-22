@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { db, type Provider, type ProviderKind } from './db'
 import { InstructionEditor, type InstructionTarget } from './InstructionEditor'
 import { defaultModels, providerKindLabels } from './llm'
+import { SwipePage } from './SwipePage'
 
 // Страница настроек: провайдеры моделей и инструкции ассистенту
 export function Settings({ onClose }: { onClose: () => void }) {
@@ -19,7 +20,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
   const card = 'flex w-full flex-col rounded-2xl border border-stone-200 bg-white px-4 py-3 text-left'
 
   return (
-    <div className="fixed inset-0 z-20 mx-auto flex max-w-xl flex-col bg-stone-50">
+    <SwipePage onClose={onClose} className="z-20">
       <header className="flex items-center gap-3 border-b border-stone-200 bg-white px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button
           type="button"
@@ -98,7 +99,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
         )}
       </div>
       {instructionTarget && <InstructionEditor target={instructionTarget} onClose={() => setInstructionTarget(null)} />}
-    </div>
+    </SwipePage>
   )
 }
 

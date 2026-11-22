@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { db, type Instruction } from './db'
+import { SwipePage } from './SwipePage'
 
 // Что правится: общая инструкция или стартовая; null — новая стартовая
 export type InstructionTarget = { kind: 'general' } | { kind: 'start'; instruction: Instruction | null }
@@ -40,7 +41,7 @@ function Form({ target, initialText, onSaved, onClose }: Props & { initialText: 
   }
 
   return (
-    <div className="fixed inset-0 z-30 mx-auto flex max-w-xl flex-col bg-stone-50">
+    <SwipePage onClose={onClose} className="z-30">
       <header className="flex items-center justify-between border-b border-stone-200 bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button type="button" className="text-stone-500" onClick={onClose}>
           Отмена
@@ -77,6 +78,6 @@ function Form({ target, initialText, onSaved, onClose }: Props & { initialText: 
           </button>
         )}
       </div>
-    </div>
+    </SwipePage>
   )
 }

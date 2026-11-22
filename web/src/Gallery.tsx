@@ -11,6 +11,7 @@ import { extractLinks, linkHost, type TextPart } from './links'
 import { db, type PreparedFile } from './db'
 import { matchChatItem, matchEntry, useFilters } from './filterStore'
 import { focusEntry } from './focusEntry'
+import { SwipePage } from './SwipePage'
 
 type Tab = 'media' | 'files' | 'links'
 
@@ -78,7 +79,7 @@ export function Gallery({ onClose }: { onClose: () => void }) {
     `rounded-full px-3 py-1.5 text-sm ${active ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-700'}`
 
   return (
-    <div className="fixed inset-0 z-20 mx-auto flex max-w-xl flex-col bg-stone-50">
+    <SwipePage onClose={onClose} className="z-20">
       <header className="flex items-center gap-3 border-b border-stone-200 bg-white px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
         <button type="button" aria-label="Закрыть вложения" className="flex size-9 items-center justify-center rounded-full hover:bg-stone-100" onClick={onClose}>
           <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -145,6 +146,6 @@ export function Gallery({ onClose }: { onClose: () => void }) {
           goTo={{ label: viewing.source.kind === 'chat' ? 'К чату' : 'К записи', action: () => goTo(viewing.source) }}
         />
       )}
-    </div>
+    </SwipePage>
   )
 }
