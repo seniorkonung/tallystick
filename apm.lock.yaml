@@ -173,34 +173,24 @@ dependencies:
     .claude/skills/openspec-verify-change/SKILL.md: sha256:836155c7161b061cd3824e7e39413c3fc1d87f517620e0ff859b499f4b185e78
   content_hash: sha256:a6be38e155c3fd6fb961679cb1a1839ddd10685539d932e1be169b5308f9db9b
 - repo_url: seniorkonung/agent-skills
-  name: agent-skills
+  name: agent-skills-engineering
   host: github.com
-  resolved_commit: 504e0329ebfbbda7ae49044d2f502b0b98b606ca
+  resolved_commit: 43a2b9fcea23cf59d8d417ffea00a719cf61818a
   resolved_ref: main
   version: 0.0.1
+  virtual_path: profiles/engineering
+  is_virtual: true
   package_type: apm_package
   deployed_files:
   - .agents/skills/c4-diagrams
   - .agents/skills/c4-diagrams/SKILL.md
   - .agents/skills/c4-diagrams/templates.md
-  - .agents/skills/change-summary
-  - .agents/skills/change-summary/SKILL.md
   - .agents/skills/code-review-and-quality
   - .agents/skills/code-review-and-quality/SKILL.md
-  - .agents/skills/discussion
-  - .agents/skills/discussion/SKILL.md
-  - .agents/skills/discussion/references/document-format.md
-  - .agents/skills/discussion/references/examples.md
   - .agents/skills/domain-modeling
   - .agents/skills/domain-modeling/ADR-FORMAT.md
   - .agents/skills/domain-modeling/CONTEXT-FORMAT.md
   - .agents/skills/domain-modeling/SKILL.md
-  - .agents/skills/idea-refine
-  - .agents/skills/idea-refine/SKILL.md
-  - .agents/skills/idea-refine/examples.md
-  - .agents/skills/idea-refine/frameworks.md
-  - .agents/skills/idea-refine/refinement-criteria.md
-  - .agents/skills/idea-refine/scripts/idea-refine.sh
   - .agents/skills/implementation-decision-review
   - .agents/skills/implementation-decision-review/SKILL.md
   - .agents/skills/implementation-decision-review/references/evaluation-cases.md
@@ -261,24 +251,12 @@ dependencies:
   - .claude/skills/c4-diagrams
   - .claude/skills/c4-diagrams/SKILL.md
   - .claude/skills/c4-diagrams/templates.md
-  - .claude/skills/change-summary
-  - .claude/skills/change-summary/SKILL.md
   - .claude/skills/code-review-and-quality
   - .claude/skills/code-review-and-quality/SKILL.md
-  - .claude/skills/discussion
-  - .claude/skills/discussion/SKILL.md
-  - .claude/skills/discussion/references/document-format.md
-  - .claude/skills/discussion/references/examples.md
   - .claude/skills/domain-modeling
   - .claude/skills/domain-modeling/ADR-FORMAT.md
   - .claude/skills/domain-modeling/CONTEXT-FORMAT.md
   - .claude/skills/domain-modeling/SKILL.md
-  - .claude/skills/idea-refine
-  - .claude/skills/idea-refine/SKILL.md
-  - .claude/skills/idea-refine/examples.md
-  - .claude/skills/idea-refine/frameworks.md
-  - .claude/skills/idea-refine/refinement-criteria.md
-  - .claude/skills/idea-refine/scripts/idea-refine.sh
   - .claude/skills/implementation-decision-review
   - .claude/skills/implementation-decision-review/SKILL.md
   - .claude/skills/implementation-decision-review/references/evaluation-cases.md
@@ -334,23 +312,14 @@ dependencies:
   deployed_file_hashes:
     .agents/skills/c4-diagrams/SKILL.md: sha256:1e7d597f24a015fc44cb9052fc0f8b665d136bd5c2f3a60a242adfedd98d17b4
     .agents/skills/c4-diagrams/templates.md: sha256:d5f6096cccd57d0d6b36adabd7d027c41b71961304db825dba8ea53ddbebc5a0
-    .agents/skills/change-summary/SKILL.md: sha256:855ac5dae361704b0af7471cf5a6c50519b338f95d49d7f83c9c1ccf1cf7cfc4
-    .agents/skills/code-review-and-quality/SKILL.md: sha256:5493d8acfa0378a07249cdb0cb2a5e4e3c719baf0f603d5e3a3983f43e16208a
-    .agents/skills/discussion/SKILL.md: sha256:e9c3423b73b4d572af3d95c8820142e18bb44e226adc92f1c297905e9835ca9a
-    .agents/skills/discussion/references/document-format.md: sha256:9012f228e7a7759f14176e38b1b39946a3d810693a4a96319934b93ad71e80ac
-    .agents/skills/discussion/references/examples.md: sha256:e0a056cc213de20ee0e311c1404a21bfdda9e70d2d2cc2b73748de1b53359a6c
+    .agents/skills/code-review-and-quality/SKILL.md: sha256:efb65a32fa22a5430eac559584ae024c00707ef84b1891a80fbad9be89669cee
     .agents/skills/domain-modeling/ADR-FORMAT.md: sha256:987ffed2f666ddae4135cff5b049d03379a53141bdbe82af50852cfcfdee493e
     .agents/skills/domain-modeling/CONTEXT-FORMAT.md: sha256:709fb2ce20067248fe4e1a23fe18007de12cd1d97d7f7f772c6d634a76f380cd
     .agents/skills/domain-modeling/SKILL.md: sha256:601e8ac96664064793acc470e7eb454bc78dddb06ea4e380834210183130a071
-    .agents/skills/idea-refine/SKILL.md: sha256:ab5240e4593b9b0250952986ce3b9aba4a7629c4bf8f6335d13584cff6ba7300
-    .agents/skills/idea-refine/examples.md: sha256:326c8e64083f29b3ea8b99e757198efafcf30a68c227156b521e1cddff5ed4ad
-    .agents/skills/idea-refine/frameworks.md: sha256:161ebc18fdf2d996bc62a87a2d747cf1bf53548354f8925de25c732c27f00309
-    .agents/skills/idea-refine/refinement-criteria.md: sha256:1ca2973a4d01b5cb37ab7ddb2eff77fa4e792634a33d0ce44961c068fc88d51a
-    .agents/skills/idea-refine/scripts/idea-refine.sh: sha256:f02a52408a4218047c032d221483abfbb48d11f090bb4915965c7419bf2e0e47
     .agents/skills/implementation-decision-review/SKILL.md: sha256:9c8c67d6465be3536121b6d6d7318d220d4a64cb9eb1c0f1165610d3a13512ff
     .agents/skills/implementation-decision-review/references/evaluation-cases.md: sha256:0b79bccb469001f18652b49709037e81a5d0841e426bf550da6d6c3b59c674ae
-    .agents/skills/incremental-implementation/SKILL.md: sha256:9fc3b1931a1aa6da02e51d030f872cb52771843830b375fc91e43885a73fa853
-    .agents/skills/observability-and-instrumentation/SKILL.md: sha256:e4e75a3b486967db22b1446ab694b82116800cb19cc6b9387ac79a604da83bca
+    .agents/skills/incremental-implementation/SKILL.md: sha256:11b6c463fc40575041e2f5a8f467eb7f35820be0fb9a57f83fb341a1e6c8dd1c
+    .agents/skills/observability-and-instrumentation/SKILL.md: sha256:72b2bf819884c33f78fa1894dc8a26e6901076a2e24c60cb3aef1a53c633a7a6
     .agents/skills/openspec-gherkin-authoring/SKILL.md: sha256:36387030aef552d599ae59bc5685a576d95db10f7a8370b766217ffa51a15d77
     .agents/skills/openspec-review-change/SKILL.md: sha256:649043a4624bc09aaa2ab7fa0253f22bc84b1647f90a0921a08aaa41c9cdfd21
     .agents/skills/openspec-review-change/assets/review-template.md: sha256:93d7fb2b378e0bf6664ddc1d33ba473aabf7ed62a3e1efd751b98ed0dcbf5a6e
@@ -379,10 +348,10 @@ dependencies:
     .agents/skills/openspec-review-implementation/tests/fixtures/valid-review.md: sha256:0405f65b52b9b9438a02c025db22df7c46f08ccc0ce23af6fe740342e5604612
     .agents/skills/openspec-review-implementation/tests/validate-review.test.mjs: sha256:bae3725fab379e1e9966b1c4a0316097d309f5c3d1b2aabdbe3c06755f7915bd
     .agents/skills/phased-planning/SKILL.md: sha256:f6e9d5c94db8837f005182bcdc5e3d4f511bb88741cdd71829ce6aeaa0badd1c
-    .agents/skills/planning-and-task-breakdown/SKILL.md: sha256:3a46c9031f2d70d5333bcd418ce835a866028e7d6abd8ed7cee621f20d6dfa72
-    .agents/skills/security-and-hardening/SKILL.md: sha256:7dee4d2cc8b417b90790bf6016f74a3dcd1adcddde6e42f545a391f950778ebe
-    .agents/skills/shipping-and-launch/SKILL.md: sha256:ca9216f73ac6dfd1b1104ccd7de570acc5a22e11b1bf0ad4bafde1009afc4512
-    .agents/skills/test-driven-development/SKILL.md: sha256:0a58d45118bed4d5da1b11d336b89835541e9e1edaa29b2e7f726ae04a64e662
+    .agents/skills/planning-and-task-breakdown/SKILL.md: sha256:acf49ad221c68c354f88ac9d7be0b94fc179d90b25177b28b151b3d9d3e7b670
+    .agents/skills/security-and-hardening/SKILL.md: sha256:f06f38a9750b082fee21836e3ed03b7f566ef676178091c30e9696e9db971761
+    .agents/skills/shipping-and-launch/SKILL.md: sha256:6d881f4beabb6c34c9dbdd0b7a71225377aecc0c01452af4ce8d930ab5426979
+    .agents/skills/test-driven-development/SKILL.md: sha256:e89d6cd447d24cb4c7d365c5a1f0b707af200e58f8f3317bfba71f80948adf44
     .agents/skills/top-down-contract-development/SKILL.md: sha256:04e83fa11298e3b59285a24c7b1f6fd996bf8db27e21e826062b65c26d349a56
     .claude/agents/code-reviewer.md: sha256:c73c351164c513586dcb46e389df5249627526e64eab8bcc63605f9e62389bfe
     .claude/agents/security-auditor.md: sha256:e9d51b87b02eae4e7af55a549fcb8fcc1289dce81a39806d2739d2d5c3f867db
@@ -394,23 +363,14 @@ dependencies:
     .claude/rules/proven-necessity.md: sha256:5b03705c13c7ab66896fe35e544344957135c1323e39d30728c1af3ebd90318c
     .claude/skills/c4-diagrams/SKILL.md: sha256:1e7d597f24a015fc44cb9052fc0f8b665d136bd5c2f3a60a242adfedd98d17b4
     .claude/skills/c4-diagrams/templates.md: sha256:d5f6096cccd57d0d6b36adabd7d027c41b71961304db825dba8ea53ddbebc5a0
-    .claude/skills/change-summary/SKILL.md: sha256:855ac5dae361704b0af7471cf5a6c50519b338f95d49d7f83c9c1ccf1cf7cfc4
-    .claude/skills/code-review-and-quality/SKILL.md: sha256:5493d8acfa0378a07249cdb0cb2a5e4e3c719baf0f603d5e3a3983f43e16208a
-    .claude/skills/discussion/SKILL.md: sha256:e9c3423b73b4d572af3d95c8820142e18bb44e226adc92f1c297905e9835ca9a
-    .claude/skills/discussion/references/document-format.md: sha256:9012f228e7a7759f14176e38b1b39946a3d810693a4a96319934b93ad71e80ac
-    .claude/skills/discussion/references/examples.md: sha256:e0a056cc213de20ee0e311c1404a21bfdda9e70d2d2cc2b73748de1b53359a6c
+    .claude/skills/code-review-and-quality/SKILL.md: sha256:efb65a32fa22a5430eac559584ae024c00707ef84b1891a80fbad9be89669cee
     .claude/skills/domain-modeling/ADR-FORMAT.md: sha256:987ffed2f666ddae4135cff5b049d03379a53141bdbe82af50852cfcfdee493e
     .claude/skills/domain-modeling/CONTEXT-FORMAT.md: sha256:709fb2ce20067248fe4e1a23fe18007de12cd1d97d7f7f772c6d634a76f380cd
     .claude/skills/domain-modeling/SKILL.md: sha256:601e8ac96664064793acc470e7eb454bc78dddb06ea4e380834210183130a071
-    .claude/skills/idea-refine/SKILL.md: sha256:ab5240e4593b9b0250952986ce3b9aba4a7629c4bf8f6335d13584cff6ba7300
-    .claude/skills/idea-refine/examples.md: sha256:326c8e64083f29b3ea8b99e757198efafcf30a68c227156b521e1cddff5ed4ad
-    .claude/skills/idea-refine/frameworks.md: sha256:161ebc18fdf2d996bc62a87a2d747cf1bf53548354f8925de25c732c27f00309
-    .claude/skills/idea-refine/refinement-criteria.md: sha256:1ca2973a4d01b5cb37ab7ddb2eff77fa4e792634a33d0ce44961c068fc88d51a
-    .claude/skills/idea-refine/scripts/idea-refine.sh: sha256:f02a52408a4218047c032d221483abfbb48d11f090bb4915965c7419bf2e0e47
     .claude/skills/implementation-decision-review/SKILL.md: sha256:9c8c67d6465be3536121b6d6d7318d220d4a64cb9eb1c0f1165610d3a13512ff
     .claude/skills/implementation-decision-review/references/evaluation-cases.md: sha256:0b79bccb469001f18652b49709037e81a5d0841e426bf550da6d6c3b59c674ae
-    .claude/skills/incremental-implementation/SKILL.md: sha256:9fc3b1931a1aa6da02e51d030f872cb52771843830b375fc91e43885a73fa853
-    .claude/skills/observability-and-instrumentation/SKILL.md: sha256:e4e75a3b486967db22b1446ab694b82116800cb19cc6b9387ac79a604da83bca
+    .claude/skills/incremental-implementation/SKILL.md: sha256:11b6c463fc40575041e2f5a8f467eb7f35820be0fb9a57f83fb341a1e6c8dd1c
+    .claude/skills/observability-and-instrumentation/SKILL.md: sha256:72b2bf819884c33f78fa1894dc8a26e6901076a2e24c60cb3aef1a53c633a7a6
     .claude/skills/openspec-gherkin-authoring/SKILL.md: sha256:36387030aef552d599ae59bc5685a576d95db10f7a8370b766217ffa51a15d77
     .claude/skills/openspec-review-change/SKILL.md: sha256:649043a4624bc09aaa2ab7fa0253f22bc84b1647f90a0921a08aaa41c9cdfd21
     .claude/skills/openspec-review-change/assets/review-template.md: sha256:93d7fb2b378e0bf6664ddc1d33ba473aabf7ed62a3e1efd751b98ed0dcbf5a6e
@@ -439,35 +399,47 @@ dependencies:
     .claude/skills/openspec-review-implementation/tests/fixtures/valid-review.md: sha256:0405f65b52b9b9438a02c025db22df7c46f08ccc0ce23af6fe740342e5604612
     .claude/skills/openspec-review-implementation/tests/validate-review.test.mjs: sha256:bae3725fab379e1e9966b1c4a0316097d309f5c3d1b2aabdbe3c06755f7915bd
     .claude/skills/phased-planning/SKILL.md: sha256:f6e9d5c94db8837f005182bcdc5e3d4f511bb88741cdd71829ce6aeaa0badd1c
-    .claude/skills/planning-and-task-breakdown/SKILL.md: sha256:3a46c9031f2d70d5333bcd418ce835a866028e7d6abd8ed7cee621f20d6dfa72
-    .claude/skills/security-and-hardening/SKILL.md: sha256:7dee4d2cc8b417b90790bf6016f74a3dcd1adcddde6e42f545a391f950778ebe
-    .claude/skills/shipping-and-launch/SKILL.md: sha256:ca9216f73ac6dfd1b1104ccd7de570acc5a22e11b1bf0ad4bafde1009afc4512
-    .claude/skills/test-driven-development/SKILL.md: sha256:0a58d45118bed4d5da1b11d336b89835541e9e1edaa29b2e7f726ae04a64e662
+    .claude/skills/planning-and-task-breakdown/SKILL.md: sha256:acf49ad221c68c354f88ac9d7be0b94fc179d90b25177b28b151b3d9d3e7b670
+    .claude/skills/security-and-hardening/SKILL.md: sha256:f06f38a9750b082fee21836e3ed03b7f566ef676178091c30e9696e9db971761
+    .claude/skills/shipping-and-launch/SKILL.md: sha256:6d881f4beabb6c34c9dbdd0b7a71225377aecc0c01452af4ce8d930ab5426979
+    .claude/skills/test-driven-development/SKILL.md: sha256:e89d6cd447d24cb4c7d365c5a1f0b707af200e58f8f3317bfba71f80948adf44
     .claude/skills/top-down-contract-development/SKILL.md: sha256:04e83fa11298e3b59285a24c7b1f6fd996bf8db27e21e826062b65c26d349a56
     .codex/agents/code-reviewer.toml: sha256:c1da100c40961598eb98fe065c8f7ea3d796c7727cb001056c0531c1a83b2a42
     .codex/agents/security-auditor.toml: sha256:6f2bec3bded4da237fa14b74fd77720f0e7d96982f09288652aec26b228110dd
     .codex/agents/test-engineer.toml: sha256:424d1fe9b726af918098b6a8d6119e441aa5e2e45265c5cdfa5fba44f0c9f608
-  content_hash: sha256:be9fabdd21216054dca3088555a30c33a0573cb6483ab121f093b888dd8b0d0b
-  skill_subset:
-  - c4-diagrams
-  - change-summary
-  - code-review-and-quality
-  - discussion
-  - domain-modeling
-  - idea-refine
-  - implementation-decision-review
-  - incremental-implementation
-  - observability-and-instrumentation
-  - openspec-gherkin-authoring
-  - openspec-review-change
-  - openspec-review-implementation
-  - openspec-task-deliberation
-  - phased-planning
-  - planning-and-task-breakdown
-  - security-and-hardening
-  - shipping-and-launch
-  - test-driven-development
-  - top-down-contract-development
+  content_hash: sha256:4c37be4288688b805dd627365fa348ea5d6744073bff0c35a1655ba503254af7
+- repo_url: seniorkonung/agent-skills
+  name: agent-skills-productivity
+  host: github.com
+  resolved_commit: 43a2b9fcea23cf59d8d417ffea00a719cf61818a
+  resolved_ref: main
+  version: 0.0.1
+  virtual_path: profiles/productivity
+  is_virtual: true
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/change-summary
+  - .agents/skills/change-summary/SKILL.md
+  - .agents/skills/discussion
+  - .agents/skills/discussion/SKILL.md
+  - .agents/skills/discussion/references/document-format.md
+  - .agents/skills/discussion/references/examples.md
+  - .claude/skills/change-summary
+  - .claude/skills/change-summary/SKILL.md
+  - .claude/skills/discussion
+  - .claude/skills/discussion/SKILL.md
+  - .claude/skills/discussion/references/document-format.md
+  - .claude/skills/discussion/references/examples.md
+  deployed_file_hashes:
+    .agents/skills/change-summary/SKILL.md: sha256:65ca3ec3840a0d1635e189e32feab16aaa971f3ee7f8d3858f42ff3fdcb53877
+    .agents/skills/discussion/SKILL.md: sha256:84b777109bc753c86a8290013e4e6c964f09e4117a887ab88a2db5a117f8d4d1
+    .agents/skills/discussion/references/document-format.md: sha256:d00546193a6a56ff6f97a56c62686a311658d48daed635baae56550cef0699a3
+    .agents/skills/discussion/references/examples.md: sha256:868b6379ff0d3e1bf6e35c3dbd2d2a4a893a8abe8e4a834caa4f3d0f9e33e03f
+    .claude/skills/change-summary/SKILL.md: sha256:65ca3ec3840a0d1635e189e32feab16aaa971f3ee7f8d3858f42ff3fdcb53877
+    .claude/skills/discussion/SKILL.md: sha256:84b777109bc753c86a8290013e4e6c964f09e4117a887ab88a2db5a117f8d4d1
+    .claude/skills/discussion/references/document-format.md: sha256:d00546193a6a56ff6f97a56c62686a311658d48daed635baae56550cef0699a3
+    .claude/skills/discussion/references/examples.md: sha256:868b6379ff0d3e1bf6e35c3dbd2d2a4a893a8abe8e4a834caa4f3d0f9e33e03f
+  content_hash: sha256:847d08d7a9dc2079dfb7e9ea299ed804664488664b54d1edf6d633baeca1ff8b
 - repo_url: addyosmani/agent-skills
   name: code-simplification
   host: github.com
@@ -538,30 +510,6 @@ dependencies:
   resolved_tag: 0.6.9
   resolved_at: '2026-11-13T20:34:57+00:00'
 - repo_url: mattpocock/skills
-  name: grill-with-docs
-  host: github.com
-  resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
-  resolved_ref: v1.2.3
-  version: unknown
-  virtual_path: skills/engineering/grill-with-docs
-  is_virtual: true
-  depth: 2
-  resolved_by: seniorkonung/agent-skills
-  package_type: claude_skill
-  deployed_files:
-  - .agents/skills/grill-with-docs
-  - .agents/skills/grill-with-docs/SKILL.md
-  - .agents/skills/grill-with-docs/agents/openai.yaml
-  - .claude/skills/grill-with-docs
-  - .claude/skills/grill-with-docs/SKILL.md
-  - .claude/skills/grill-with-docs/agents/openai.yaml
-  deployed_file_hashes:
-    .agents/skills/grill-with-docs/SKILL.md: sha256:610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165
-    .agents/skills/grill-with-docs/agents/openai.yaml: sha256:94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9
-    .claude/skills/grill-with-docs/SKILL.md: sha256:610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165
-    .claude/skills/grill-with-docs/agents/openai.yaml: sha256:94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9
-  content_hash: sha256:c3a266bcc09eab29358eaae6e288f9a2cd492fd0af2bcaeeec55fd6207da9a89
-- repo_url: mattpocock/skills
   name: grilling
   host: github.com
   resolved_commit: 6acc160e4e0cd062dbbbd7a1b26ae92855edf07e
@@ -612,8 +560,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -621,8 +569,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:1e7d597f24a015fc44cb9052fc0f8b665d136bd5c2f3a60a242adfedd98d17b4
 - kind: project-relative
   target: agent-skills
@@ -630,8 +578,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:d5f6096cccd57d0d6b36adabd7d027c41b71961304db825dba8ea53ddbebc5a0
 - kind: project-relative
   target: agent-skills
@@ -639,8 +587,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -648,17 +596,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:855ac5dae361704b0af7471cf5a6c50519b338f95d49d7f83c9c1ccf1cf7cfc4
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
+  content_hash: sha256:65ca3ec3840a0d1635e189e32feab16aaa971f3ee7f8d3858f42ff3fdcb53877
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/code-review-and-quality
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -666,9 +614,9 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:5493d8acfa0378a07249cdb0cb2a5e4e3c719baf0f603d5e3a3983f43e16208a
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:efb65a32fa22a5430eac559584ae024c00707ef84b1891a80fbad9be89669cee
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/code-simplification
@@ -711,8 +659,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -720,35 +668,35 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:e9c3423b73b4d572af3d95c8820142e18bb44e226adc92f1c297905e9835ca9a
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
+  content_hash: sha256:84b777109bc753c86a8290013e4e6c964f09e4117a887ab88a2db5a117f8d4d1
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/discussion/references/document-format.md
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:9012f228e7a7759f14176e38b1b39946a3d810693a4a96319934b93ad71e80ac
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
+  content_hash: sha256:d00546193a6a56ff6f97a56c62686a311658d48daed635baae56550cef0699a3
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/discussion/references/examples.md
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:e0a056cc213de20ee0e311c1404a21bfdda9e70d2d2cc2b73748de1b53359a6c
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
+  content_hash: sha256:868b6379ff0d3e1bf6e35c3dbd2d2a4a893a8abe8e4a834caa4f3d0f9e33e03f
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/domain-modeling
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -756,8 +704,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:987ffed2f666ddae4135cff5b049d03379a53141bdbe82af50852cfcfdee493e
 - kind: project-relative
   target: agent-skills
@@ -765,8 +713,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:709fb2ce20067248fe4e1a23fe18007de12cd1d97d7f7f772c6d634a76f380cd
 - kind: project-relative
   target: agent-skills
@@ -774,36 +722,9 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:601e8ac96664064793acc470e7eb454bc78dddb06ea4e380834210183130a071
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/grill-with-docs
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/grill-with-docs
-  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
-  content_hash: null
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/grill-with-docs/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/grill-with-docs
-  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
-  content_hash: sha256:610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/grill-with-docs/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/grill-with-docs
-  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
-  content_hash: sha256:94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/grilling
@@ -833,66 +754,12 @@ deployments:
   content_hash: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
 - kind: project-relative
   target: agent-skills
-  value: .agents/skills/idea-refine
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: null
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/idea-refine/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:ab5240e4593b9b0250952986ce3b9aba4a7629c4bf8f6335d13584cff6ba7300
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/idea-refine/examples.md
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:326c8e64083f29b3ea8b99e757198efafcf30a68c227156b521e1cddff5ed4ad
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/idea-refine/frameworks.md
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:161ebc18fdf2d996bc62a87a2d747cf1bf53548354f8925de25c732c27f00309
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/idea-refine/refinement-criteria.md
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:1ca2973a4d01b5cb37ab7ddb2eff77fa4e792634a33d0ce44961c068fc88d51a
-- kind: project-relative
-  target: agent-skills
-  value: .agents/skills/idea-refine/scripts/idea-refine.sh
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:f02a52408a4218047c032d221483abfbb48d11f090bb4915965c7419bf2e0e47
-- kind: project-relative
-  target: agent-skills
   value: .agents/skills/implementation-decision-review
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -900,8 +767,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:9c8c67d6465be3536121b6d6d7318d220d4a64cb9eb1c0f1165610d3a13512ff
 - kind: project-relative
   target: agent-skills
@@ -909,8 +776,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:0b79bccb469001f18652b49709037e81a5d0841e426bf550da6d6c3b59c674ae
 - kind: project-relative
   target: agent-skills
@@ -918,8 +785,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -927,17 +794,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:9fc3b1931a1aa6da02e51d030f872cb52771843830b375fc91e43885a73fa853
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:11b6c463fc40575041e2f5a8f467eb7f35820be0fb9a57f83fb341a1e6c8dd1c
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/observability-and-instrumentation
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -945,9 +812,9 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:e4e75a3b486967db22b1446ab694b82116800cb19cc6b9387ac79a604da83bca
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:72b2bf819884c33f78fa1894dc8a26e6901076a2e24c60cb3aef1a53c633a7a6
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/openspec-apply-change
@@ -1026,8 +893,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1035,8 +902,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:36387030aef552d599ae59bc5685a576d95db10f7a8370b766217ffa51a15d77
 - kind: project-relative
   target: agent-skills
@@ -1080,8 +947,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1089,8 +956,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:649043a4624bc09aaa2ab7fa0253f22bc84b1647f90a0921a08aaa41c9cdfd21
 - kind: project-relative
   target: agent-skills
@@ -1098,8 +965,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:93d7fb2b378e0bf6664ddc1d33ba473aabf7ed62a3e1efd751b98ed0dcbf5a6e
 - kind: project-relative
   target: agent-skills
@@ -1107,8 +974,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:16298dccc61ca238b0968517a28d1fb36acf4b5a3ef749017c526fcd3bb77543
 - kind: project-relative
   target: agent-skills
@@ -1116,8 +983,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:6abb7d5b9e453eddfbc1542428e0a8489896179aaa21d816c8eaf644d9654a38
 - kind: project-relative
   target: agent-skills
@@ -1125,8 +992,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:f317aca8284b14b5266a3d3d97ed7509d09a755361bb5f0a339b026915537b57
 - kind: project-relative
   target: agent-skills
@@ -1134,8 +1001,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:00b9c7df3a87eee651aac9a2c5d248413dd7e42f3f731cce6ec8e97d90b523a2
 - kind: project-relative
   target: agent-skills
@@ -1143,8 +1010,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:2d2cc9175d654bb0f9cdf7bc6f867a77829250b9a7975d8070c9f780b54a3458
 - kind: project-relative
   target: agent-skills
@@ -1152,8 +1019,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:38fae1eae3a0893e03e21b67f8db6084234ad6f13d404e20aabb312db93cc2d1
 - kind: project-relative
   target: agent-skills
@@ -1161,8 +1028,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:8cc5e3b745df47c6bc605a2d6b9109bfdf22f72e174580f542b5b47e8a83cbef
 - kind: project-relative
   target: agent-skills
@@ -1170,8 +1037,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:0c99baf7c79aafc7eb802d86986a57c85456dcec5905fe59296ed08e660f4cf6
 - kind: project-relative
   target: agent-skills
@@ -1179,8 +1046,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:bae3725fab379e1e9966b1c4a0316097d309f5c3d1b2aabdbe3c06755f7915bd
 - kind: project-relative
   target: agent-skills
@@ -1188,8 +1055,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1197,8 +1064,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:57dba1975970eef92af7596ba3ffea237051fcaaae3b54735c2602a8fdedf111
 - kind: project-relative
   target: agent-skills
@@ -1206,8 +1073,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:66bc32cb83b50f9dd8d2282b8e80d3c196dc05337e14e9ad22d0b00eb2a5c807
 - kind: project-relative
   target: agent-skills
@@ -1215,8 +1082,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:bcfaac572261a2a670338a2b24c5f240efeb07e0e63d85d5a11db3b6e870f1dc
 - kind: project-relative
   target: agent-skills
@@ -1224,8 +1091,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:24bfca5cc6c8e67ac0deb802958a8eba69ca1aa86d2f81ac2808815b987507c0
 - kind: project-relative
   target: agent-skills
@@ -1233,8 +1100,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:d0c49ace8d3411047b5341e73540b2ca524e82a3d98dadddf782f1d0ddd23483
 - kind: project-relative
   target: agent-skills
@@ -1242,8 +1109,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:a26428cde836084c8c7e723a9ae8c550af8f756155b84e4eef4917a4d0d4d376
 - kind: project-relative
   target: agent-skills
@@ -1251,8 +1118,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:15f4a3e00360500e593e69c259083474697d3052363bfd102231665c62780bfd
 - kind: project-relative
   target: agent-skills
@@ -1260,8 +1127,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:3c1eca5422f1b2b8e7dfdafbc873f68a3171c26197c380262745efb73db1ef29
 - kind: project-relative
   target: agent-skills
@@ -1269,8 +1136,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:b8a06b3ca2a35574661ea0cd0992c8e53245e93060226f8d3aa321b71bfbbe20
 - kind: project-relative
   target: agent-skills
@@ -1278,8 +1145,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:2d2cc9175d654bb0f9cdf7bc6f867a77829250b9a7975d8070c9f780b54a3458
 - kind: project-relative
   target: agent-skills
@@ -1287,8 +1154,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:e9f3e9b8f2160e46fab7e6dbcdbcf63623b3d66f089a91892d29b8118100a116
 - kind: project-relative
   target: agent-skills
@@ -1296,8 +1163,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:b776e757673ab2d322bcfa5326909a734828eb85a182312f45b1b598edc122c1
 - kind: project-relative
   target: agent-skills
@@ -1305,8 +1172,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:380c981f061ccdd5a7f03e99be3160329c325d97b4c6cf0ed1d35a089705ed86
 - kind: project-relative
   target: agent-skills
@@ -1314,8 +1181,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:0405f65b52b9b9438a02c025db22df7c46f08ccc0ce23af6fe740342e5604612
 - kind: project-relative
   target: agent-skills
@@ -1323,8 +1190,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:bae3725fab379e1e9966b1c4a0316097d309f5c3d1b2aabdbe3c06755f7915bd
 - kind: project-relative
   target: agent-skills
@@ -1386,8 +1253,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1395,8 +1262,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:f6e9d5c94db8837f005182bcdc5e3d4f511bb88741cdd71829ce6aeaa0badd1c
 - kind: project-relative
   target: agent-skills
@@ -1404,8 +1271,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1413,17 +1280,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:3a46c9031f2d70d5333bcd418ce835a866028e7d6abd8ed7cee621f20d6dfa72
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:acf49ad221c68c354f88ac9d7be0b94fc179d90b25177b28b151b3d9d3e7b670
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/security-and-hardening
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1431,17 +1298,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:7dee4d2cc8b417b90790bf6016f74a3dcd1adcddde6e42f545a391f950778ebe
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:f06f38a9750b082fee21836e3ed03b7f566ef676178091c30e9696e9db971761
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/shipping-and-launch
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1449,9 +1316,9 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:ca9216f73ac6dfd1b1104ccd7de570acc5a22e11b1bf0ad4bafde1009afc4512
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:6d881f4beabb6c34c9dbdd0b7a71225377aecc0c01452af4ce8d930ab5426979
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/source-driven-development
@@ -1476,8 +1343,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1485,17 +1352,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:0a58d45118bed4d5da1b11d336b89835541e9e1edaa29b2e7f726ae04a64e662
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:e89d6cd447d24cb4c7d365c5a1f0b707af200e58f8f3317bfba71f80948adf44
 - kind: project-relative
   target: agent-skills
   value: .agents/skills/top-down-contract-development
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: agent-skills
@@ -1503,8 +1370,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:04e83fa11298e3b59285a24c7b1f6fd996bf8db27e21e826062b65c26d349a56
 - kind: project-relative
   target: agent-skills
@@ -1530,8 +1397,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:c73c351164c513586dcb46e389df5249627526e64eab8bcc63605f9e62389bfe
 - kind: project-relative
   target: claude
@@ -1539,8 +1406,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:e9d51b87b02eae4e7af55a549fcb8fcc1289dce81a39806d2739d2d5c3f867db
 - kind: project-relative
   target: claude
@@ -1548,8 +1415,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:5c967d9626e6f7414f42ef7ec5b670c663c554b4e92abfa5215a0506649f1650
 - kind: project-relative
   target: claude
@@ -1557,8 +1424,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:4d0e01e3f8628b9f4e2a90b932935cd819bd50a0969862294e140ae6e4aeb8ba
 - kind: project-relative
   target: claude
@@ -1566,8 +1433,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:047b781ee08264502823b2594ab7851095bbf1ed455d6e51ff1883baa95b9861
 - kind: project-relative
   target: claude
@@ -1584,8 +1451,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:0881e04e71d1480690e708917090c885e9c3230dc3541e789e0030a4073e9d40
 - kind: project-relative
   target: claude
@@ -1602,8 +1469,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:b9b97fff2887221cd60c897e518246c8775828ead55c9381a92f1a5e42e91020
 - kind: project-relative
   target: claude
@@ -1611,8 +1478,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:5b03705c13c7ab66896fe35e544344957135c1323e39d30728c1af3ebd90318c
 - kind: project-relative
   target: claude
@@ -1647,8 +1514,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -1656,8 +1523,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:1e7d597f24a015fc44cb9052fc0f8b665d136bd5c2f3a60a242adfedd98d17b4
 - kind: project-relative
   target: claude
@@ -1665,8 +1532,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:d5f6096cccd57d0d6b36adabd7d027c41b71961304db825dba8ea53ddbebc5a0
 - kind: project-relative
   target: claude
@@ -1674,8 +1541,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
   content_hash: null
 - kind: project-relative
   target: claude
@@ -1683,17 +1550,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:855ac5dae361704b0af7471cf5a6c50519b338f95d49d7f83c9c1ccf1cf7cfc4
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
+  content_hash: sha256:65ca3ec3840a0d1635e189e32feab16aaa971f3ee7f8d3858f42ff3fdcb53877
 - kind: project-relative
   target: claude
   value: .claude/skills/code-review-and-quality
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -1701,9 +1568,9 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:5493d8acfa0378a07249cdb0cb2a5e4e3c719baf0f603d5e3a3983f43e16208a
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:efb65a32fa22a5430eac559584ae024c00707ef84b1891a80fbad9be89669cee
 - kind: project-relative
   target: claude
   value: .claude/skills/code-simplification
@@ -1746,8 +1613,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
   content_hash: null
 - kind: project-relative
   target: claude
@@ -1755,35 +1622,35 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:e9c3423b73b4d572af3d95c8820142e18bb44e226adc92f1c297905e9835ca9a
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
+  content_hash: sha256:84b777109bc753c86a8290013e4e6c964f09e4117a887ab88a2db5a117f8d4d1
 - kind: project-relative
   target: claude
   value: .claude/skills/discussion/references/document-format.md
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:9012f228e7a7759f14176e38b1b39946a3d810693a4a96319934b93ad71e80ac
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
+  content_hash: sha256:d00546193a6a56ff6f97a56c62686a311658d48daed635baae56550cef0699a3
 - kind: project-relative
   target: claude
   value: .claude/skills/discussion/references/examples.md
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:e0a056cc213de20ee0e311c1404a21bfdda9e70d2d2cc2b73748de1b53359a6c
+  - seniorkonung/agent-skills/profiles/productivity
+  active_owner: seniorkonung/agent-skills/profiles/productivity
+  content_hash: sha256:868b6379ff0d3e1bf6e35c3dbd2d2a4a893a8abe8e4a834caa4f3d0f9e33e03f
 - kind: project-relative
   target: claude
   value: .claude/skills/domain-modeling
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -1791,8 +1658,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:987ffed2f666ddae4135cff5b049d03379a53141bdbe82af50852cfcfdee493e
 - kind: project-relative
   target: claude
@@ -1800,8 +1667,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:709fb2ce20067248fe4e1a23fe18007de12cd1d97d7f7f772c6d634a76f380cd
 - kind: project-relative
   target: claude
@@ -1809,36 +1676,9 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:601e8ac96664064793acc470e7eb454bc78dddb06ea4e380834210183130a071
-- kind: project-relative
-  target: claude
-  value: .claude/skills/grill-with-docs
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/grill-with-docs
-  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/grill-with-docs/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/grill-with-docs
-  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
-  content_hash: sha256:610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165
-- kind: project-relative
-  target: claude
-  value: .claude/skills/grill-with-docs/agents/openai.yaml
-  runtime: null
-  scope: project
-  owners:
-  - mattpocock/skills/skills/engineering/grill-with-docs
-  active_owner: mattpocock/skills/skills/engineering/grill-with-docs
-  content_hash: sha256:94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9
 - kind: project-relative
   target: claude
   value: .claude/skills/grilling
@@ -1868,66 +1708,12 @@ deployments:
   content_hash: sha256:1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b
 - kind: project-relative
   target: claude
-  value: .claude/skills/idea-refine
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: null
-- kind: project-relative
-  target: claude
-  value: .claude/skills/idea-refine/SKILL.md
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:ab5240e4593b9b0250952986ce3b9aba4a7629c4bf8f6335d13584cff6ba7300
-- kind: project-relative
-  target: claude
-  value: .claude/skills/idea-refine/examples.md
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:326c8e64083f29b3ea8b99e757198efafcf30a68c227156b521e1cddff5ed4ad
-- kind: project-relative
-  target: claude
-  value: .claude/skills/idea-refine/frameworks.md
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:161ebc18fdf2d996bc62a87a2d747cf1bf53548354f8925de25c732c27f00309
-- kind: project-relative
-  target: claude
-  value: .claude/skills/idea-refine/refinement-criteria.md
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:1ca2973a4d01b5cb37ab7ddb2eff77fa4e792634a33d0ce44961c068fc88d51a
-- kind: project-relative
-  target: claude
-  value: .claude/skills/idea-refine/scripts/idea-refine.sh
-  runtime: null
-  scope: project
-  owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:f02a52408a4218047c032d221483abfbb48d11f090bb4915965c7419bf2e0e47
-- kind: project-relative
-  target: claude
   value: .claude/skills/implementation-decision-review
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -1935,8 +1721,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:9c8c67d6465be3536121b6d6d7318d220d4a64cb9eb1c0f1165610d3a13512ff
 - kind: project-relative
   target: claude
@@ -1944,8 +1730,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:0b79bccb469001f18652b49709037e81a5d0841e426bf550da6d6c3b59c674ae
 - kind: project-relative
   target: claude
@@ -1953,8 +1739,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -1962,17 +1748,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:9fc3b1931a1aa6da02e51d030f872cb52771843830b375fc91e43885a73fa853
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:11b6c463fc40575041e2f5a8f467eb7f35820be0fb9a57f83fb341a1e6c8dd1c
 - kind: project-relative
   target: claude
   value: .claude/skills/observability-and-instrumentation
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -1980,9 +1766,9 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:e4e75a3b486967db22b1446ab694b82116800cb19cc6b9387ac79a604da83bca
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:72b2bf819884c33f78fa1894dc8a26e6901076a2e24c60cb3aef1a53c633a7a6
 - kind: project-relative
   target: claude
   value: .claude/skills/openspec-apply-change
@@ -2061,8 +1847,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2070,8 +1856,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:36387030aef552d599ae59bc5685a576d95db10f7a8370b766217ffa51a15d77
 - kind: project-relative
   target: claude
@@ -2115,8 +1901,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2124,8 +1910,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:649043a4624bc09aaa2ab7fa0253f22bc84b1647f90a0921a08aaa41c9cdfd21
 - kind: project-relative
   target: claude
@@ -2133,8 +1919,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:93d7fb2b378e0bf6664ddc1d33ba473aabf7ed62a3e1efd751b98ed0dcbf5a6e
 - kind: project-relative
   target: claude
@@ -2142,8 +1928,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:16298dccc61ca238b0968517a28d1fb36acf4b5a3ef749017c526fcd3bb77543
 - kind: project-relative
   target: claude
@@ -2151,8 +1937,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:6abb7d5b9e453eddfbc1542428e0a8489896179aaa21d816c8eaf644d9654a38
 - kind: project-relative
   target: claude
@@ -2160,8 +1946,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:f317aca8284b14b5266a3d3d97ed7509d09a755361bb5f0a339b026915537b57
 - kind: project-relative
   target: claude
@@ -2169,8 +1955,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:00b9c7df3a87eee651aac9a2c5d248413dd7e42f3f731cce6ec8e97d90b523a2
 - kind: project-relative
   target: claude
@@ -2178,8 +1964,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:2d2cc9175d654bb0f9cdf7bc6f867a77829250b9a7975d8070c9f780b54a3458
 - kind: project-relative
   target: claude
@@ -2187,8 +1973,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:38fae1eae3a0893e03e21b67f8db6084234ad6f13d404e20aabb312db93cc2d1
 - kind: project-relative
   target: claude
@@ -2196,8 +1982,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:8cc5e3b745df47c6bc605a2d6b9109bfdf22f72e174580f542b5b47e8a83cbef
 - kind: project-relative
   target: claude
@@ -2205,8 +1991,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:0c99baf7c79aafc7eb802d86986a57c85456dcec5905fe59296ed08e660f4cf6
 - kind: project-relative
   target: claude
@@ -2214,8 +2000,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:bae3725fab379e1e9966b1c4a0316097d309f5c3d1b2aabdbe3c06755f7915bd
 - kind: project-relative
   target: claude
@@ -2223,8 +2009,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2232,8 +2018,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:57dba1975970eef92af7596ba3ffea237051fcaaae3b54735c2602a8fdedf111
 - kind: project-relative
   target: claude
@@ -2241,8 +2027,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:66bc32cb83b50f9dd8d2282b8e80d3c196dc05337e14e9ad22d0b00eb2a5c807
 - kind: project-relative
   target: claude
@@ -2250,8 +2036,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:bcfaac572261a2a670338a2b24c5f240efeb07e0e63d85d5a11db3b6e870f1dc
 - kind: project-relative
   target: claude
@@ -2259,8 +2045,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:24bfca5cc6c8e67ac0deb802958a8eba69ca1aa86d2f81ac2808815b987507c0
 - kind: project-relative
   target: claude
@@ -2268,8 +2054,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:d0c49ace8d3411047b5341e73540b2ca524e82a3d98dadddf782f1d0ddd23483
 - kind: project-relative
   target: claude
@@ -2277,8 +2063,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:a26428cde836084c8c7e723a9ae8c550af8f756155b84e4eef4917a4d0d4d376
 - kind: project-relative
   target: claude
@@ -2286,8 +2072,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:15f4a3e00360500e593e69c259083474697d3052363bfd102231665c62780bfd
 - kind: project-relative
   target: claude
@@ -2295,8 +2081,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:3c1eca5422f1b2b8e7dfdafbc873f68a3171c26197c380262745efb73db1ef29
 - kind: project-relative
   target: claude
@@ -2304,8 +2090,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:b8a06b3ca2a35574661ea0cd0992c8e53245e93060226f8d3aa321b71bfbbe20
 - kind: project-relative
   target: claude
@@ -2313,8 +2099,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:2d2cc9175d654bb0f9cdf7bc6f867a77829250b9a7975d8070c9f780b54a3458
 - kind: project-relative
   target: claude
@@ -2322,8 +2108,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:e9f3e9b8f2160e46fab7e6dbcdbcf63623b3d66f089a91892d29b8118100a116
 - kind: project-relative
   target: claude
@@ -2331,8 +2117,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:b776e757673ab2d322bcfa5326909a734828eb85a182312f45b1b598edc122c1
 - kind: project-relative
   target: claude
@@ -2340,8 +2126,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:380c981f061ccdd5a7f03e99be3160329c325d97b4c6cf0ed1d35a089705ed86
 - kind: project-relative
   target: claude
@@ -2349,8 +2135,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:0405f65b52b9b9438a02c025db22df7c46f08ccc0ce23af6fe740342e5604612
 - kind: project-relative
   target: claude
@@ -2358,8 +2144,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:bae3725fab379e1e9966b1c4a0316097d309f5c3d1b2aabdbe3c06755f7915bd
 - kind: project-relative
   target: claude
@@ -2421,8 +2207,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2430,8 +2216,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:f6e9d5c94db8837f005182bcdc5e3d4f511bb88741cdd71829ce6aeaa0badd1c
 - kind: project-relative
   target: claude
@@ -2439,8 +2225,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2448,17 +2234,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:3a46c9031f2d70d5333bcd418ce835a866028e7d6abd8ed7cee621f20d6dfa72
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:acf49ad221c68c354f88ac9d7be0b94fc179d90b25177b28b151b3d9d3e7b670
 - kind: project-relative
   target: claude
   value: .claude/skills/security-and-hardening
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2466,17 +2252,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:7dee4d2cc8b417b90790bf6016f74a3dcd1adcddde6e42f545a391f950778ebe
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:f06f38a9750b082fee21836e3ed03b7f566ef676178091c30e9696e9db971761
 - kind: project-relative
   target: claude
   value: .claude/skills/shipping-and-launch
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2484,9 +2270,9 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:ca9216f73ac6dfd1b1104ccd7de570acc5a22e11b1bf0ad4bafde1009afc4512
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:6d881f4beabb6c34c9dbdd0b7a71225377aecc0c01452af4ce8d930ab5426979
 - kind: project-relative
   target: claude
   value: .claude/skills/source-driven-development
@@ -2511,8 +2297,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2520,17 +2306,17 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
-  content_hash: sha256:0a58d45118bed4d5da1b11d336b89835541e9e1edaa29b2e7f726ae04a64e662
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
+  content_hash: sha256:e89d6cd447d24cb4c7d365c5a1f0b707af200e58f8f3317bfba71f80948adf44
 - kind: project-relative
   target: claude
   value: .claude/skills/top-down-contract-development
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: null
 - kind: project-relative
   target: claude
@@ -2538,8 +2324,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:04e83fa11298e3b59285a24c7b1f6fd996bf8db27e21e826062b65c26d349a56
 - kind: project-relative
   target: claude
@@ -2565,8 +2351,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:c1da100c40961598eb98fe065c8f7ea3d796c7727cb001056c0531c1a83b2a42
 - kind: project-relative
   target: codex
@@ -2574,8 +2360,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:6f2bec3bded4da237fa14b74fd77720f0e7d96982f09288652aec26b228110dd
 - kind: project-relative
   target: codex
@@ -2583,8 +2369,8 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - seniorkonung/agent-skills
-  active_owner: seniorkonung/agent-skills
+  - seniorkonung/agent-skills/profiles/engineering
+  active_owner: seniorkonung/agent-skills/profiles/engineering
   content_hash: sha256:424d1fe9b726af918098b6a8d6119e441aa5e2e45265c5cdfa5fba44f0c9f608
 - kind: uri
   target: mcp
